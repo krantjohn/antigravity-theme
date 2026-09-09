@@ -44,9 +44,15 @@
 
 ## 📸 效果展示 (Showcase)
 
-| 圣园未花全景柔光粉主题 (默认预设) | 玛奇玛手势支配主题 (自定义换图演示) |
-| :---: | :---: |
-| <img src="assets/previews/mika_theme_overview.png" width="440" /> | <img src="assets/previews/makima_wallpaper_demo.png" width="440" /> |
+| 圣园未花全景柔光粉主题 (默认预设) | 玛奇玛手势支配主题 (自定义换图演示) | 三面板独立壁纸联动 (左中右协同工作流) |
+| :---: | :---: | :---: |
+| <img src="assets/previews/mika_theme_overview.png" width="280" /> | <img src="assets/previews/makima_wallpaper_demo.png" width="280" /> | <img src="assets/previews/multi_panel_flow_demo.png" width="280" /> |
+
+<p align="center">
+  <img src="assets/previews/multi_panel_flow_demo.png" alt="多面板独立壁纸协同工作流" width="880" style="border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);" />
+  <br>
+  <em>✨ 三面板独立壁纸联动实战：左侧 AI 主对话区（玛奇玛全景） + 中间 PowerShell 终端（未花立绘） + 右侧会话抽屉（未花半身像）</em>
+</p>
 
 ---
 
