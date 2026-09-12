@@ -21,6 +21,11 @@
 
 ## ✨ 核心特色 (Features)
 
+- 🎮 **Steam Wallpaper Engine 创意工坊原生级深度联动**：
+  - 自动扫描并识别本地 Steam 安装库（支持多盘符跨磁盘 SteamLibrary 库检索与 VDF 解析）。
+  - 自动穿透并读取 Wallpaper Engine（Steam AppID 431960）已订阅下载的创意工坊壁纸。
+  - 解析 `project.json`，智能提取视频文件（MP4 / WebM）、场景动态图与高清预览图。
+  - 支持交互式菜单浏览、关键词模糊搜索、工坊 ID / 序号直达，一键无缝装配到任意 Antigravity 槽位！
 - 🎬 **动态视频与静态壁纸全兼容**：
   - 全面支持 **MP4 / WebM / OGG / MOV** 动态视频壁纸，自动循环静音播放、GPU 硬件加速解码、CPU 零额外负担。
   - 完美保留原生静态壁纸（JPG / PNG / GIF / WebP / SVG），随时自由混搭（例如：左侧主背景用动态视频，终端用静态壁纸）。
@@ -90,14 +95,33 @@
 
 本主题引擎支持 **5 大槽位独立随心换**。你随时可以用你喜欢的任意**动态视频 (MP4 / WebM)** 或**静态图片 (JPG / PNG / GIF / WebP)** 替换任意面板！
 
-### 方法 1：双击脚本拖拽更换（最简单）
-双击运行 **`bin/swap_wallpaper.bat`**：
-1. 输入你要更换的槽位（例如：`左`、`中`、`右`、`下` 或 `设置`）；
-2. 直接将你的视频或图片文件拖入 CMD 窗口中，按回车即可立即生效！
+### 方法 1：双击脚本交互式管理与更换（最简单）
+- 双击运行 **`bin/swap_wallpaper.bat`**：
+  - 选项 [1]：更换本地壁纸（拖入图片或视频文件即可）；
+  - 选项 [2]：浏览 Steam Wallpaper Engine 已订阅壁纸库；
+  - 选项 [3]：搜索 Steam Wallpaper Engine 壁纸；
+  - 选项 [4]：查看当前各槽位状态。
+- 或直接双击运行 **`bin/wallpaper_engine.bat`**：
+  - 专属 Wallpaper Engine 工坊选择器，快速按序号或工坊 ID 将壁纸应用到指定的 Antigravity 槽位！
 
 ### 方法 2：命令行指令快速更换
-在命令行中运行以下指令即可指定槽位与视频/图片路径：
 
+#### 1. Steam Wallpaper Engine 创意工坊壁纸（一键检索与应用）
+```bash
+# 浏览已扫描到的 Wallpaper Engine 创意工坊壁纸列表
+node core/theme_engine.js --list-we
+
+# 搜索包含关键词的 Wallpaper Engine 壁纸
+node core/theme_engine.js --list-we "碧蓝"
+
+# 根据列表序号或创意工坊 ID，一键应用到指定槽位（例如应用第 2 项到左侧主对话底图）
+node core/theme_engine.js --swap-we 2 左
+
+# 使用创意工坊 ID 直接应用（例如将 3164111930 应用到中间终端）
+node core/theme_engine.js --swap-we 3164111930 中
+```
+
+#### 2. 本地文件直接更换
 ```bash
 # 更换【全局主对话背景】为动态视频 (MP4)
 node core/theme_engine.js --swap "左" "D:\你的动态壁纸.mp4"
@@ -150,15 +174,19 @@ node core/theme_engine.js --status
 antigravity-theme/
 ├── bin/
 │   ├── install.bat             # 一键自动安装与底层永久固化启动器
-│   ├── swap_wallpaper.bat      # 交互式一键更换壁纸工具 (支持视频与图片)
+│   ├── swap_wallpaper.bat      # 交互式一键更换壁纸工具 (本地/工坊双支持)
+│   ├── wallpaper_engine.bat    # Steam Wallpaper Engine 创意工坊壁纸专属选择器
 │   └── restore_baseline.bat    # 一键还原回初版官方基线工具
 ├── core/
 │   ├── theme_engine.js         # 核心主题编译器：CSS生成、5槽位管理、CDP热重载
+│   ├── wallpaper_engine_bridge.js # Steam 库与 Wallpaper Engine 创意工坊跨盘符资产桥接
 │   ├── media_server.js         # 本地流媒体服务：HTTP 206 Range 支持、硬件加速推流
 │   ├── auto_patcher.js         # 核心补丁生成器：解包asar、注入preload/utils/main
 │   └── patch_core.js           # 固化替换工具：解除占用、安全替换核心、唤醒进程
 ├── tests/
-│   └── test_suite.js           # 自动化深度实测套件：动态视频、静态图片、CDP热重载验证
+│   ├── test_suite.js           # 11 项全功能深度端到端自动化测试套件
+│   ├── test_wallpaper_engine.js# Steam Wallpaper Engine 模块 14 项专业测试
+│   └── test_media_server.js    # 流媒体服务器与 HTTP 206 单元测试
 ├── wallpapers/                 # 5 槽位默认预设素材 (蓝途圣园未花/普拉娜/妃咲等)
 │   ├── left_wallpaper.jpg
 │   ├── mid_wallpaper.jpg

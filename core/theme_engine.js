@@ -3,6 +3,13 @@ const path = require('path');
 const http = require('http');
 const os = require('os');
 const { startMediaServer, isMediaServerRunning, DEFAULT_PORT } = require('./media_server');
+const {
+  scanWorkshopWallpapers,
+  getWallpaperById,
+  formatWallpaperTable,
+  getAllSteamLibraries,
+  findWorkshopDirs
+} = require('./wallpaper_engine_bridge');
 
 const antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || path.join(os.homedir(), '.gemini', 'antigravity');
 const repoWallpapersDir = path.join(__dirname, '..', 'wallpapers');
@@ -1068,7 +1075,7 @@ function getClientVideoScript(config) {
           });
           (document.body || document.documentElement).prepend(leftVid);
         }
-        if (leftVid.dataset.currentSrc !== src) {
+        if (leftVid.dataset.currentSrc !== src || leftVid.error || leftVid.readyState === 0) {
           leftVid.dataset.currentSrc = src;
           leftVid.src = src;
           leftVid.load();
@@ -1187,7 +1194,7 @@ function getClientVideoScript(config) {
               }
               targetContainer.prepend(vid);
             }
-            if (vid.dataset.currentSrc !== src) {
+            if (vid.dataset.currentSrc !== src || vid.error || vid.readyState === 0) {
               vid.dataset.currentSrc = src;
               vid.src = src;
               vid.load();
@@ -1417,10 +1424,66 @@ function listSlotsStatus() {
   }
 }
 
+async function swapWallpaperFromWE(idOrIndex, slotInput) {
+  const wallpaper = getWallpaperById(idOrIndex);
+  if (!wallpaper) {
+    console.error(`❌ 未在 Steam Wallpaper Engine 创意工坊中找到壁纸: "${idOrIndex}"`);
+    console.error(`   提示: 可使用 node core/theme_engine.js --list-we 查看已安装壁纸列表与对应序号/ID。`);
+    return false;
+  }
+
+  const slotKey = SLOT_ALIASES[slotInput ? slotInput.toLowerCase() : ''];
+  if (!slotKey) {
+    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置`);
+    return false;
+  }
+
+  console.log(`🎮 从 Steam Wallpaper Engine 选定壁纸: 【${wallpaper.title}】 (ID: ${wallpaper.id})`);
+  console.log(`   素材类型: ${wallpaper.mediaType === 'video' ? '🎬 动态视频' : '🖼️ 静态图像'} (${wallpaper.file})`);
+  console.log(`   原始类型: ${wallpaper.rawType} | 大小: ${wallpaper.sizeMb} MB`);
+  console.log(`   素材路径: ${wallpaper.mediaPath}`);
+
+  return swapWallpaper(slotInput, wallpaper.mediaPath);
+}
+
+function listWallpaperEngineWallpapers(search = '', limit = 50) {
+  const list = scanWorkshopWallpapers({ search });
+  console.log(formatWallpaperTable(list, limit));
+  return list;
+}
+
 if (require.main === module) {
   const args = process.argv.slice(2);
   if (args[0] === '--swap' && args[1] && args[2]) {
-    swapWallpaper(args[1], args[2]);
+    swapWallpaper(args[1], args[2]).then(ok => {
+      if (!ok) process.exit(1);
+    }).catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
+  } else if (args[0] === '--swap-we' || args[0] === '--we-swap') {
+    let targetId = args[1];
+    let targetSlot = args[2];
+    // If user passed slot first, e.g. --swap-we 左 3148864242
+    if (SLOT_ALIASES[targetId?.toLowerCase()] && !SLOT_ALIASES[targetSlot?.toLowerCase()]) {
+      const tmp = targetId;
+      targetId = targetSlot;
+      targetSlot = tmp;
+    }
+    if (!targetId || !targetSlot) {
+      console.error('❌ 参数错误。用法: node core/theme_engine.js --swap-we <壁纸序号/创意工坊ID> <槽位(左/中/右/下/设置)>');
+      process.exit(1);
+    } else {
+      swapWallpaperFromWE(targetId, targetSlot).then(ok => {
+        if (!ok) process.exit(1);
+      }).catch(err => {
+        console.error(err);
+        process.exit(1);
+      });
+    }
+  } else if (args[0] === '--list-we' || args[0] === '--we-list' || args[0] === '-we') {
+    const search = args.slice(1).join(' ');
+    listWallpaperEngineWallpapers(search);
   } else if (args[0] === '--set-left' && args[1]) {
     swapWallpaper('左', args[1]);
   } else if (args[0] === '--set-mid' && args[1]) {
@@ -1483,6 +1546,11 @@ if (require.main === module) {
 
 module.exports = {
   swapWallpaper,
+  swapWallpaperFromWE,
+  listWallpaperEngineWallpapers,
+  scanWorkshopWallpapers,
+  getWallpaperById,
+  formatWallpaperTable,
   generateMasterCss,
   revertToBaseline,
   loadSlotsConfig,
@@ -1495,3 +1563,4 @@ module.exports = {
   VIDEO_EXTS,
   IMAGE_EXTS
 };
+
