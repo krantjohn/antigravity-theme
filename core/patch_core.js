@@ -17,15 +17,26 @@ const patchedAsarPath = path.join(resDir, 'app.asar.patched');
 const appDir = path.join(resDir, 'app');
 const exePath = path.join(localAppData, 'Programs', 'antigravity', 'Antigravity.exe');
 
-// 1. Check if patched asar exists, if not pack it
-if (!fs.existsSync(patchedAsarPath)) {
-  console.log('[1/3] 正在从源码打包永久补丁...');
+const repoMediaServer = path.join(__dirname, 'media_server.js');
+const distMediaServer = path.join(appDir, 'dist', 'media_server.js');
+const antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || path.join(os.homedir(), '.gemini', 'antigravity');
+const userMediaServer = path.join(antigravityDir, 'media_server.js');
+if (fs.existsSync(repoMediaServer)) {
   try {
-    execSync(`npx --yes asar pack "${appDir}" "${patchedAsarPath}"`, { stdio: 'inherit' });
-  } catch (err) {
-    console.error('❌ 打包失败:', err.message);
-    process.exit(1);
-  }
+    if (fs.existsSync(path.join(appDir, 'dist'))) {
+      fs.copyFileSync(repoMediaServer, distMediaServer);
+    }
+    fs.copyFileSync(repoMediaServer, userMediaServer);
+  } catch(e) {}
+}
+
+// 1. Always pack patched asar from appDir to ensure latest fixes
+console.log('[1/3] 正在从源码打包最新补丁镜像...');
+try {
+  execSync(`npx --yes asar pack "${appDir}" "${patchedAsarPath}"`, { stdio: 'inherit' });
+} catch (err) {
+  console.error('❌ 打包失败:', err.message);
+  process.exit(1);
 }
 
 // 2. Terminate Antigravity process to release file lock

@@ -38,11 +38,13 @@ if (fs.existsSync(appDir)) {
 }
 execSync(`npx --yes asar extract "${asarPath}" "${appDir}"`, { stdio: 'inherit' });
 
-// 复制流媒体服务模块到 app/dist 目录
+// 复制流媒体服务模块到 app/dist 目录以及用户配置目录
 const distMediaServerPath = path.join(appDist, 'media_server.js');
+const userMediaServerPath = path.join(antigravityDir, 'media_server.js');
 if (fs.existsSync(repoMediaServerPath)) {
   fs.copyFileSync(repoMediaServerPath, distMediaServerPath);
-  console.log('✓ 已植入 media_server.js 流媒体服务模块');
+  try { fs.copyFileSync(repoMediaServerPath, userMediaServerPath); } catch(e) {}
+  console.log('✓ 已植入 media_server.js 流媒体服务模块 (dist & config)');
 }
 
 // 2. Patch main.js (固定 CDP 调试端口 8314 & 启动动态壁纸流媒体服务器 8315)
@@ -53,11 +55,17 @@ let mainContent = fs.readFileSync(mainPath, 'utf8');
 const mediaServerInjectionCode = `
 // ================= Antigravity Wallpaper Media Server =================
 try {
-  const { startMediaServer } = require('./media_server');
-  const _os = require('os');
+  const _fs = require('fs');
   const _path = require('path');
+  const _os = require('os');
   const _antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || _path.join(_os.homedir(), '.gemini', 'antigravity');
-  startMediaServer(_path.join(_antigravityDir, 'wallpapers'), 8315);
+  const _p1 = _path.join(__dirname, 'media_server.js');
+  const _p2 = _path.join(_antigravityDir, 'media_server.js');
+  const _target = _fs.existsSync(_p1) ? _p1 : (_fs.existsSync(_p2) ? _p2 : null);
+  if (_target) {
+    const { startMediaServer } = require(_target);
+    startMediaServer(_path.join(_antigravityDir, 'wallpapers'), 8315);
+  }
 } catch(e) {}
 // =====================================================================
 `;
@@ -75,9 +83,10 @@ if (mainContent.includes("'remote-debugging-port', '0'")) {
   }
 }
 
-if (!mainContent.includes('Antigravity Wallpaper Media Server')) {
-  mainContent += '\n' + mediaServerInjectionCode;
+if (mainContent.includes('// ================= Antigravity Wallpaper Media Server =================')) {
+  mainContent = mainContent.replace(/\/\/ ================= Antigravity Wallpaper Media Server =================[\s\S]*?\/\/ =====================================================================\n?/g, '');
 }
+mainContent += '\n' + mediaServerInjectionCode;
 fs.writeFileSync(mainPath, mainContent, 'utf8');
 console.log('✓ main.js 注入完成');
 
@@ -98,12 +107,17 @@ const themeInjectionCode = `
     const SERVER_URL = 'http://127.0.0.1:8315';
     // 0. 确保流媒体服务 (8315) 持续运行
     try {
-      const { isMediaServerRunning, startMediaServer } = require('./media_server');
-      isMediaServerRunning(8315).then(running => {
-        if (!running) {
-          startMediaServer(path.join(antigravityDir, 'wallpapers'), 8315);
-        }
-      }).catch(() => {});
+      const _p1 = path.join(__dirname, 'media_server.js');
+      const _p2 = path.join(antigravityDir, 'media_server.js');
+      const _mediaPath = fs.existsSync(_p1) ? _p1 : (fs.existsSync(_p2) ? _p2 : null);
+      if (_mediaPath) {
+        const { isMediaServerRunning, startMediaServer } = require(_mediaPath);
+        isMediaServerRunning(8315).then(running => {
+          if (!running) {
+            startMediaServer(path.join(antigravityDir, 'wallpapers'), 8315);
+          }
+        }).catch(() => {});
+      }
     } catch(e) {}
 
     // In-memory cache for configuration to avoid UI-thread disk I/O on DOM mutations
@@ -148,7 +162,7 @@ const themeInjectionCode = `
         const left = config.left;
         const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
         if (left && left.type === 'video' && left.file) {
-          const vParam = (left && left.version) ? ('?v=' + left.version) : ('?v=' + Date.now());
+          const vParam = (left && left.version) ? ('?v=' + left.version) : '';
           const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
           for (let i = 1; i < allLeftVids.length; i++) {
             allLeftVids[i].pause();
@@ -175,9 +189,19 @@ const themeInjectionCode = `
             leftVid.addEventListener('loadeddata', function() {
               if (leftVid.paused) leftVid.play().catch(function(){});
             });
+            leftVid.addEventListener('error', function() {
+              setTimeout(function() {
+                if (leftVid && leftVid.error) {
+                  leftVid.dataset.currentSrc = '';
+                  leftVid.src = src;
+                  leftVid.load();
+                  leftVid.play().catch(function(){});
+                }
+              }, 1200);
+            });
             (document.body || document.documentElement).prepend(leftVid);
           }
-          if (leftVid.dataset.currentSrc !== src) {
+          if (leftVid.error || leftVid.dataset.currentSrc !== src) {
             leftVid.dataset.currentSrc = src;
             leftVid.src = src;
             leftVid.load();
@@ -222,7 +246,7 @@ const themeInjectionCode = `
         for (const slotKey in slotSelectors) {
           const slotData = config[slotKey];
           const isVideo = slotData && slotData.type === 'video' && slotData.file;
-          const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : ('?v=' + Date.now());
+          const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : '';
           const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
           const selectors = slotSelectors[slotKey];
 
@@ -285,13 +309,23 @@ const themeInjectionCode = `
                 vid.addEventListener('loadeddata', function() {
                   if (vid.paused) vid.play().catch(function(){});
                 });
+                vid.addEventListener('error', function() {
+                  setTimeout(function() {
+                    if (vid && vid.error) {
+                      vid.dataset.currentSrc = '';
+                      vid.src = src;
+                      vid.load();
+                      vid.play().catch(function(){});
+                    }
+                  }, 1200);
+                });
                 const pos = window.getComputedStyle(targetContainer).position;
                 if (!pos || pos === 'static') {
                   targetContainer.style.position = 'relative';
                 }
                 targetContainer.prepend(vid);
               }
-              if (vid.dataset.currentSrc !== src) {
+              if (vid.error || vid.dataset.currentSrc !== src) {
                 vid.dataset.currentSrc = src;
                 vid.src = src;
                 vid.load();
@@ -422,6 +456,13 @@ if (fs.existsSync(kbPath)) {
 console.log('[5/5] 正在重新打包并生成 app.asar.patched 补丁镜像...');
 execSync(`npx --yes asar pack "${appDir}" "${patchedAsarPath}"`, { stdio: 'inherit' });
 console.log('✓ app.asar.patched 打包生成完毕！');
+
+try {
+  fs.copyFileSync(patchedAsarPath, asarPath);
+  console.log('✓ app.asar 已直接更新并固化完成！');
+} catch (e) {
+  console.log('提示: app.asar 当前被占用，稍后可运行 patch_core 固化生效');
+}
 
 console.log('');
 console.log('=======================================================');

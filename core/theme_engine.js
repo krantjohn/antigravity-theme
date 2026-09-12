@@ -27,6 +27,13 @@ if (!fs.existsSync(localWallpapersDir)) {
 
 const wallpapersDir = localWallpapersDir;
 const customCssPath = path.join(antigravityDir, 'custom_theme.css');
+const localMediaServerPath = path.join(antigravityDir, 'media_server.js');
+const repoMediaServerPath = path.join(__dirname, 'media_server.js');
+if (fs.existsSync(repoMediaServerPath)) {
+  try {
+    fs.copyFileSync(repoMediaServerPath, localMediaServerPath);
+  } catch(e) {}
+}
 const baselineDir = path.join(antigravityDir, 'backups', 'baseline_v1_初版');
 const slotsConfigPath = path.join(antigravityDir, 'slots_config.json');
 
@@ -182,7 +189,9 @@ function generateMasterCss(slotsConfig) {
   const isBottomVideo = slotsConfig.bottom && slotsConfig.bottom.type === 'video';
   const isSettingsVideo = slotsConfig.settings && slotsConfig.settings.type === 'video';
 
-  const b64Left = !isLeftVideo ? getBase64(slotsConfig.left?.file || 'left_wallpaper.jpg') : '';
+  const b64Left = !isLeftVideo 
+    ? getBase64(slotsConfig.left?.file || 'left_wallpaper.jpg')
+    : (getBase64('left_wallpaper.jpg') || getBase64('left_poster.jpg') || '');
   const b64Mid = !isMidVideo ? getBase64(slotsConfig.mid?.file || 'mid_wallpaper.jpg') : '';
   const b64Right = !isRightVideo ? getBase64(slotsConfig.right?.file || 'right_wallpaper.jpg') : '';
   const b64Bottom = !isBottomVideo ? getBase64(slotsConfig.bottom?.file || 'input_wallpaper.jpg') : '';
@@ -237,7 +246,7 @@ body::before {
     linear-gradient(
       rgba(11, 12, 20, 0.06), 
       rgba(11, 12, 20, 0.10)
-    )${isLeftVideo ? '' : `,\n    url("${b64Left}")`} !important;
+    )${b64Left ? `,\n    url("${b64Left}")` : ''} !important;
   background-size: cover !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
