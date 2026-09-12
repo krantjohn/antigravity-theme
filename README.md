@@ -21,6 +21,9 @@
 
 ## ✨ 核心特色 (Features)
 
+- 🎬 **动态视频与静态壁纸全兼容**：
+  - 全面支持 **MP4 / WebM / OGG / MOV** 动态视频壁纸，自动循环静音播放、GPU 硬件加速解码、CPU 零额外负担。
+  - 完美保留原生静态壁纸（JPG / PNG / GIF / WebP / SVG），随时自由混搭（例如：左侧主背景用动态视频，终端用静态壁纸）。
 - 🎨 **5 大独立壁纸槽位**：
   - **`左`（全局主对话）**：全景贯通底座，贯穿整个客户端窗口底层。
   - **`中`（活跃终端面板）**：终端区域独立背景，沉浸式写代码。
@@ -85,22 +88,25 @@
 
 ## 🖼️ 自由更换壁纸 (Custom Wallpapers)
 
-本主题引擎支持 **5 大槽位独立随心换**。你随时可以用你喜欢的任意图片（JPG / PNG）替换任意面板！
+本主题引擎支持 **5 大槽位独立随心换**。你随时可以用你喜欢的任意**动态视频 (MP4 / WebM)** 或**静态图片 (JPG / PNG / GIF / WebP)** 替换任意面板！
 
 ### 方法 1：双击脚本拖拽更换（最简单）
 双击运行 **`bin/swap_wallpaper.bat`**：
 1. 输入你要更换的槽位（例如：`左`、`中`、`右`、`下` 或 `设置`）；
-2. 直接将你的图片文件拖入 CMD 窗口中，按回车即可立即生效！
+2. 直接将你的视频或图片文件拖入 CMD 窗口中，按回车即可立即生效！
 
 ### 方法 2：命令行指令快速更换
-在命令行中运行以下指令即可指定槽位与图片路径：
+在命令行中运行以下指令即可指定槽位与视频/图片路径：
 
 ```bash
-# 更换【全局主对话背景】(左槽位)
+# 更换【全局主对话背景】为动态视频 (MP4)
+node core/theme_engine.js --swap "左" "D:\你的动态壁纸.mp4"
+
+# 更换【全局主对话背景】为静态图片 (JPG/PNG)
 node core/theme_engine.js --swap "左" "D:\你的壁纸.jpg"
 
-# 更换【终端区域面板】(中槽位)
-node core/theme_engine.js --swap "中" "D:\你的终端壁纸.png"
+# 更换【终端区域面板】(中槽位 - 支持动态视频或静态图片)
+node core/theme_engine.js --swap "中" "D:\你的终端壁纸.mp4"
 
 # 更换【右侧抽屉面板】(右槽位)
 node core/theme_engine.js --swap "右" "D:\你的侧栏壁纸.jpg"
@@ -110,6 +116,9 @@ node core/theme_engine.js --swap "下" "D:\你的输入框壁纸.png"
 
 # 更换【设置面板插画】(设置槽位)
 node core/theme_engine.js --swap "设置" "D:\你的设置壁纸.png"
+
+# 查看当前 5 大槽位的壁纸类型与状态
+node core/theme_engine.js --status
 ```
 
 ---
@@ -141,12 +150,15 @@ node core/theme_engine.js --swap "设置" "D:\你的设置壁纸.png"
 antigravity-theme/
 ├── bin/
 │   ├── install.bat             # 一键自动安装与底层永久固化启动器
-│   ├── swap_wallpaper.bat      # 交互式一键更换壁纸工具
+│   ├── swap_wallpaper.bat      # 交互式一键更换壁纸工具 (支持视频与图片)
 │   └── restore_baseline.bat    # 一键还原回初版官方基线工具
 ├── core/
 │   ├── theme_engine.js         # 核心主题编译器：CSS生成、5槽位管理、CDP热重载
+│   ├── media_server.js         # 本地流媒体服务：HTTP 206 Range 支持、硬件加速推流
 │   ├── auto_patcher.js         # 核心补丁生成器：解包asar、注入preload/utils/main
 │   └── patch_core.js           # 固化替换工具：解除占用、安全替换核心、唤醒进程
+├── tests/
+│   └── test_suite.js           # 自动化深度实测套件：动态视频、静态图片、CDP热重载验证
 ├── wallpapers/                 # 5 槽位默认预设素材 (蓝途圣园未花/普拉娜/妃咲等)
 │   ├── left_wallpaper.jpg
 │   ├── mid_wallpaper.jpg
