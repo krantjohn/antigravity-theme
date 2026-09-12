@@ -1050,7 +1050,8 @@ function getClientVideoScript(config) {
       const left = config.left;
       const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
       if (left && left.type === 'video' && left.file) {
-        const src = SERVER_URL + '/' + encodeURIComponent(left.file);
+        const vParam = (left && left.version) ? ('?v=' + left.version) : ('?v=' + Date.now());
+        const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
         for (let i = 1; i < allLeftVids.length; i++) {
           allLeftVids[i].pause();
           allLeftVids[i].removeAttribute('src');
@@ -1130,7 +1131,8 @@ function getClientVideoScript(config) {
       for (const slotKey in slotSelectors) {
         const slotData = config[slotKey];
         const isVideo = slotData && slotData.type === 'video' && slotData.file;
-        const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file)) : null;
+        const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : ('?v=' + Date.now());
+        const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
         const selectors = slotSelectors[slotKey];
 
         if (!isVideo) {
@@ -1352,6 +1354,7 @@ async function swapWallpaper(slotInput, srcPath) {
     key: slotKey,
     file: targetFileName,
     type: isVideo ? 'video' : 'image',
+    version: Date.now(),
     desc: slotMeta.desc
   };
   saveSlotsConfig(slotsConfig);
@@ -1394,6 +1397,7 @@ async function revertToBaseline() {
       key,
       file: meta.defaultFile,
       type: 'image',
+      version: Date.now(),
       desc: meta.desc
     };
   }

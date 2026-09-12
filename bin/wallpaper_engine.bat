@@ -14,14 +14,14 @@ exit /b %ERRORLEVEL%
 :MENU
 cls
 echo ====================================================================
-echo    🎮 Steam Wallpaper Engine 创意工坊壁纸一键选择器
+echo    🎮 Steam Wallpaper Engine 创意工坊壁纸一键选择器 
 echo ====================================================================
 echo.
 echo   [1] 浏览已安装壁纸列表 (全部)
 echo   [2] 搜索已安装壁纸 (按名称 / ID)
-echo   [3] 直接根据序号或创意工坊ID应用壁纸
-echo   [4] 查看当前各个槽位状态
-echo   [5] 退出
+echo   [3] 直接根据序号或创意工坊ID应用壁纸 
+echo   [4] 查看当前各个槽位状态 
+echo   [5] 退出 
 echo.
 set "choice="
 set /p "choice=请选择操作 (1-5) [默认 1]: "

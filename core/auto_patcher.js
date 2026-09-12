@@ -108,10 +108,15 @@ const themeInjectionCode = `
 
     // In-memory cache for configuration to avoid UI-thread disk I/O on DOM mutations
     let cachedConfig = null;
+    let lastMtime = 0;
     const reloadConfig = () => {
       try {
         if (fs.existsSync(slotsConfigPath)) {
-          cachedConfig = JSON.parse(fs.readFileSync(slotsConfigPath, 'utf8'));
+          const stat = fs.statSync(slotsConfigPath);
+          if (stat.mtimeMs !== lastMtime || !cachedConfig) {
+            lastMtime = stat.mtimeMs;
+            cachedConfig = JSON.parse(fs.readFileSync(slotsConfigPath, 'utf8'));
+          }
         }
       } catch(e) {}
     };
@@ -135,7 +140,7 @@ const themeInjectionCode = `
     // 2. 动态视频槽位自动化挂载
     const applyVideos = () => {
       try {
-        if (!cachedConfig) reloadConfig();
+        reloadConfig();
         const config = cachedConfig;
         if (!config) return;
 
@@ -143,7 +148,8 @@ const themeInjectionCode = `
         const left = config.left;
         const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
         if (left && left.type === 'video' && left.file) {
-          const src = SERVER_URL + '/' + encodeURIComponent(left.file);
+          const vParam = (left && left.version) ? ('?v=' + left.version) : ('?v=' + Date.now());
+          const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
           for (let i = 1; i < allLeftVids.length; i++) {
             allLeftVids[i].pause();
             allLeftVids[i].removeAttribute('src');
@@ -223,7 +229,8 @@ const themeInjectionCode = `
         for (const slotKey in slotSelectors) {
           const slotData = config[slotKey];
           const isVideo = slotData && slotData.type === 'video' && slotData.file;
-          const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file)) : null;
+          const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : ('?v=' + Date.now());
+          const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
           const selectors = slotSelectors[slotKey];
 
           if (!isVideo) {
