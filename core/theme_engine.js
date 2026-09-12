@@ -482,17 +482,10 @@ div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border [class*="hover\\:bg"]
   transform: translateX(3px) !important;
 }
 
-/* 底部实际输入卡片（下: 壁纸高亮通透呈现） */
-div.rounded-2xl.bg-card-border > div.bg-card,
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border > div.bg-card,
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border > div.relative.flex.flex-col.gap-0,
-div.relative.flex.flex-col.gap-0[class*="bg-card"],
-div.bg-card:has([contenteditable="true"]),
-div.bg-card:has(textarea),
-div:has(> [contenteditable="true"]):not([role="dialog"] *),
-div:has(> textarea):not([role="dialog"] *),
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border > div.relative.flex.flex-col.gap-0.p-1,
-div.relative.flex.flex-col.gap-0.p-1.rounded-\\[calc\\(theme\\(borderRadius\\.2xl\\)-1px\\)\\].bg-card {
+/* 8. 底部输入卡片（仅最外层单个卡片容器挂载壁纸，坚决杜绝内部子元素重复应用导致切片重叠） */
+#antigravity\.agentSidePanelInputBox > div.bg-card,
+#antigravity\.agentSidePanelInputBox > div[class*="bg-card"],
+div.rounded-2xl.bg-card-border > div.bg-card {
   position: relative !important;
   background-image: 
     linear-gradient(
@@ -504,6 +497,13 @@ div.relative.flex.flex-col.gap-0.p-1.rounded-\\[calc\\(theme\\(borderRadius\\.2x
   background-repeat: no-repeat !important;
   border-radius: 15px !important;
   overflow: hidden !important;
+}
+
+/* 强制输入卡片内部所有子元素（文本输入行、工具栏、附件预览栏）背景透明且无多余贴图 */
+#antigravity\.agentSidePanelInputBox > div.bg-card div:not([class*="thumbnail"]):not(img),
+div.rounded-2xl.bg-card-border > div.bg-card div:not([class*="thumbnail"]):not(img) {
+  background-image: none !important;
+  background-color: transparent !important;
 }
 
 .antigravity-slot-video[data-slot="bottom"] {
@@ -746,24 +746,25 @@ div[data-aux-pane-open="true"] {
   overflow: hidden !important;
 }
 
-/* 顶部标签栏、包装容器与分割线完全透明，透出左侧全局底图 */
+/* 12.1 整个右侧辅助大容器（包含中侧终端、Review面板与右侧抽屉）：背景必须完全透明，以左侧全局底图为背景！ */
+div[data-aux-pane-open="true"],
+[aria-label="Auxiliary Pane"],
+div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
 div[data-aux-pane-open="true"] > div,
 div[data-aux-pane-open="true"] .shrink-0,
 div[data-aux-pane-open="true"] .flex-grow,
 div[data-aux-pane-open="true"] .border-b,
 div[data-aux-pane-open="true"] .border-border,
-div[data-aux-pane-open="true"] .bg-background {
+div[data-aux-pane-open="true"] .bg-background,
+[class*="terminal-drawer"] {
   background-color: transparent !important;
   background-image: none !important;
   background: transparent !important;
 }
 
-/* 12.2 【右】右侧专属侧栏抽屉（Conversation/Agent面板）：仅在此特定区域显示右壁纸 */
+/* 12.2 【右】仅在右侧对话列表抽屉（Conversation面板，宽度约250px）独立展示右壁纸 */
 div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
-div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
-div[data-aux-pane-open="true"] div:has(> #antigravity\.agentSidePanelInputBox),
-div[data-aux-pane-open="true"] div.flex-1.min-h-0:has(div.flex.flex-col.gap-2),
-[class*="terminal-drawer"] {
+div[data-aux-pane-open="true"] div.flex-1.min-h-0 > div.flex.flex-col.gap-2.overflow-y-auto {
   position: relative !important;
   background-color: transparent !important;
   background-image: 
@@ -1121,22 +1122,13 @@ function getClientVideoScript(config) {
         ],
         'right': [
           'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto',
-          'div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"]',
-          'div[data-aux-pane-open="true"] div:has(> #antigravity\\.agentSidePanelInputBox)',
-          '[class*="terminal-drawer"]'
+          'div[data-aux-pane-open="true"] .overflow-y-auto',
+          'div[data-aux-pane-open="true"] div.flex-1.min-h-0'
         ],
         'bottom': [
-          'div.bg-card:has([contenteditable="true"])',
-          'div.bg-card:has(textarea)',
-          'div:has(> [contenteditable="true"]):not([role="dialog"] *)',
-          'div:has(> textarea):not([role="dialog"] *)',
-          'div.rounded-2xl.bg-card-border > div.bg-card',
-          'div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border > div.bg-card',
-          'div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border > div.relative.flex.flex-col.gap-0',
-          'div[class*="rounded-2xl"][class*="bg-card-border"] > div[class*="bg-card"]',
-          'div.relative.flex.flex-col.gap-0[class*="bg-card"]',
-          'div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border > div.relative.flex.flex-col.gap-0.p-1',
-          'div.relative.flex.flex-col.gap-0.p-1.rounded-\\\\[calc\\\\(theme\\\\(borderRadius\\\\.2xl\\\\)-1px\\\\)\\\\].bg-card'
+          '#antigravity\\.agentSidePanelInputBox > div.bg-card',
+          '#antigravity\\.agentSidePanelInputBox > div[class*="bg-card"]',
+          'div.rounded-2xl.bg-card-border > div.bg-card'
         ],
         'settings': [
           '[role="dialog"]',

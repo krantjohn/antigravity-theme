@@ -204,22 +204,13 @@ const themeInjectionCode = `
           ],
           'right': [
             'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto',
-            'div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"]',
-            'div[data-aux-pane-open="true"] div:has(> #antigravity\\.agentSidePanelInputBox)',
-            '[class*="terminal-drawer"]'
+            'div[data-aux-pane-open="true"] .overflow-y-auto',
+            'div[data-aux-pane-open="true"] div.flex-1.min-h-0'
           ],
           'bottom': [
-            'div.bg-card:has([contenteditable="true"])',
-            'div.bg-card:has(textarea)',
-            'div:has(> [contenteditable="true"]):not([role="dialog"] *)',
-            'div:has(> textarea):not([role="dialog"] *)',
-            'div.rounded-2xl.bg-card-border > div.bg-card',
-            'div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border > div.bg-card',
-            'div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border > div.relative.flex.flex-col.gap-0',
-            'div[class*="rounded-2xl"][class*="bg-card-border"] > div[class*="bg-card"]',
-            'div.relative.flex.flex-col.gap-0[class*="bg-card"]',
-            'div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border > div.relative.flex.flex-col.gap-0.p-1',
-            'div.relative.flex.flex-col.gap-0.p-1.rounded-\\\\[calc\\\\(theme\\\\(borderRadius\\\\.2xl\\\\)-1px\\\\)\\\\].bg-card'
+            '#antigravity\\.agentSidePanelInputBox > div.bg-card',
+            '#antigravity\\.agentSidePanelInputBox > div[class*="bg-card"]',
+            'div.rounded-2xl.bg-card-border > div.bg-card'
           ],
           'settings': [
             '[role="dialog"]',
