@@ -180,6 +180,7 @@ function startMediaServer(wallpapersDir, port = DEFAULT_PORT, callback) {
 function isMediaServerRunning(port = DEFAULT_PORT) {
   return new Promise((resolve) => {
     const req = http.get(`http://127.0.0.1:${port}/health`, { timeout: 1000 }, (res) => {
+      res.resume();
       resolve(res.statusCode === 200);
     });
     req.on('error', () => resolve(false));
@@ -190,10 +191,63 @@ function isMediaServerRunning(port = DEFAULT_PORT) {
   });
 }
 
+async function ensureMediaServer(wallpapersDir, port = DEFAULT_PORT) {
+  const running = await isMediaServerRunning(port);
+  if (running) {
+    return true;
+  }
+
+  // 1. Try spawning a detached background daemon so it outlives short-lived CLI processes
+  try {
+    const { spawn } = require('child_process');
+    const env = { ...process.env };
+    if (process.versions && process.versions.electron) {
+      env.ELECTRON_RUN_AS_NODE = '1';
+    }
+    const child = spawn(process.execPath, [__filename, wallpapersDir, String(port)], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+      env
+    });
+    child.unref();
+
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 100));
+      if (await isMediaServerRunning(port)) {
+        return true;
+      }
+    }
+  } catch (e) {}
+
+  // 2. Fallback: start in-process
+  return new Promise((resolve) => {
+    startMediaServer(wallpapersDir, port, (err) => {
+      resolve(!err || err.code === 'EADDRINUSE');
+    });
+  });
+}
+
+if (require.main === module) {
+  const os = require('os');
+  const antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || path.join(os.homedir(), '.gemini', 'antigravity');
+  const dir = process.argv[2] || path.join(antigravityDir, 'wallpapers');
+  const port = parseInt(process.argv[3], 10) || DEFAULT_PORT;
+  startMediaServer(dir, port, (err) => {
+    if (err && err.code !== 'EADDRINUSE') {
+      console.error('[MediaServer] Failed to start:', err.message);
+      process.exit(1);
+    }
+    console.log(`[MediaServer] Listening on http://127.0.0.1:${port} serving ${dir}`);
+  });
+}
+
 module.exports = {
   createMediaServer,
   startMediaServer,
+  ensureMediaServer,
   isMediaServerRunning,
   DEFAULT_PORT,
   MIME_TYPES
 };
+

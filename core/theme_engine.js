@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const os = require('os');
-const { startMediaServer, isMediaServerRunning, DEFAULT_PORT } = require('./media_server');
+const { startMediaServer, ensureMediaServer, isMediaServerRunning, DEFAULT_PORT } = require('./media_server');
 const {
   scanWorkshopWallpapers,
   getWallpaperById,
@@ -232,6 +232,7 @@ body::before {
   bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
+  background-color: transparent !important;
   background-image: 
     linear-gradient(
       rgba(11, 12, 20, 0.06), 
@@ -242,7 +243,7 @@ body::before {
   background-repeat: no-repeat !important;
   background-attachment: fixed !important;
   pointer-events: none !important;
-  z-index: ${isLeftVideo ? 1 : 0} !important;
+  z-index: 0 !important;
   transform: translate3d(0, 0, 0) !important;
   backface-visibility: hidden !important;
   will-change: transform !important;
@@ -731,15 +732,7 @@ div.group\\/file-row span {
 /* ==========================================================================
    12. 【右】独立侧栏壁纸 + 极简纯净无杂线琉璃质感 (Right Drawer)
    ========================================================================== */
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
-div.flex:has([id="antigravity.agentSidePanelInputBox"]),
-div.flex:has(#antigravity\\\\.agentSidePanelInputBox),
-div:has(> div > [id="antigravity.agentSidePanelInputBox"]),
-div:has(> div > #antigravity\\\\.agentSidePanelInputBox),
-div.flex-1.flex.flex-col.min-w-0.h-full:has([id="antigravity.agentSidePanelInputBox"]),
-div.flex-1.flex.flex-col.min-w-0.h-full:has(#antigravity\\\\.agentSidePanelInputBox),
-[class*="standalone"],
-[class*="Standalone"],
+div[data-aux-pane-open="true"],
 [class*="terminal-drawer"] {
   position: relative !important;
   background-color: transparent !important;
@@ -758,6 +751,16 @@ div.flex-1.flex.flex-col.min-w-0.h-full:has(#antigravity\\\\.agentSidePanelInput
     -6px 0 28px rgba(244, 114, 182, 0.22) !important;
   z-index: 10 !important;
   overflow: hidden !important;
+}
+
+div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
+div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
+div[data-aux-pane-open="true"] > div {
+  background-color: transparent !important;
+  background-image: none !important;
+  background: transparent !important;
+  border-left: none !important;
+  box-shadow: none !important;
 }
 
 .antigravity-slot-video[data-slot="right"] {
@@ -1101,9 +1104,7 @@ function getClientVideoScript(config) {
           '[data-panel="terminal"]'
         ],
         'right': [
-          'div.flex-1.flex.flex-col.min-w-0.h-full:has([id="antigravity.agentSidePanelInputBox"])',
-          'div.flex-1.flex.flex-col.min-w-0.h-full:has(#antigravity\\\\.agentSidePanelInputBox)',
-          'div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background',
+          'div[data-aux-pane-open="true"]',
           '[class*="terminal-drawer"]'
         ],
         'bottom': [
@@ -1146,6 +1147,9 @@ function getClientVideoScript(config) {
             try {
               const el = document.querySelector(selectors[i]);
               if (el && el !== document.body && el !== document.documentElement) {
+                if (slotKey === 'right' && (el.querySelector('#antigravity\\.agentSidePanelInputBox') || el.querySelector('[id="antigravity.agentSidePanelInputBox"]'))) {
+                  continue;
+                }
                 targetContainer = el;
                 break;
               }
@@ -1297,26 +1301,26 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
   });
 }
 
-function swapWallpaper(slotInput, srcPath) {
+async function swapWallpaper(slotInput, srcPath) {
   if (!slotInput) {
     console.error('❌ 请提供槽位名称: 左, 中, 右, 下, 设置');
-    return Promise.resolve(false);
+    return false;
   }
   const slotKey = SLOT_ALIASES[slotInput.toLowerCase()];
   if (!slotKey || !SLOTS_META[slotKey]) {
     console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置`);
-    return Promise.resolve(false);
+    return false;
   }
 
   if (!fs.existsSync(srcPath)) {
     console.error(`❌ 壁纸素材不存在: ${srcPath}`);
-    return Promise.resolve(false);
+    return false;
   }
 
   const stat = fs.statSync(srcPath);
   if (!stat.isFile()) {
     console.error(`❌ 指定路径不是文件: ${srcPath}`);
-    return Promise.resolve(false);
+    return false;
   }
 
   const ext = path.extname(srcPath).toLowerCase();
@@ -1327,7 +1331,7 @@ function swapWallpaper(slotInput, srcPath) {
     console.error(`❌ 不支持的文件格式: "${ext}"`);
     console.error(`   支持的视频格式: ${Array.from(VIDEO_EXTS).join(', ')}`);
     console.error(`   支持的图片格式: ${Array.from(IMAGE_EXTS).join(', ')}`);
-    return Promise.resolve(false);
+    return false;
   }
 
   const slotMeta = SLOTS_META[slotKey];
@@ -1359,27 +1363,24 @@ function swapWallpaper(slotInput, srcPath) {
   console.log(`✓ custom_theme.css 已更新 (${(css.length / 1024 / 1024).toFixed(2)} MB)`);
 
   console.log(`[3/4] 启动 / 校验动态壁纸本地流媒体服务器 (8315)...`);
-  startMediaServer(wallpapersDir, DEFAULT_PORT);
+  await ensureMediaServer(wallpapersDir, DEFAULT_PORT);
 
   console.log(`[4/4] 触发界面热重载与实时生效...`);
-  const reloadPromise = triggerLiveHotReload(css, slotsConfig);
+  const reloadPromise = await triggerLiveHotReload(css, slotsConfig);
 
   console.log(`✨ 【${slotInput}】壁纸更换完成！已实时生效。`);
   return reloadPromise;
 }
 
-function revertToBaseline() {
+async function revertToBaseline() {
   console.log(`正在从黄金基线【初版】恢复...`);
   if (!fs.existsSync(baselineDir)) {
     console.error(`❌ 未找到初版备份目录: ${baselineDir}`);
-    return Promise.resolve(false);
+    return false;
   }
   const baselineCssPath = path.join(baselineDir, 'custom_theme.css');
   const baselineWallpapers = path.join(baselineDir, 'wallpapers');
   
-  if (fs.existsSync(baselineCssPath)) {
-    fs.copyFileSync(baselineCssPath, customCssPath);
-  }
   if (fs.existsSync(baselineWallpapers)) {
     fs.readdirSync(baselineWallpapers).forEach(f => {
       fs.copyFileSync(path.join(baselineWallpapers, f), path.join(wallpapersDir, f));
@@ -1398,9 +1399,17 @@ function revertToBaseline() {
   }
   saveSlotsConfig(baselineConfig);
 
-  console.log(`✓ 初版文件已全部还原，正在热重载...`);
-  const css = fs.readFileSync(customCssPath, 'utf-8');
-  const reloadPromise = triggerLiveHotReload(css, baselineConfig);
+  console.log(`✓ 初版文件已全部还原，正在重新编译并输出黄金基线样式...`);
+  const css = generateMasterCss(baselineConfig);
+  fs.writeFileSync(customCssPath, css, 'utf-8');
+
+  // Also update baselineCssPath so that baseline backup does not contain stale buggy selectors
+  if (fs.existsSync(baselineCssPath)) {
+    fs.writeFileSync(baselineCssPath, css, 'utf-8');
+  }
+
+  console.log(`✓ 黄金基线样式表已生成 (${(css.length / 1024 / 1024).toFixed(2)} MB)，正在热重载...`);
+  const reloadPromise = await triggerLiveHotReload(css, baselineConfig);
   console.log(`✨ 成功还原为【初版】黄金基线！`);
   return reloadPromise;
 }
@@ -1502,7 +1511,12 @@ if (require.main === module) {
       console.log(`Media server running at http://127.0.0.1:${DEFAULT_PORT}`);
     });
   } else if (args[0] === '--baseline' || args[0] === '--revert-baseline' || args[0] === '--restore-baseline') {
-    revertToBaseline();
+    revertToBaseline().then(ok => {
+      if (!ok) process.exit(1);
+    }).catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
   } else if (args[0] === '--rebuild') {
     const slotsConfig = loadSlotsConfig();
     const css = generateMasterCss(slotsConfig);

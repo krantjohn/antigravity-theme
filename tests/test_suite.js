@@ -135,7 +135,32 @@ async function runTests() {
   assert.ok(videoState.src.includes('8315'), 'Video src must point to media server port 8315');
   assert.strictEqual(videoState.slot, 'left', 'Slot attribute must be left');
   assert.ok(videoState.readyState >= 1, 'Left video must have readyState >= 1');
-  console.log('✓ [Test 3] 槽位【左】动态视频挂载并播放成功');
+
+  // Verify right_wallpaper is NOT painted over body or the left chat pane
+  const cdpLeftCleanCheck = await evalCdp(`
+    (() => {
+      const bodyBg = window.getComputedStyle(document.body).backgroundImage;
+      const input = document.getElementById('antigravity.agentSidePanelInputBox');
+      let leakedToChat = false;
+      let cur = input;
+      while (cur && cur !== document.body) {
+        const s = window.getComputedStyle(cur);
+        if (s.backgroundImage && s.backgroundImage.includes('data:image') && s.backgroundImage.length > 500) {
+          leakedToChat = true;
+          break;
+        }
+        cur = cur.parentElement;
+      }
+      return JSON.stringify({
+        bodyHasRightBg: bodyBg.includes('data:image') && bodyBg.length > 500,
+        leakedToChat
+      });
+    })()
+  `);
+  const leftCleanState = JSON.parse(cdpLeftCleanCheck);
+  assert.strictEqual(leftCleanState.bodyHasRightBg, false, 'Right wallpaper must NEVER paint onto document.body');
+  assert.strictEqual(leftCleanState.leakedToChat, false, 'Right wallpaper must NEVER leak into the left chat pane');
+  console.log('✓ [Test 3] 槽位【左】动态视频挂载并播放成功 (且右壁纸未发生渗漏或遮挡)');
 
   // Test 4: Video swap on terminal (mid) slot
   console.log('\n[Test 4] 测试槽位【中】(终端) 切换为动态视频...');
@@ -199,7 +224,7 @@ async function runTests() {
     new Promise((resolve) => {
       const start = Date.now();
       const check = () => {
-        const hasContainer = !!document.querySelector('div.flex-1.flex.flex-col.min-w-0.h-full:has([id="antigravity.agentSidePanelInputBox"]), div.flex-1.flex.flex-col.min-w-0.h-full:has(#antigravity\\\\.agentSidePanelInputBox), div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background, [class*="terminal-drawer"]');
+        const hasContainer = !!document.querySelector('div[data-aux-pane-open="true"], [class*="terminal-drawer"]');
         const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
         const v = vids[0];
         if (v && v.paused) {
@@ -240,13 +265,49 @@ async function runTests() {
     })
   `);
   const rightState = JSON.parse(cdpRightCheck);
-  console.log('   CDP 右侧侧栏视频状态:', rightState);
+  console.log('   CDP 右侧侧栏初始视频状态 (收起时):', rightState);
   assert.strictEqual(rightState.inBody, false, 'Right slot video must never be mounted into document.body');
-  if (rightState.hasContainer) {
-    assert.strictEqual(rightState.count, 1, 'CRITICAL: Must mount exactly 1 video element when container exists (not 18 duplicate elements!)');
-    assert.strictEqual(rightState.paused, false, 'Right video must be playing');
-  } else {
-    assert.strictEqual(rightState.count, 0, 'When right container is closed/collapsed, no duplicate video should leak into other containers');
+  assert.strictEqual(rightState.count, 0, 'When right container is closed/collapsed, no duplicate video should leak into other containers');
+
+  // Test dynamic opening and closing of auxiliary pane
+  const hasToggleBtn = await evalCdp(`!!document.querySelector('button[aria-label="Toggle Auxiliary Pane"]')`);
+  if (hasToggleBtn) {
+    console.log('   正在测试动态展开辅助侧栏并校验 slot right 动态视频实时挂载...');
+    await evalCdp(`document.querySelector('button[aria-label="Toggle Auxiliary Pane"]').click()`);
+    await new Promise(r => setTimeout(r, 800));
+
+    const cdpRightOpenCheck = await evalCdp(`
+      (() => {
+        const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
+        const v = vids[0];
+        const container = document.querySelector('div[data-aux-pane-open="true"]');
+        return JSON.stringify({
+          count: vids.length,
+          mountedInContainer: !!(v && container && v.parentElement === container),
+          readyState: v ? v.readyState : 0,
+          paused: v ? v.paused : null
+        });
+      })()
+    `);
+    const rightOpenState = JSON.parse(cdpRightOpenCheck);
+    console.log('   CDP 侧栏展开后视频挂载状态:', rightOpenState);
+    assert.strictEqual(rightOpenState.count, 1, 'Exactly 1 right video must be mounted when auxiliary pane is open');
+    assert.ok(rightOpenState.mountedInContainer, 'Video must be mounted directly inside div[data-aux-pane-open="true"]');
+    assert.ok(rightOpenState.readyState >= 1, 'Right video must have readyState >= 1');
+
+    // Close auxiliary pane again
+    await evalCdp(`document.querySelector('button[aria-label="Toggle Auxiliary Pane"]').click()`);
+    await new Promise(r => setTimeout(r, 800));
+
+    const cdpRightClosedCheck = await evalCdp(`
+      (() => {
+        const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
+        return JSON.stringify({ count: vids.length });
+      })()
+    `);
+    const rightClosedState = JSON.parse(cdpRightClosedCheck);
+    assert.strictEqual(rightClosedState.count, 0, 'Video must be cleanly unmounted when auxiliary pane is closed');
+    console.log('   ✓ 辅助侧栏动态展开挂载与收起卸载生命周期闭环验证通过');
   }
   console.log('✓ [Test 6] 槽位【右】单例隔离校验通过 (准确控制视频实例，无DOM泄漏)');
 
@@ -322,7 +383,37 @@ async function runTests() {
   assert.strictEqual(baselineConfig.right.type, 'image');
   assert.strictEqual(baselineConfig.bottom.type, 'image');
   assert.strictEqual(baselineConfig.settings.type, 'image');
-  console.log('✓ [Test 8] 黄金基线全量还原成功');
+
+  const antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || path.join(require('os').homedir(), '.gemini', 'antigravity');
+  const baselineCssContent = fs.readFileSync(path.join(antigravityDir, 'custom_theme.css'), 'utf8');
+  assert.strictEqual(baselineCssContent.includes('[class*="standalone"]'), false, 'Baseline CSS must not contain standalone');
+  assert.strictEqual(baselineCssContent.includes('div.flex-1.flex.flex-col.min-w-0.h-full:has(#antigravity'), false, 'Baseline CSS must not contain chat input box selector');
+
+  const cdpBaselineBodyCheck = await evalCdp(`
+    (() => {
+      const bodyBg = window.getComputedStyle(document.body).backgroundImage;
+      const sheet = document.getElementById('antigravity-custom-theme')?.sheet;
+      let bodyMatchesRight = false;
+      if (sheet) {
+        for (const rule of sheet.cssRules) {
+          if (rule.selectorText && document.body.matches(rule.selectorText)) {
+            if (rule.style?.backgroundImage && rule.style.backgroundImage.includes('data:image')) {
+              bodyMatchesRight = true;
+              break;
+            }
+          }
+        }
+      }
+      return JSON.stringify({
+        bodyHasRightBg: bodyBg.includes('data:image') && bodyBg.length > 500,
+        bodyMatchesRight
+      });
+    })()
+  `);
+  const baselineBodyState = JSON.parse(cdpBaselineBodyCheck);
+  assert.strictEqual(baselineBodyState.bodyHasRightBg, false, 'document.body must NOT have right wallpaper in baseline');
+  assert.strictEqual(baselineBodyState.bodyMatchesRight, false, 'document.body must NOT match any right wallpaper rules in baseline');
+  console.log('✓ [Test 8] 黄金基线全量还原成功 (且 custom_theme.css 与 document.body 保持绝对纯净)');
 
   // Test 9: Batch scripts CRLF and UTF-8 verification
   console.log('\n[Test 9] 校验 bin/*.bat 脚本编码与 CRLF 行尾规范 (彻底杜绝 CMD 乱码与指令截断)...');
@@ -368,7 +459,10 @@ async function runTests() {
     await revertToBaseline();
     const finalConfig = loadSlotsConfig();
     assert.strictEqual(finalConfig.left.type, 'image');
-    console.log('   ✓ 已还原黄金基线状态');
+
+    const finalCssContent = fs.readFileSync(path.join(antigravityDir, 'custom_theme.css'), 'utf8');
+    assert.strictEqual(finalCssContent.includes('[class*="standalone"]'), false, 'Final baseline CSS must not contain standalone');
+    console.log('   ✓ 已还原黄金基线状态 (无污染残留)');
   }
   console.log('✓ [Test 11] Wallpaper Engine 槽位热切换及基线还原验证通过');
 

@@ -96,6 +96,15 @@ const themeInjectionCode = `
     const antigravityDir = path.dirname(customCssPath);
     const slotsConfigPath = path.join(antigravityDir, 'slots_config.json').replace(/\\\\/g, '/');
     const SERVER_URL = 'http://127.0.0.1:8315';
+    // 0. 确保流媒体服务 (8315) 持续运行
+    try {
+      const { isMediaServerRunning, startMediaServer } = require('./media_server');
+      isMediaServerRunning(8315).then(running => {
+        if (!running) {
+          startMediaServer(path.join(antigravityDir, 'wallpapers'), 8315);
+        }
+      }).catch(() => {});
+    } catch(e) {}
 
     // In-memory cache for configuration to avoid UI-thread disk I/O on DOM mutations
     let cachedConfig = null;
@@ -188,9 +197,7 @@ const themeInjectionCode = `
             '[data-panel="terminal"]'
           ],
           'right': [
-            'div.flex-1.flex.flex-col.min-w-0.h-full:has([id="antigravity.agentSidePanelInputBox"])',
-            'div.flex-1.flex.flex-col.min-w-0.h-full:has(#antigravity\\\\.agentSidePanelInputBox)',
-            'div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background',
+            'div[data-aux-pane-open="true"]',
             '[class*="terminal-drawer"]'
           ],
           'bottom': [
@@ -233,6 +240,9 @@ const themeInjectionCode = `
               try {
                 const el = document.querySelector(selectors[i]);
                 if (el && el !== document.body && el !== document.documentElement) {
+                  if (slotKey === 'right' && (el.querySelector('#antigravity\\.agentSidePanelInputBox') || el.querySelector('[id="antigravity.agentSidePanelInputBox"]'))) {
+                    continue;
+                  }
                   targetContainer = el;
                   break;
                 }
