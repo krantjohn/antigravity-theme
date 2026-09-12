@@ -732,7 +732,37 @@ div.group\\/file-row span {
 /* ==========================================================================
    12. 【右】独立侧栏壁纸 + 极简纯净无杂线琉璃质感 (Right Drawer)
    ========================================================================== */
-div[data-aux-pane-open="true"],
+/* 12.1 整个右侧辅助大容器（包含中侧终端与右侧抽屉）：背景必须完全透明，以左侧全局底图为背景！ */
+div[data-aux-pane-open="true"] {
+  position: relative !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  background: transparent !important;
+  border-left: 1.5px solid rgba(249, 168, 212, 0.45) !important;
+  box-shadow: 
+    -1px 0 6px rgba(249, 168, 212, 0.40),
+    -3px 0 14px rgba(244, 114, 182, 0.25) !important;
+  z-index: 10 !important;
+  overflow: hidden !important;
+}
+
+/* 顶部标签栏、包装容器与分割线完全透明，透出左侧全局底图 */
+div[data-aux-pane-open="true"] > div,
+div[data-aux-pane-open="true"] .shrink-0,
+div[data-aux-pane-open="true"] .flex-grow,
+div[data-aux-pane-open="true"] .border-b,
+div[data-aux-pane-open="true"] .border-border,
+div[data-aux-pane-open="true"] .bg-background {
+  background-color: transparent !important;
+  background-image: none !important;
+  background: transparent !important;
+}
+
+/* 12.2 【右】右侧专属侧栏抽屉（Conversation/Agent面板）：仅在此特定区域显示右壁纸 */
+div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
+div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
+div[data-aux-pane-open="true"] div:has(> #antigravity\.agentSidePanelInputBox),
+div[data-aux-pane-open="true"] div.flex-1.min-h-0:has(div.flex.flex-col.gap-2),
 [class*="terminal-drawer"] {
   position: relative !important;
   background-color: transparent !important;
@@ -744,22 +774,7 @@ div[data-aux-pane-open="true"],
   background-size: cover !important;
   background-position: center 20% !important;
   background-repeat: no-repeat !important;
-  border-left: 1.5px solid rgba(249, 168, 212, 0.85) !important;
-  box-shadow: 
-    -1px 0 6px rgba(249, 168, 212, 0.75),
-    -3px 0 14px rgba(244, 114, 182, 0.45),
-    -6px 0 28px rgba(244, 114, 182, 0.22) !important;
-  z-index: 10 !important;
-  overflow: hidden !important;
-}
-
-div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
-div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
-div[data-aux-pane-open="true"] > div {
-  background-color: transparent !important;
-  background-image: none !important;
-  background: transparent !important;
-  border-left: none !important;
+  border-left: 1px solid rgba(249, 168, 212, 0.35) !important;
   box-shadow: none !important;
 }
 
@@ -1105,7 +1120,9 @@ function getClientVideoScript(config) {
           '[data-panel="terminal"]'
         ],
         'right': [
-          'div[data-aux-pane-open="true"]',
+          'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto',
+          'div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"]',
+          'div[data-aux-pane-open="true"] div:has(> #antigravity\\.agentSidePanelInputBox)',
           '[class*="terminal-drawer"]'
         ],
         'bottom': [

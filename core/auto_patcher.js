@@ -203,7 +203,9 @@ const themeInjectionCode = `
             '[data-panel="terminal"]'
           ],
           'right': [
-            'div[data-aux-pane-open="true"]',
+            'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto',
+            'div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"]',
+            'div[data-aux-pane-open="true"] div:has(> #antigravity\\.agentSidePanelInputBox)',
             '[class*="terminal-drawer"]'
           ],
           'bottom': [

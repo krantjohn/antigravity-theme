@@ -267,11 +267,20 @@ async function runTests() {
   const rightState = JSON.parse(cdpRightCheck);
   console.log('   CDP 右侧侧栏初始视频状态 (收起时):', rightState);
   assert.strictEqual(rightState.inBody, false, 'Right slot video must never be mounted into document.body');
-  assert.strictEqual(rightState.count, 0, 'When right container is closed/collapsed, no duplicate video should leak into other containers');
+  if (!rightState.hasContainer) {
+    assert.strictEqual(rightState.count, 0, 'When right container is closed/collapsed, no duplicate video should leak into other containers');
+  } else {
+    assert.strictEqual(rightState.count, 1, 'When right container is open, exactly 1 video instance should be mounted');
+  }
 
   // Test dynamic opening and closing of auxiliary pane
   const hasToggleBtn = await evalCdp(`!!document.querySelector('button[aria-label="Toggle Auxiliary Pane"]')`);
   if (hasToggleBtn) {
+    // If currently open, close it first so we can deterministically test opening it
+    if (rightState.hasContainer) {
+      await evalCdp(`document.querySelector('button[aria-label="Toggle Auxiliary Pane"]').click()`);
+      await new Promise(r => setTimeout(r, 600));
+    }
     console.log('   正在测试动态展开辅助侧栏并校验 slot right 动态视频实时挂载...');
     await evalCdp(`document.querySelector('button[aria-label="Toggle Auxiliary Pane"]').click()`);
     await new Promise(r => setTimeout(r, 800));
@@ -283,7 +292,7 @@ async function runTests() {
         const container = document.querySelector('div[data-aux-pane-open="true"]');
         return JSON.stringify({
           count: vids.length,
-          mountedInContainer: !!(v && container && v.parentElement === container),
+          mountedInContainer: !!(v && container && container.contains(v)),
           readyState: v ? v.readyState : 0,
           paused: v ? v.paused : null
         });
@@ -292,7 +301,7 @@ async function runTests() {
     const rightOpenState = JSON.parse(cdpRightOpenCheck);
     console.log('   CDP 侧栏展开后视频挂载状态:', rightOpenState);
     assert.strictEqual(rightOpenState.count, 1, 'Exactly 1 right video must be mounted when auxiliary pane is open');
-    assert.ok(rightOpenState.mountedInContainer, 'Video must be mounted directly inside div[data-aux-pane-open="true"]');
+    assert.ok(rightOpenState.mountedInContainer, 'Video must be contained inside auxiliary drawer');
     assert.ok(rightOpenState.readyState >= 1, 'Right video must have readyState >= 1');
 
     // Close auxiliary pane again
