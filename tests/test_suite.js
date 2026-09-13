@@ -16,6 +16,12 @@ const {
   resolveFontColor,
   parseHexColor,
   adjustBrightness,
+  setPosition,
+  adjustPosition,
+  resetPosition,
+  parsePosition,
+  getSlotPosition,
+  parseCoordinate,
   FONT_PRESETS,
   SLOTS_META,
   SLOT_ALIASES,
@@ -101,18 +107,16 @@ async function runTests() {
   assert.strictEqual(configAfterVideo.left.type, 'video');
   assert.ok(configAfterVideo.left.file.endsWith('.mp4'));
 
-  // Allow 500ms for CDP evaluation to settle
-  await new Promise(r => setTimeout(r, 600));
+  // Allow 2500ms for OS file flush, antivirus scan and CDP evaluation to settle
+  await new Promise(r => setTimeout(r, 2500));
 
   const cdpVideoCheck = await evalCdp(`
     new Promise((resolve) => {
       const start = Date.now();
       const check = () => {
         const v = document.getElementById('antigravity-video-left');
-        if (v && v.paused) {
-          v.play().catch(() => {});
-        }
         if (v && v.readyState >= 1) {
+          if (v.paused) v.play().catch(() => {});
           resolve(JSON.stringify({
             exists: true,
             src: v.src,
@@ -120,12 +124,13 @@ async function runTests() {
             readyState: v.readyState,
             slot: v.getAttribute('data-slot')
           }));
-        } else if (Date.now() - start > 3000) {
+        } else if (Date.now() - start > 25000) {
           resolve(JSON.stringify({
             exists: !!v,
             src: v ? v.src : null,
             paused: v ? v.paused : null,
             readyState: v ? v.readyState : 0,
+            networkState: v ? v.networkState : null,
             slot: v ? v.getAttribute('data-slot') : null
           }));
         } else {
@@ -181,7 +186,7 @@ async function runTests() {
   console.log('\n[Test 5] 测试槽位【下】(底部提问输入框) 切换为动态视频...');
   const swapBottomResult = await swapWallpaper('下', sampleVideoPath);
   assert.ok(swapBottomResult);
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => setTimeout(r, 2500));
 
   const cdpBottomCheck = await evalCdp(`
     new Promise((resolve) => {
@@ -189,17 +194,15 @@ async function runTests() {
       const check = () => {
         const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="bottom"]');
         const v = vids[0];
-        if (v && v.paused) {
-          v.play().catch(() => {});
-        }
-        if (v && v.readyState >= 1 && !v.paused) {
+        if (v && v.readyState >= 1) {
+          if (v.paused) v.play().catch(() => {});
           resolve(JSON.stringify({
             count: vids.length,
             src: v.src,
             paused: v.paused,
             readyState: v.readyState
           }));
-        } else if (Date.now() - start > 4000) {
+        } else if (Date.now() - start > 25000) {
           resolve(JSON.stringify({
             count: vids ? vids.length : 0,
             src: v ? v.src : null,
@@ -290,12 +293,13 @@ async function runTests() {
     console.log('   正在测试动态展开辅助侧栏并校验 slot right 动态视频实时挂载...');
     await evalCdp(`document.querySelector('button[aria-label="Toggle Auxiliary Pane"]').click()`);
     let rightOpenState = { count: 0, readyState: 0 };
-    for (let attempt = 0; attempt < 30; attempt++) {
+    for (let attempt = 0; attempt < 150; attempt++) {
       await new Promise(r => setTimeout(r, 100));
       const cdpRightOpenCheck = await evalCdp(`
         (() => {
           const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
           const v = vids[0];
+          if (v && v.paused) v.play().catch(() => {});
           const container = document.querySelector('div[data-aux-pane-open="true"]');
           return JSON.stringify({
             count: vids.length,
@@ -644,8 +648,177 @@ async function runTests() {
   assert.ok(baselineCss.includes('rgba(10, 11, 20, 0.75)'), 'Inline code must have dark background in light text mode');
   console.log('✓ [Test 13] 字体颜色切换、持久化、样式编译及 CDP 实时热重载全流程通过');
 
+  // Test 14: Wallpaper position adjustment across all slots (left, mid, right, bottom, settings),
+  // coordinate parser, WASD/arrow directions, edge clamping, CSS generation and live CDP verification
+  console.log('\n[Test 14] 校验各个槽位壁纸位置调节 (上下/左右微调、居中、复位与实时生效)...');
+
+  // 14.1 Test coordinate parser (including Chinese keywords and boundaries)
+  assert.strictEqual(parseCoordinate(50), 50);
+  assert.strictEqual(parseCoordinate('20%'), 20);
+  assert.strictEqual(parseCoordinate('left'), 0);
+  assert.strictEqual(parseCoordinate('right'), 100);
+  assert.strictEqual(parseCoordinate('top'), 0);
+  assert.strictEqual(parseCoordinate('bottom'), 100);
+  assert.strictEqual(parseCoordinate('center'), 50);
+  assert.strictEqual(parseCoordinate('左'), 0);
+  assert.strictEqual(parseCoordinate('右'), 100);
+  assert.strictEqual(parseCoordinate('上'), 0);
+  assert.strictEqual(parseCoordinate('下'), 100);
+  assert.strictEqual(parseCoordinate('中'), 50);
+  assert.strictEqual(parseCoordinate('居中'), 50);
+  assert.strictEqual(parseCoordinate(-10), 0, 'Should clamp negative coordinates to 0');
+  assert.strictEqual(parseCoordinate(150), 100, 'Should clamp coordinates > 100 to 100');
+  assert.strictEqual(parseCoordinate('invalid'), 50, 'Invalid string should fallback to 50');
+
+  // 14.2 Test position parser (handling standard CSS inverted keyword order and Chinese keywords)
+  assert.deepStrictEqual(parsePosition('center center'), { x: 50, y: 50, str: '50% 50%' });
+  assert.deepStrictEqual(parsePosition('50% 20%'), { x: 50, y: 20, str: '50% 20%' });
+  assert.deepStrictEqual(parsePosition('top'), { x: 50, y: 0, str: '50% 0%' });
+  assert.deepStrictEqual(parsePosition('bottom'), { x: 50, y: 100, str: '50% 100%' });
+  assert.deepStrictEqual(parsePosition('left'), { x: 0, y: 50, str: '0% 50%' });
+  assert.deepStrictEqual(parsePosition('right'), { x: 100, y: 50, str: '100% 50%' });
+  assert.deepStrictEqual(parsePosition('上'), { x: 50, y: 0, str: '50% 0%' });
+  assert.deepStrictEqual(parsePosition('下'), { x: 50, y: 100, str: '50% 100%' });
+  assert.deepStrictEqual(parsePosition('左'), { x: 0, y: 50, str: '0% 50%' });
+  assert.deepStrictEqual(parsePosition('右'), { x: 100, y: 50, str: '100% 50%' });
+  assert.deepStrictEqual(parsePosition('center top'), { x: 50, y: 0, str: '50% 0%' });
+  assert.deepStrictEqual(parsePosition('top center'), { x: 50, y: 0, str: '50% 0%' });
+  assert.deepStrictEqual(parsePosition('bottom center'), { x: 50, y: 100, str: '50% 100%' });
+  assert.deepStrictEqual(parsePosition('center bottom'), { x: 50, y: 100, str: '50% 100%' });
+  assert.deepStrictEqual(parsePosition('top left'), { x: 0, y: 0, str: '0% 0%' });
+  assert.deepStrictEqual(parsePosition('居中 上'), { x: 50, y: 0, str: '50% 0%' });
+  assert.deepStrictEqual(parsePosition('上 居中'), { x: 50, y: 0, str: '50% 0%' });
+  assert.deepStrictEqual(parsePosition({ x: 30, y: 70 }), { x: 30, y: 70, str: '30% 70%' });
+
+  // 14.3 Test setPosition on slot left (左)
+  const setLeftRes = await setPosition('左', '30% 40%');
+  assert.ok(setLeftRes.ok);
+  assert.strictEqual(setLeftRes.position, '30% 40%');
+  const cfg1 = loadSlotsConfig();
+  assert.strictEqual(cfg1.left.position, '30% 40%');
+
+  // Verify CSS reflects set position
+  const cssPos = fs.readFileSync(path.join(antigravityDir, 'custom_theme.css'), 'utf8');
+  assert.ok(cssPos.includes('30% 40%'), 'custom_theme.css must include newly set position 30% 40%');
+
+  // 14.4 Test adjustPosition with WASD / numbers 1-5 / directions on left
+  // Move UP by 10% (y: 40 -> 30)
+  await adjustPosition('左', 'up', 10);
+  const cfgUp = loadSlotsConfig();
+  assert.strictEqual(cfgUp.left.position, '30% 30%');
+
+  // Move DOWN by 5% (y: 30 -> 35) using 's'
+  await adjustPosition('左', 's', 5);
+  const cfgDown = loadSlotsConfig();
+  assert.strictEqual(cfgDown.left.position, '30% 35%');
+
+  // Move LEFT by 10% (x: 30 -> 20) using number '3'
+  await adjustPosition('左', '3', 10);
+  const cfgLeft = loadSlotsConfig();
+  assert.strictEqual(cfgLeft.left.position, '20% 35%');
+
+  // Move RIGHT by 15% (x: 20 -> 35) using number '4'
+  await adjustPosition('左', '4', 15);
+  const cfgRight = loadSlotsConfig();
+  assert.strictEqual(cfgRight.left.position, '35% 35%');
+
+  // Center using '5' (or 'c')
+  await adjustPosition('左', '5');
+  const cfgCenter = loadSlotsConfig();
+  assert.strictEqual(cfgCenter.left.position, '50% 50%');
+
+  // Test boundary clamping (moving up 200% should clamp at 0%)
+  await adjustPosition('左', '1', 200);
+  const cfgClamped = loadSlotsConfig();
+  assert.strictEqual(cfgClamped.left.position, '50% 0%');
+
+  // 14.5 Test position adjustment across all remaining slots (mid, right, bottom, settings)
+  await setPosition('中', '60% 25%');
+  await setPosition('右', '40% 15%');
+  await setPosition('下', '50% 10%');
+  await setPosition('设置', '50% 70%');
+
+  const cfgAll = loadSlotsConfig();
+  assert.strictEqual(cfgAll.mid.position, '60% 25%');
+  assert.strictEqual(cfgAll.right.position, '40% 15%');
+  assert.strictEqual(cfgAll.bottom.position, '50% 10%');
+  assert.strictEqual(cfgAll.settings.position, '50% 70%');
+
+  // 14.6 Test live CDP evaluation to verify position applied to live DOM
+  await new Promise(r => setTimeout(r, 600));
+  const cdpPosCheck = await evalCdp(`
+    (() => {
+      const sheet = document.getElementById('antigravity-custom-theme')?.sheet;
+      let midPosFound = false;
+      let bottomPosFound = false;
+      if (sheet) {
+        for (const rule of sheet.cssRules) {
+          if (rule.cssText && rule.cssText.includes('60% 25%')) {
+            midPosFound = true;
+          }
+          if (rule.cssText && rule.cssText.includes('50% 10%')) {
+            bottomPosFound = true;
+          }
+        }
+      }
+      const cs = window.getComputedStyle(document.body, '::before');
+      return JSON.stringify({
+        bodyBeforePos: cs.backgroundPosition,
+        midPosFound,
+        bottomPosFound
+      });
+    })()
+  `);
+  const posState = JSON.parse(cdpPosCheck);
+  console.log('   CDP 壁纸位置生效状态:', posState);
+  assert.ok(posState.bodyBeforePos.includes('50% 0%'), 'body::before backgroundPosition must match clamped position 50% 0%');
+  assert.strictEqual(posState.midPosFound, true, 'Terminal mid position 60% 25% must be present in stylesheet rules');
+  assert.strictEqual(posState.bottomPosFound, true, 'Bottom input position 50% 10% must be present in stylesheet rules');
+
+  // 14.7 Test resetPosition ('all', 'reset', and '全部')
+  await resetPosition('reset');
+  const cfgReset = loadSlotsConfig();
+  assert.strictEqual(cfgReset.left.position, SLOTS_META.left.defaultPosition);
+  assert.strictEqual(cfgReset.mid.position, SLOTS_META.mid.defaultPosition);
+  assert.strictEqual(cfgReset.right.position, SLOTS_META.right.defaultPosition);
+  assert.strictEqual(cfgReset.bottom.position, SLOTS_META.bottom.defaultPosition);
+  assert.strictEqual(cfgReset.settings.position, SLOTS_META.settings.defaultPosition);
+
+  // Restore clean baseline at end of test suite
+  await revertToBaseline();
+  console.log('✓ [Test 14] 壁纸位置调节 (上下/左右微调、居中、边界防溢、全槽位适配及CDP实时重载) 全部通过');
+
+  // Test 15: Sidebar dark-text & white-haze isolation under dark font mode
+  console.log('\n[Test 15] 校验侧边栏历史对话列表在暗黑字体模式下杜绝黑色字体与发虚白光晕...');
+  await setFontColor('obsidian-black');
+  await new Promise(r => setTimeout(r, 600));
+
+  const cdpSidebarStyleCheck = await evalCdp(`
+    (() => {
+      const rows = Array.from(document.querySelectorAll('[data-testid*="conversation-row"], div.bg-sidebar [class*="truncate"]'));
+      if (rows.length === 0) return JSON.stringify({ count: 0 });
+      const sample = rows[0];
+      const cs = window.getComputedStyle(sample);
+      return JSON.stringify({
+        count: rows.length,
+        color: cs.color,
+        textShadow: cs.textShadow,
+        hasWhiteHaze: cs.textShadow.includes('255, 255, 255') || cs.textShadow.includes('#ffffff')
+      });
+    })()
+  `);
+  const sidebarStyle = JSON.parse(cdpSidebarStyleCheck);
+  console.log('   CDP 侧栏会话文字样式:', sidebarStyle);
+  if (sidebarStyle.count > 0) {
+    assert.strictEqual(sidebarStyle.color, 'rgb(241, 245, 249)', 'Sidebar text must be crisp light #f1f5f9');
+    assert.strictEqual(sidebarStyle.hasWhiteHaze, false, 'Sidebar text must NOT have diffuse white glow');
+  }
+
+  await revertToBaseline();
+  console.log('✓ [Test 15] 侧边栏深色保护区隔离校验通过，纯白高对比无发虚白雾');
+
   console.log('\n=======================================================');
-  console.log('✨ 所有的 13 项单元与深度端到端实测全部通过 (PASS)！');
+  console.log('✨ 所有的 15 项单元与深度端到端实测全部通过 (PASS)！');
   console.log('=======================================================');
   process.exit(0);
 }

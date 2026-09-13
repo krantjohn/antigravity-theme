@@ -41,11 +41,11 @@ const VIDEO_EXTS = new Set(['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v']);
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']);
 
 const SLOTS_META = {
-  'left': { key: 'left', defaultFile: 'left_wallpaper.jpg', desc: 'AI主对话界面 / 全局底图' },
-  'mid': { key: 'mid', defaultFile: 'mid_wallpaper.jpg', desc: '终端界面 (活跃终端壁纸)' },
-  'right': { key: 'right', defaultFile: 'right_wallpaper.jpg', desc: '最右侧界面 (独立终端/侧栏壁纸)' },
-  'bottom': { key: 'bottom', defaultFile: 'input_wallpaper.jpg', desc: '底部输入框' },
-  'settings': { key: 'settings', defaultFile: 'settings_wallpaper.png', desc: '设置界面' }
+  'left': { key: 'left', defaultFile: 'left_wallpaper.jpg', desc: 'AI主对话界面 / 全局底图', defaultPosition: 'center center' },
+  'mid': { key: 'mid', defaultFile: 'mid_wallpaper.jpg', desc: '终端界面 (活跃终端壁纸)', defaultPosition: 'center 20%' },
+  'right': { key: 'right', defaultFile: 'right_wallpaper.jpg', desc: '最右侧界面 (独立终端/侧栏壁纸)', defaultPosition: 'center 20%' },
+  'bottom': { key: 'bottom', defaultFile: 'input_wallpaper.jpg', desc: '底部输入框', defaultPosition: 'center 6%' },
+  'settings': { key: 'settings', defaultFile: 'settings_wallpaper.png', desc: '设置界面', defaultPosition: 'center 65%' }
 };
 
 const SLOT_ALIASES = {
@@ -274,6 +274,97 @@ const SLOTS = {
   'settings': { file: 'settings_wallpaper.png', key: 'settings', desc: '设置界面' }
 };
 
+const VERTICAL_KEYWORDS = new Set(['top', 'bottom', '上', '下']);
+const HORIZONTAL_KEYWORDS = new Set(['left', 'right', '左', '右']);
+const CENTER_KEYWORDS = new Set(['center', '中', '居中']);
+
+function parseCoordinate(val, axis = 'x') {
+  if (typeof val === 'number') {
+    return Math.max(0, Math.min(100, Math.round(val)));
+  }
+  if (!val || typeof val !== 'string') {
+    return 50;
+  }
+  const s = val.trim().toLowerCase();
+  if (s === 'left' || s === '左') return 0;
+  if (s === 'right' || s === '右') return 100;
+  if (s === 'top' || s === '上') return 0;
+  if (s === 'bottom' || s === '下') return 100;
+  if (s === 'center' || s === '中' || s === '居中') return 50;
+
+  if (s.endsWith('%')) {
+    const num = parseFloat(s);
+    return isNaN(num) ? 50 : Math.max(0, Math.min(100, Math.round(num)));
+  }
+  const num = parseFloat(s);
+  return isNaN(num) ? 50 : Math.max(0, Math.min(100, Math.round(num)));
+}
+
+function parsePosition(posInput, defaultPos = 'center center') {
+  if (!posInput) posInput = defaultPos;
+  let x = 50;
+  let y = 50;
+
+  if (typeof posInput === 'object' && posInput !== null) {
+    x = parseCoordinate(posInput.x, 'x');
+    y = parseCoordinate(posInput.y, 'y');
+    return { x, y, str: `${x}% ${y}%` };
+  }
+
+  const str = String(posInput).trim();
+  const parts = str.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    const p = parts[0].toLowerCase();
+    if (VERTICAL_KEYWORDS.has(p)) {
+      x = 50;
+      y = parseCoordinate(p, 'y');
+    } else if (HORIZONTAL_KEYWORDS.has(p)) {
+      x = parseCoordinate(p, 'x');
+      y = 50;
+    } else if (CENTER_KEYWORDS.has(p)) {
+      x = 50;
+      y = 50;
+    } else {
+      x = parseCoordinate(p, 'x');
+      y = 50;
+    }
+  } else if (parts.length >= 2) {
+    const p0 = parts[0].toLowerCase();
+    const p1 = parts[1].toLowerCase();
+
+    // Check if parts[0] is explicitly vertical (e.g. top center, bottom 20%, 上 居中)
+    if (VERTICAL_KEYWORDS.has(p0) && (HORIZONTAL_KEYWORDS.has(p1) || CENTER_KEYWORDS.has(p1) || p1.endsWith('%') || !isNaN(parseFloat(p1)))) {
+      y = parseCoordinate(p0, 'y');
+      x = parseCoordinate(p1, 'x');
+    } else if (HORIZONTAL_KEYWORDS.has(p1) && (VERTICAL_KEYWORDS.has(p0) || CENTER_KEYWORDS.has(p0) || p0.endsWith('%') || !isNaN(parseFloat(p0)))) {
+      y = parseCoordinate(p0, 'y');
+      x = parseCoordinate(p1, 'x');
+    } else {
+      x = parseCoordinate(p0, 'x');
+      y = parseCoordinate(p1, 'y');
+    }
+  }
+
+  return { x, y, str: `${x}% ${y}%` };
+}
+
+function getSlotPosition(slotsConfig, slotKey) {
+  const meta = SLOTS_META[slotKey];
+  const defaultPos = meta ? (meta.defaultPosition || 'center center') : 'center center';
+  if (!slotsConfig || !slotsConfig[slotKey] || !slotsConfig[slotKey].position) {
+    return defaultPos;
+  }
+  const pos = slotsConfig[slotKey].position;
+  if (typeof pos === 'string' && pos.trim()) {
+    return pos.trim();
+  }
+  if (typeof pos === 'object' && pos !== null) {
+    const parsed = parsePosition(pos, defaultPos);
+    return parsed.str;
+  }
+  return defaultPos;
+}
+
 function loadSlotsConfig() {
   let config = {};
   if (fs.existsSync(slotsConfigPath)) {
@@ -315,6 +406,7 @@ function loadSlotsConfig() {
         key,
         file: foundFile,
         type: foundType,
+        position: meta.defaultPosition || 'center center',
         desc: meta.desc
       };
       modified = true;
@@ -326,6 +418,10 @@ function loadSlotsConfig() {
       }
       const ext = path.extname(config[key].file).toLowerCase();
       config[key].type = VIDEO_EXTS.has(ext) ? 'video' : 'image';
+      if (!config[key].position) {
+        config[key].position = meta.defaultPosition || 'center center';
+        modified = true;
+      }
       config[key].desc = meta.desc;
     }
   }
@@ -401,6 +497,12 @@ function generateMasterCss(slotsConfig) {
   const b64Bottom = !isBottomVideo ? getBase64(slotsConfig.bottom?.file || 'input_wallpaper.jpg') : '';
   const b64Settings = !isSettingsVideo ? getBase64(slotsConfig.settings?.file || 'settings_wallpaper.png') : '';
 
+  const posLeft = getSlotPosition(slotsConfig, 'left');
+  const posMid = getSlotPosition(slotsConfig, 'mid');
+  const posRight = getSlotPosition(slotsConfig, 'right');
+  const posBottom = getSlotPosition(slotsConfig, 'bottom');
+  const posSettings = getSlotPosition(slotsConfig, 'settings');
+
   return `/* ==========================================================================
    Antigravity 2.0 Master Custom Theme - 5-Slot Dynamic Hybrid Edition
    Slots: [左: 主对话区/全局底图] | [中: 活跃终端壁纸] | [右: 极简无杂线侧栏壁纸] | [下: 底部输入框] | [设置: 设置弹窗]
@@ -452,7 +554,7 @@ body::before {
       rgba(11, 12, 20, 0.10)
     )${b64Left ? `,\n    url("${b64Left}")` : ''}`} !important;
   background-size: cover !important;
-  background-position: center !important;
+  background-position: ${posLeft} !important;
   background-repeat: no-repeat !important;
   background-attachment: fixed !important;
   pointer-events: none !important;
@@ -471,7 +573,7 @@ body::before {
   width: 100vw !important;
   height: 100vh !important;
   object-fit: cover !important;
-  object-position: center !important;
+  object-position: ${posLeft} !important;
   pointer-events: none !important;
   z-index: 0 !important;
   transform: translate3d(0, 0, 0) !important;
@@ -536,8 +638,9 @@ div[class*="inset-x-4"][class*="pointer-events-none"][class*="bottom-0"] {
   display: none !important;
 }
 
-/* 5. Left Sidebar */
-aside, nav, [class*="sidebar"], [class*="Sidebar"], [class*="navigation"], [class*="Navigation"] {
+/* 5. Left Sidebar & Navigation & Conversation History List (深色磨砂背景保护区：纯净浅白文本，彻底杜绝黑色字体与发虚白光晕) */
+aside, nav, [role="navigation"], [class*="sidebar"], [class*="Sidebar"], [class*="navigation"], [class*="Navigation"],
+div.bg-sidebar, [data-panel="conversations"], [data-testid*="sidebar"], [data-testid*="conversation-list"] {
   background-color: rgba(14, 15, 26, 0.35) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
@@ -546,18 +649,53 @@ aside, nav, [class*="sidebar"], [class*="Sidebar"], [class*="navigation"], [clas
   color: #f1f5f9 !important;
 }
 
-aside span, aside p, aside div, aside a, aside button,
-nav span, nav p, nav div, nav a, nav button,
-[class*="sidebar"] span, [class*="sidebar"] div, [class*="sidebar"] button,
-[class*="file-tree"] span, [class*="file-tree"] div,
-[class*="explorer"] span, [class*="explorer"] div,
-[class*="tree-view"] span {
-  color: #f1f5f9 !important;
+/* 5.1 强制保护侧边栏、对话历史列表与文件树所有文本元素：统一轻阴影纯净白字，严禁继承主对话区任何自定义暗黑字体或白辉光描边 */
+aside, aside *,
+nav, nav *,
+[role="navigation"], [role="navigation"] *,
+[class*="sidebar"], [class*="sidebar"] *,
+[class*="Sidebar"], [class*="Sidebar"] *,
+[class*="navigation"], [class*="navigation"] *,
+div.bg-sidebar, div.bg-sidebar *,
+[data-panel="conversations"], [data-panel="conversations"] *,
+[data-testid*="sidebar"], [data-testid*="sidebar"] *,
+[data-testid*="conversation-list"], [data-testid*="conversation-list"] *,
+[data-testid*="conversation-row"], [data-testid*="conversation-row"] *,
+[class*="file-tree"], [class*="file-tree"] *,
+[class*="explorer"], [class*="explorer"] *,
+[class*="tree-view"], [class*="tree-view"] * {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
-aside [class*="text-muted"], nav [class*="text-muted"], [class*="sidebar"] [class*="text-muted"] {
-  color: rgba(226, 232, 240, 0.70) !important;
+aside span, aside p, aside div, aside a, aside button,
+nav span, nav p, nav div, nav a, nav button,
+[role="navigation"] span, [role="navigation"] p, [role="navigation"] div, [role="navigation"] a, [role="navigation"] button,
+[class*="sidebar"] span, [class*="sidebar"] p, [class*="sidebar"] div, [class*="sidebar"] a, [class*="sidebar"] button,
+[class*="Sidebar"] span, [class*="Sidebar"] p, [class*="Sidebar"] div, [class*="Sidebar"] a, [class*="Sidebar"] button,
+div.bg-sidebar span, div.bg-sidebar p, div.bg-sidebar div, div.bg-sidebar a, div.bg-sidebar button,
+[data-panel="conversations"] span, [data-panel="conversations"] p, [data-panel="conversations"] div, [data-panel="conversations"] a,
+[data-testid*="sidebar"] span, [data-testid*="sidebar"] p, [data-testid*="sidebar"] div,
+[data-testid*="conversation-list"] span, [data-testid*="conversation-list"] p, [data-testid*="conversation-list"] div,
+[data-testid*="conversation-row"] span, [data-testid*="conversation-row"] p, [data-testid*="conversation-row"] div,
+[data-testid*="conversation-row"] span.truncate,
+[data-testid*="conversation-list"] span.truncate,
+div.bg-sidebar span.truncate,
+[role="navigation"] span.truncate,
+[class*="file-tree"] span, [class*="file-tree"] div,
+[class*="explorer"] span, [class*="explorer"] div,
+[class*="tree-view"] span, [class*="tree-view"] div {
+  color: #f1f5f9 !important;
+}
+
+aside [class*="text-muted"], nav [class*="text-muted"], [role="navigation"] [class*="text-muted"],
+[class*="sidebar"] [class*="text-muted"], [class*="sidebar"] [class*="text-secondary"],
+div.bg-sidebar [class*="text-muted"], div.bg-sidebar [class*="text-secondary"],
+[data-testid*="sidebar"] [class*="text-muted"], [data-testid*="sidebar"] [class*="text-secondary"],
+[data-testid*="conversation-list"] [class*="text-muted"], [data-testid*="conversation-list"] [class*="text-secondary"],
+[data-testid*="conversation-row"] [class*="text-muted"], [data-testid*="conversation-row"] [class*="text-secondary"],
+[data-testid*="conversation-row"] time,
+[data-testid*="conversation-list"] time {
+  color: rgba(226, 232, 240, 0.75) !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
@@ -641,72 +779,72 @@ div[class*="user-input-step"] div {
   text-shadow: ${font.shadow} !important;
 }
 
-/* 7.1 主对话区 AI 回复正文 Markdown 渲染与文本深度高对比度增强 (严格约束至纯文本正文，不污染带背景的小部件) */
-div[role="article"] div.leading-relaxed p,
-div[role="article"] div.leading-relaxed li,
-div[role="article"] div.leading-relaxed td,
-div[role="article"] div.leading-relaxed th,
-div[role="article"] div.leading-relaxed blockquote,
-div.leading-relaxed p,
-div.leading-relaxed li,
-div.leading-relaxed td,
-div.leading-relaxed th,
-div.leading-relaxed blockquote,
-div.leading-relaxed > span:not([class*="syntax"]):not([class*="token"]):not([class*="hljs"]):not([class*="code"]):not(.line-content *):not([class*="codicon"]),
-main p,
-main li,
-main td,
-main th {
+/* 7.1 主对话区 AI 回复正文 Markdown 渲染与文本深度高对比度增强 (严格约束至纯文本正文，不污染带背景的小部件与代码块) */
+div[role="article"] div.leading-relaxed p:not(pre *),
+div[role="article"] div.leading-relaxed li:not(pre *),
+div[role="article"] div.leading-relaxed td:not(pre *),
+div[role="article"] div.leading-relaxed th:not(pre *),
+div[role="article"] div.leading-relaxed blockquote:not(pre *),
+div.leading-relaxed p:not(pre *),
+div.leading-relaxed li:not(pre *),
+div.leading-relaxed td:not(pre *),
+div.leading-relaxed th:not(pre *),
+div.leading-relaxed blockquote:not(pre *),
+div.leading-relaxed > span:not([class*="syntax"]):not([class*="token"]):not([class*="hljs"]):not([class*="code"]):not(.line-content *):not([class*="codicon"]):not(pre *):not([class*="code-block"] *),
+main p:not(pre *):not([class*="code-block"] *),
+main li:not(pre *):not([class*="code-block"] *),
+main td:not(pre *):not([class*="code-block"] *),
+main th:not(pre *):not([class*="code-block"] *) {
   color: ${font.primary} !important;
   text-shadow: ${font.shadow} !important;
 }
 
-div[role="article"] div.leading-relaxed [class*="text-muted"],
-div.leading-relaxed [class*="text-muted"],
-main [class*="text-muted"],
-main [class*="text-secondary"],
-main time,
-main .text-xs,
-main .text-sm {
+div[role="article"] div.leading-relaxed [class*="text-muted"]:not(pre *):not([class*="code-block"] *),
+div.leading-relaxed [class*="text-muted"]:not(pre *):not([class*="code-block"] *),
+main [class*="text-muted"]:not(pre *):not([class*="code-block"] *),
+main [class*="text-secondary"]:not(pre *):not([class*="code-block"] *),
+main time:not(pre *):not([class*="code-block"] *),
+main .text-xs:not(pre *):not([class*="code-block"] *),
+main .text-sm:not(pre *):not([class*="code-block"] *) {
   color: ${font.secondary} !important;
   text-shadow: ${font.shadow} !important;
 }
 
-div[role="article"] div.leading-relaxed h1, div[role="article"] div.leading-relaxed h2, div[role="article"] div.leading-relaxed h3,
-div[role="article"] div.leading-relaxed h4, div[role="article"] div.leading-relaxed h5, div[role="article"] div.leading-relaxed h6,
-div.leading-relaxed h1, div.leading-relaxed h2, div.leading-relaxed h3,
-div.leading-relaxed h4, div.leading-relaxed h5, div.leading-relaxed h6,
-main h1, main h2, main h3, main h4, main h5, main h6 {
+div[role="article"] div.leading-relaxed h1:not(pre *), div[role="article"] div.leading-relaxed h2:not(pre *), div[role="article"] div.leading-relaxed h3:not(pre *),
+div[role="article"] div.leading-relaxed h4:not(pre *), div[role="article"] div.leading-relaxed h5:not(pre *), div[role="article"] div.leading-relaxed h6:not(pre *),
+div.leading-relaxed h1:not(pre *), div.leading-relaxed h2:not(pre *), div.leading-relaxed h3:not(pre *),
+div.leading-relaxed h4:not(pre *), div.leading-relaxed h5:not(pre *), div.leading-relaxed h6:not(pre *),
+main h1:not(pre *), main h2:not(pre *), main h3:not(pre *), main h4:not(pre *), main h5:not(pre *), main h6:not(pre *) {
   color: ${font.primary} !important;
   text-shadow: ${font.shadow} !important;
   font-weight: 700 !important;
 }
 
-div[role="article"] div.leading-relaxed a,
-div.leading-relaxed a,
-main a {
+div[role="article"] div.leading-relaxed a:not(pre *),
+div.leading-relaxed a:not(pre *),
+main a:not(pre *) {
   color: ${font.muted} !important;
   text-shadow: ${font.shadow} !important;
   text-decoration: underline !important;
 }
 
-div[role="article"] div.leading-relaxed strong, div[role="article"] div.leading-relaxed b,
-div.leading-relaxed strong, div.leading-relaxed b,
-main strong, main b {
+div[role="article"] div.leading-relaxed strong:not(pre *), div[role="article"] div.leading-relaxed b:not(pre *),
+div.leading-relaxed strong:not(pre *), div.leading-relaxed b:not(pre *),
+main strong:not(pre *), main b:not(pre *) {
   color: ${font.primary} !important;
   text-shadow: ${font.shadow} !important;
   font-weight: 700 !important;
 }
 
-div[role="article"] div.leading-relaxed em, div[role="article"] div.leading-relaxed i,
-div.leading-relaxed em, div.leading-relaxed i {
+div[role="article"] div.leading-relaxed em:not(pre *), div[role="article"] div.leading-relaxed i:not(pre *),
+div.leading-relaxed em:not(pre *), div.leading-relaxed i:not(pre *) {
   color: ${font.primary} !important;
   text-shadow: ${font.shadow} !important;
 }
 
-div[role="article"] div.leading-relaxed blockquote,
-div.leading-relaxed blockquote,
-main blockquote {
+div[role="article"] div.leading-relaxed blockquote:not(pre *),
+div.leading-relaxed blockquote:not(pre *),
+main blockquote:not(pre *) {
   border-left: 3px solid ${font.muted} !important;
   color: ${font.secondary} !important;
   text-shadow: ${font.shadow} !important;
@@ -724,10 +862,11 @@ div.user-input-buttons-container button,
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
-/* 对话顶栏与面板标题 */
+/* 对话顶栏与面板标题 (严格限制在主对话面板与Pane内，绝不污染侧栏) */
 div[data-pane-id] div.flex.w-full.min-w-0 span.truncate,
 div[data-pane-id] span.cursor-pointer,
-span.truncate.inline-block {
+div[data-pane-id] span.truncate.inline-block,
+[data-testid="conversation-view"] span.truncate.inline-block {
   color: ${font.primary} !important;
   text-shadow: ${font.shadow} !important;
 }
@@ -792,6 +931,17 @@ div.user-input-buttons-container button:hover,
   color: #ffffff !important;
   background-color: rgba(244, 114, 182, 0.35) !important;
   transform: scale(1.1) !important;
+}
+
+/* 7.15 侧栏历史对话最终隔离保护：即便主对话区启用暗黑曜黑模式，侧边栏也绝不继承发虚白渐变光晕 */
+[role="navigation"] [class*="truncate"],
+div.bg-sidebar [class*="truncate"],
+[data-testid*="conversation-row"] [class*="truncate"],
+[data-testid*="conversation-list"] [class*="truncate"],
+[data-testid*="conversation-row"] span,
+[data-testid*="conversation-list"] span {
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* 8. 底部输入框整体琉璃质感与输入卡片 */
@@ -877,7 +1027,7 @@ div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([role="me
       rgba(12, 14, 24, 0.28)
     )${isBottomVideo ? '' : `,\n    url("${b64Bottom}")`} !important;
   background-size: cover !important;
-  background-position: center 6% !important;
+  background-position: ${posBottom} !important;
   background-repeat: no-repeat !important;
   border-radius: 15px !important;
   overflow: hidden !important;
@@ -986,7 +1136,7 @@ div[role="listbox"][data-mention-menu] svg,
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
-  object-position: center 6% !important;
+  object-position: ${posBottom} !important;
   pointer-events: none !important;
   z-index: 0 !important;
   border-radius: 15px !important;
@@ -1025,7 +1175,7 @@ div.relative.flex.flex-col.gap-0.p-1 [role="button"] {
 
 /* ==========================================================================
    9. 代码块与多行代码容器 (Sleek Frosted Glass Code Blocks)
-   杜绝生硬突兀的死白底色，全主题统一优雅暗色半透明磨砂玻璃卡片与精致微光描边
+   杜绝生硬突兀的死白底色，全主题统一优雅暗色半透明磨砂玻璃卡片与精致微光描边，杜绝字迹发虚/重影/白雾光晕
    ========================================================================== */
 pre {
   background: transparent !important;
@@ -1034,30 +1184,80 @@ pre {
   box-shadow: none !important;
   margin: 0 !important;
   padding: 0 !important;
+  color: #e2e8f0 !important;
+  text-shadow: none !important;
 }
 
 pre > div.relative,
 div.relative:has(> .code-block) {
-  background-color: rgba(14, 16, 28, 0.82) !important;
+  background-color: rgba(15, 18, 30, 0.88) !important;
   backdrop-filter: blur(16px) saturate(140%) !important;
   -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
   border: 1px solid rgba(244, 114, 182, 0.35) !important;
   border-radius: 12px !important;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55), 0 0 12px rgba(244, 114, 182, 0.15) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 12px rgba(244, 114, 182, 0.15) !important;
   overflow: hidden !important;
 }
 
+/* Header bar */
 pre > div.relative > div.min-h-7,
+pre [class*="min-h-7"],
 div.relative:has(> .code-block) > div.min-h-7 {
-  background-color: rgba(22, 26, 42, 0.90) !important;
+  background-color: rgba(22, 26, 42, 0.92) !important;
   border-bottom: 1px solid rgba(244, 114, 182, 0.25) !important;
-  color: #e2e8f0 !important;
 }
 
-pre > div.relative > div.min-h-7 *,
-div.relative:has(> .code-block) > div.min-h-7 * {
-  color: #e2e8f0 !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+/* Header text & language indicator */
+div[role="article"] div.leading-relaxed pre div.min-h-7,
+div[role="article"] div.leading-relaxed pre div.min-h-7 *,
+div[role="article"] div.leading-relaxed pre [class*="text-muted"],
+div[role="article"] div.leading-relaxed pre .text-sm,
+div.leading-relaxed pre div.min-h-7,
+div.leading-relaxed pre div.min-h-7 *,
+main pre div.min-h-7,
+main pre div.min-h-7 *,
+pre div.min-h-7,
+pre div.min-h-7 *,
+pre [class*="min-h-7"],
+pre [class*="min-h-7"] *,
+pre div.min-h-7 div.font-sans,
+pre div.min-h-7 span,
+div.relative:has(> .code-block) > div.min-h-7 div,
+div.relative:has(> .code-block) > div.min-h-7 span {
+  color: #cbd5e1 !important;
+  text-shadow: none !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em !important;
+}
+
+/* Header action buttons & icons */
+pre div.min-h-7 button,
+pre div.min-h-7 button svg,
+pre [class*="min-h-7"] button,
+pre [class*="min-h-7"] button svg {
+  color: #94a3b8 !important;
+  text-shadow: none !important;
+  transition: all 0.15s ease !important;
+}
+
+pre div.min-h-7 button:hover,
+pre [class*="min-h-7"] button:hover {
+  color: #f472b6 !important;
+  transform: scale(1.08) !important;
+}
+
+pre div.min-h-7 button svg,
+pre [class*="min-h-7"] button svg {
+  color: inherit !important;
+  filter: none !important;
+}
+
+/* Code text and content: 彻底杜绝文字阴影发虚/重影/黑白雾气光晕 */
+pre, pre *,
+.code-block, .code-block *,
+.code-line, .code-line *,
+.line-content, .line-content * {
+  text-shadow: none !important;
 }
 
 .code-block,
@@ -1067,14 +1267,15 @@ pre code {
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 .code-block .line-content,
-.code-block span:not([class*="token"]):not([class*="hljs"]):not([class*="syntax"]) {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+.code-block .line-content span,
+.code-block span:not([class*="token"]):not([class*="hljs"]):not([class*="syntax"]),
+pre code span:not([class*="token"]):not([class*="hljs"]):not([class*="syntax"]),
+pre .line-content span:not([class*="token"]):not([class*="hljs"]):not([class*="syntax"]) {
+  color: #e2e8f0 !important;
+  text-shadow: none !important;
 }
 
 /* 10. Popovers & Dialogs 通用 */
@@ -1139,7 +1340,7 @@ div:has(> .xterm-screen) {
       rgba(11, 12, 20, 0.18)
     )${isMidVideo ? '' : `,\n    url("${b64Mid}")`} !important;
   background-size: cover !important;
-  background-position: center 20% !important;
+  background-position: ${posMid} !important;
   background-repeat: no-repeat !important;
   overflow: hidden !important;
 }
@@ -1151,7 +1352,7 @@ div:has(> .xterm-screen) {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
-  object-position: center 20% !important;
+  object-position: ${posMid} !important;
   pointer-events: none !important;
   z-index: 0 !important;
 }
@@ -1321,7 +1522,7 @@ div[data-aux-pane-open="true"] div.flex-1.min-h-0 > div.flex.flex-col.gap-2.over
       rgba(11, 12, 20, 0.20)
     )${isRightVideo ? '' : `,\n    url("${b64Right}")`} !important;
   background-size: cover !important;
-  background-position: center 20% !important;
+  background-position: ${posRight} !important;
   background-repeat: no-repeat !important;
   border-left: 1px solid rgba(249, 168, 212, 0.35) !important;
   box-shadow: none !important;
@@ -1334,7 +1535,7 @@ div[data-aux-pane-open="true"] div.flex-1.min-h-0 > div.flex.flex-col.gap-2.over
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
-  object-position: center 20% !important;
+  object-position: ${posRight} !important;
   pointer-events: none !important;
   z-index: 0 !important;
 }
@@ -1416,7 +1617,7 @@ div.settings-modal-container {
       rgba(8, 10, 20, 0.35)
     )${isSettingsVideo ? '' : `,\n    url("${b64Settings}")`} !important;
   background-size: cover !important;
-  background-position: center 65% !important;
+  background-position: ${posSettings} !important;
   background-repeat: no-repeat !important;
   border: 1.5px solid rgba(151, 213, 255, 0.45) !important;
   border-radius: 20px !important;
@@ -1434,7 +1635,7 @@ div.settings-modal-container {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
-  object-position: center 65% !important;
+  object-position: ${posSettings} !important;
   pointer-events: none !important;
   z-index: 0 !important;
   border-radius: 20px !important;
@@ -1605,10 +1806,23 @@ div.settings-modal-container {
 
 function getClientVideoScript(config) {
   const configJson = JSON.stringify(config || {});
+  const posLeft = getSlotPosition(config, 'left');
+  const posMid = getSlotPosition(config, 'mid');
+  const posRight = getSlotPosition(config, 'right');
+  const posBottom = getSlotPosition(config, 'bottom');
+  const posSettings = getSlotPosition(config, 'settings');
+
   return `
   (function() {
     const SERVER_URL = 'http://127.0.0.1:${DEFAULT_PORT}';
     const config = ${configJson};
+    const slotPositions = {
+      'left': '${posLeft}',
+      'mid': '${posMid}',
+      'right': '${posRight}',
+      'bottom': '${posBottom}',
+      'settings': '${posSettings}'
+    };
 
     function applyVideos() {
       // 1. Slot: left (Global base wallpaper)
@@ -1638,6 +1852,9 @@ function getClientVideoScript(config) {
           leftVid.setAttribute('playsinline', '');
           leftVid.setAttribute('autoplay', '');
           leftVid.setAttribute('loop', '');
+          leftVid.preload = 'auto';
+          leftVid.setAttribute('preload', 'auto');
+          leftVid.style.objectPosition = '${posLeft}';
           leftVid.addEventListener('loadedmetadata', function() {
             if (leftVid.paused) leftVid.play().catch(function() {});
           });
@@ -1667,6 +1884,7 @@ function getClientVideoScript(config) {
           leftVid.load();
           leftVid.play().catch(function() {});
         }
+        leftVid.style.objectPosition = '${posLeft}';
         if (leftVid.paused && leftVid.readyState >= 1) {
           leftVid.play().catch(function() {});
         }
@@ -1766,6 +1984,9 @@ function getClientVideoScript(config) {
               vid.setAttribute('playsinline', '');
               vid.setAttribute('autoplay', '');
               vid.setAttribute('loop', '');
+              vid.preload = 'auto';
+              vid.setAttribute('preload', 'auto');
+              vid.style.objectPosition = slotPositions[slotKey] || 'center center';
               vid.addEventListener('loadedmetadata', function() {
                 if (vid.paused) vid.play().catch(function() {});
               });
@@ -1799,6 +2020,7 @@ function getClientVideoScript(config) {
               vid.load();
               vid.play().catch(function() {});
             }
+            vid.style.objectPosition = slotPositions[slotKey] || 'center center';
             if (vid.paused && vid.readyState >= 1) {
               vid.play().catch(function() {});
             }
@@ -1826,7 +2048,9 @@ function getClientVideoScript(config) {
       window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
       window.__antigravityVideoObserver.observe(document.body || document.documentElement, {
         childList: true,
-        subtree: true
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'class', 'style', 'hidden']
       });
       setInterval(function() {
         if (window.__antigravityApplyVideos) {
@@ -1848,7 +2072,7 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
     };
 
     try {
-      const activeConfig = loadSlotsConfig();
+      const activeConfig = slotsConfig || loadSlotsConfig();
       const activeCss = css || (fs.existsSync(customCssPath) ? fs.readFileSync(customCssPath, 'utf-8') : '');
       http.get('http://127.0.0.1:8314/json', (res) => {
         let data = '';
@@ -1876,11 +2100,25 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
                     return "Live theme & video hot-reloaded!";
                   })()
                 `;
-                ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: applyCode } }));
-                setTimeout(() => {
+                let done = false;
+                const onDone = () => {
+                  if (done) return;
+                  done = true;
                   try { ws.close(); } catch(e) {}
                   finish();
-                }, 400);
+                };
+                ws.addEventListener('message', (evt) => {
+                  try {
+                    const msg = JSON.parse(evt.data);
+                    if (msg.id === 1) {
+                      onDone();
+                    }
+                  } catch(e) {
+                    onDone();
+                  }
+                });
+                ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: applyCode } }));
+                setTimeout(onDone, 3000);
               });
               ws.addEventListener('error', finish);
             } else {
@@ -1944,11 +2182,13 @@ async function swapWallpaper(slotInput, srcPath) {
 
   // 更新槽位状态配置
   const slotsConfig = loadSlotsConfig();
+  const prevPosition = slotsConfig[slotKey]?.position || slotMeta.defaultPosition || 'center center';
   slotsConfig[slotKey] = {
     key: slotKey,
     file: targetFileName,
     type: isVideo ? 'video' : 'image',
     version: Date.now(),
+    position: prevPosition,
     desc: slotMeta.desc
   };
   saveSlotsConfig(slotsConfig);
@@ -1993,6 +2233,7 @@ async function revertToBaseline() {
       file: meta.defaultFile,
       type: 'image',
       version: Date.now(),
+      position: meta.defaultPosition || 'center center',
       desc: meta.desc
     };
   }
@@ -2013,6 +2254,129 @@ async function revertToBaseline() {
   const reloadPromise = await triggerLiveHotReload(css, baselineConfig);
   console.log(`✨ 成功还原为【初版】黄金基线！`);
   return reloadPromise;
+}
+
+async function setPosition(slotInput, posX, posY) {
+  if (!slotInput) {
+    console.error('❌ 请提供槽位名称: 左, 中, 右, 下, 设置');
+    return false;
+  }
+  const slotKey = SLOT_ALIASES[slotInput.toLowerCase()];
+  if (!slotKey || !SLOTS_META[slotKey]) {
+    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置`);
+    return false;
+  }
+
+  let posStr;
+  if (posY !== undefined && posY !== null && posY !== '') {
+    const combined = `${posX} ${posY}`;
+    const parsed = parsePosition(combined, SLOTS_META[slotKey].defaultPosition);
+    posStr = parsed.str;
+  } else {
+    const parsed = parsePosition(posX, SLOTS_META[slotKey].defaultPosition);
+    posStr = parsed.str;
+  }
+
+  const slotsConfig = loadSlotsConfig();
+  if (!slotsConfig[slotKey]) {
+    slotsConfig[slotKey] = {
+      key: slotKey,
+      file: SLOTS_META[slotKey].defaultFile,
+      type: 'image',
+      version: Date.now(),
+      desc: SLOTS_META[slotKey].desc
+    };
+  }
+  slotsConfig[slotKey].position = posStr;
+  saveSlotsConfig(slotsConfig);
+
+  console.log(`[1/3] 已设置槽位【${slotInput} (${SLOTS_META[slotKey].desc})】壁纸显示位置: ${posStr}`);
+
+  console.log(`[2/3] 重新编译并输出 custom_theme.css...`);
+  const css = generateMasterCss(slotsConfig);
+  fs.writeFileSync(customCssPath, css, 'utf-8');
+  try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch(e) {}
+  console.log(`✓ custom_theme.css 已更新 (${(css.length / 1024 / 1024).toFixed(2)} MB)`);
+
+  console.log(`[3/3] 触发界面热重载与实时生效...`);
+  const reloadPromise = await triggerLiveHotReload(css, slotsConfig);
+  console.log(`✨ 【${slotInput}】壁纸位置已调整为 ${posStr}！已实时生效。`);
+  return { ok: true, slot: slotKey, position: posStr };
+}
+
+async function adjustPosition(slotInput, direction, delta = 5) {
+  if (!slotInput) {
+    console.error('❌ 请提供槽位名称: 左, 中, 右, 下, 设置');
+    return false;
+  }
+  const slotKey = SLOT_ALIASES[slotInput.toLowerCase()];
+  if (!slotKey || !SLOTS_META[slotKey]) {
+    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置`);
+    return false;
+  }
+
+  const d = (typeof delta === 'number') ? delta : (parseFloat(delta) || 5);
+  const slotsConfig = loadSlotsConfig();
+  const currentPosStr = getSlotPosition(slotsConfig, slotKey);
+  const current = parsePosition(currentPosStr, SLOTS_META[slotKey].defaultPosition);
+
+  let x = current.x;
+  let y = current.y;
+
+  const dir = String(direction || '').toLowerCase().trim();
+  if (dir === 'up' || dir === 'u' || dir === 'w' || dir === '上' || dir === 'top' || dir === '1') {
+    y = Math.max(0, y - d);
+  } else if (dir === 'down' || dir === 's' || dir === '下' || dir === 'bottom' || dir === '2') {
+    y = Math.min(100, y + d);
+  } else if (dir === 'left' || dir === 'a' || dir === '左' || dir === '3') {
+    x = Math.max(0, x - d);
+  } else if (dir === 'right' || dir === 'd' || dir === '右' || dir === '4') {
+    x = Math.min(100, x + d);
+  } else if (dir === 'center' || dir === 'c' || dir === '中' || dir === '居中' || dir === '5') {
+    x = 50;
+    y = 50;
+  } else {
+    console.error(`❌ 未知移动方向: "${direction}"。支持: up/上/w/1, down/下/s/2, left/左/a/3, right/右/d/4, center/居中/c/5`);
+    return false;
+  }
+
+  const newPosStr = `${x}% ${y}%`;
+  return setPosition(slotInput, newPosStr);
+}
+
+async function resetPosition(slotInput) {
+  const norm = String(slotInput || 'all').toLowerCase().trim();
+  if (!slotInput || norm === 'all' || norm === '全部' || norm === 'reset' || norm === '重置' || norm === '*') {
+    const slotsConfig = loadSlotsConfig();
+    for (const [key, meta] of Object.entries(SLOTS_META)) {
+      if (!slotsConfig[key]) {
+        slotsConfig[key] = {
+          key,
+          file: meta.defaultFile,
+          type: 'image',
+          version: Date.now(),
+          desc: meta.desc
+        };
+      }
+      slotsConfig[key].position = meta.defaultPosition || 'center center';
+    }
+    saveSlotsConfig(slotsConfig);
+    const css = generateMasterCss(slotsConfig);
+    fs.writeFileSync(customCssPath, css, 'utf-8');
+    try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch(e) {}
+    await triggerLiveHotReload(css, slotsConfig);
+    console.log(`✨ 所有槽位壁纸位置已重置为默认值！`);
+    return { ok: true, slot: 'all' };
+  }
+
+  const slotKey = SLOT_ALIASES[norm];
+  if (!slotKey || !SLOTS_META[slotKey]) {
+    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置, 或 all (全部)`);
+    return false;
+  }
+
+  const defaultPos = SLOTS_META[slotKey].defaultPosition || 'center center';
+  return setPosition(slotInput, defaultPos);
 }
 
 async function setFontColor(colorOrPreset) {
@@ -2089,8 +2453,10 @@ function listSlotsStatus() {
     const filePath = path.join(wallpapersDir, item.file);
     const exists = fs.existsSync(filePath);
     const size = exists ? (fs.statSync(filePath).size / 1024 / 1024).toFixed(2) + ' MB' : '未找到文件';
+    const pos = getSlotPosition(config, key);
     console.log(`槽位 [${key.padEnd(8)}] (${item.desc}):`);
     console.log(`   类型: ${typeLabel}`);
+    console.log(`   🎯 位置: ${pos}`);
     console.log(`   文件: ${item.file} (${size})`);
     console.log('');
   }
@@ -2178,6 +2544,51 @@ if (require.main === module) {
     args[0] === 'list-fonts' || args[0] === 'fonts' || (args[0] === 'font' && !args[1])
   ) {
     listFontPresets();
+  } else if (
+    args[0] === '--set-position' || args[0] === '--set-pos' || args[0] === '--pos' ||
+    args[0] === 'set-pos' || args[0] === 'set-position' || args[0] === 'pos' ||
+    args[0] === 'position' || (args[0] === '--position' && args[1])
+  ) {
+    if (!args[1] || !args[2]) {
+      console.error('❌ 参数错误。用法: node core/theme_engine.js --set-pos <槽位(左/中/右/下/设置)> <X坐标> [Y坐标]');
+      console.error('   示例: node core/theme_engine.js --set-pos 左 50% 30%');
+      console.error('   示例: node core/theme_engine.js --set-pos 中 "center 20%"');
+      process.exit(1);
+    }
+    setPosition(args[1], args[2], args[3]).then(res => {
+      if (!res) process.exit(1);
+    }).catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
+  } else if (
+    args[0] === '--adjust-position' || args[0] === '--adjust-pos' || args[0] === '--adj-pos' ||
+    args[0] === '--adj' || args[0] === 'adjust-pos' || args[0] === 'adjust-position' ||
+    args[0] === 'adj-pos' || args[0] === 'adj'
+  ) {
+    if (!args[1] || !args[2]) {
+      console.error('❌ 参数错误。用法: node core/theme_engine.js --adj-pos <槽位> <方向(up/down/left/right)> [步长%]');
+      console.error('   示例: node core/theme_engine.js --adj-pos 左 up 5');
+      console.error('   示例: node core/theme_engine.js --adj-pos 左 w 5');
+      process.exit(1);
+    }
+    adjustPosition(args[1], args[2], args[3]).then(res => {
+      if (!res) process.exit(1);
+    }).catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
+  } else if (
+    args[0] === '--reset-position' || args[0] === '--reset-pos' ||
+    args[0] === 'reset-pos' || args[0] === 'reset-position' ||
+    args[0] === 'reset'
+  ) {
+    resetPosition(args[1] || 'all').then(res => {
+      if (!res) process.exit(1);
+    }).catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
   } else if (args[0] === '--set-left' && args[1]) {
     swapWallpaper('左', args[1]);
   } else if (args[0] === '--set-mid' && args[1]) {
@@ -2188,7 +2599,11 @@ if (require.main === module) {
     swapWallpaper('下', args[1]);
   } else if (args[0] === '--set-settings' && args[1]) {
     swapWallpaper('设置', args[1]);
-  } else if (args[0] === '--status' || args[0] === '--list' || args[0] === '-l') {
+  } else if (
+    args[0] === '--status' || args[0] === '--list' || args[0] === '-l' ||
+    args[0] === '--list-slots' || args[0] === 'list-slots' || args[0] === '--slots' ||
+    args[0] === 'slots' || args[0] === 'status'
+  ) {
     listSlotsStatus();
   } else if (args[0] === '--server') {
     console.log('启动动态壁纸流媒体服务器...');
@@ -2262,6 +2677,12 @@ module.exports = {
   resolveFontColor,
   parseHexColor,
   adjustBrightness,
+  setPosition,
+  adjustPosition,
+  resetPosition,
+  parsePosition,
+  getSlotPosition,
+  parseCoordinate,
   FONT_PRESETS,
   SLOTS,
   SLOTS_META,

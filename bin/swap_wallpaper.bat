@@ -20,6 +20,70 @@ if /i "%arg1%"=="set-font" (
     node "%~dp0..\core\theme_engine.js" --set-font-color %2 %3 %4
     exit /b %ERRORLEVEL%
 )
+if /i "%arg1%"=="pos" (
+    if "%~2"=="" (
+        goto POS_MENU
+    ) else (
+        node "%~dp0..\core\theme_engine.js" --set-pos %2 %3 %4
+        exit /b %ERRORLEVEL%
+    )
+)
+if /i "%arg1%"=="position" (
+    if "%~2"=="" (
+        goto POS_MENU
+    ) else (
+        node "%~dp0..\core\theme_engine.js" --set-pos %2 %3 %4
+        exit /b %ERRORLEVEL%
+    )
+)
+if /i "%arg1%"=="set-pos" (
+    node "%~dp0..\core\theme_engine.js" --set-pos %2 %3 %4
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="set-position" (
+    node "%~dp0..\core\theme_engine.js" --set-pos %2 %3 %4
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="adj-pos" (
+    node "%~dp0..\core\theme_engine.js" --adj-pos %2 %3 %4
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="adjust-pos" (
+    node "%~dp0..\core\theme_engine.js" --adj-pos %2 %3 %4
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="adjust-position" (
+    node "%~dp0..\core\theme_engine.js" --adj-pos %2 %3 %4
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="adj" (
+    node "%~dp0..\core\theme_engine.js" --adj-pos %2 %3 %4
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="reset-pos" (
+    node "%~dp0..\core\theme_engine.js" --reset-pos %2
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="reset-position" (
+    node "%~dp0..\core\theme_engine.js" --reset-pos %2
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="reset" (
+    node "%~dp0..\core\theme_engine.js" --reset-pos %2
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="status" (
+    node "%~dp0..\core\theme_engine.js" --status
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="slots" (
+    node "%~dp0..\core\theme_engine.js" --status
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="list-slots" (
+    node "%~dp0..\core\theme_engine.js" --status
+    exit /b %ERRORLEVEL%
+)
 if "%arg1:~0,1%"=="-" (
     node "%~dp0..\core\theme_engine.js" %*
 ) else (
@@ -36,19 +100,21 @@ echo.
 echo   [1] 更换本地壁纸 (输入路径或直接拖入视频/图片)
 echo   [2] 浏览 Steam Wallpaper Engine 创意工坊壁纸并选择 
 echo   [3] 搜索 Steam Wallpaper Engine 创意工坊壁纸 
-echo   [4] 自定义字体颜色与预设 (解决亮/暗壁纸字体不清问题)
-echo   [5] 查看当前各个槽位与字体状态 
-echo   [6] 退出 
+echo   [4] 调节各个位置壁纸的位置 (上下/左右微调与居中复位)
+echo   [5] 自定义字体颜色与预设 (解决亮/暗壁纸字体不清问题)
+echo   [6] 查看当前各个槽位与字体状态 
+echo   [7] 退出 
 echo.
 set "choice="
-set /p "choice=请选择操作 (1-6) [默认 1]: "
+set /p "choice=请选择操作 (1-7) [默认 1]: "
 if not defined choice set "choice=1"
 if "%choice%"=="1" goto LOCAL_SWAP
 if "%choice%"=="2" goto WE_LIST
 if "%choice%"=="3" goto WE_SEARCH
-if "%choice%"=="4" goto FONT_MENU
-if "%choice%"=="5" goto VIEW_STATUS
-if "%choice%"=="6" goto EXIT
+if "%choice%"=="4" goto POS_MENU
+if "%choice%"=="5" goto FONT_MENU
+if "%choice%"=="6" goto VIEW_STATUS
+if "%choice%"=="7" goto EXIT
 goto MENU
 
 :LOCAL_SWAP
@@ -128,10 +194,90 @@ echo.
 pause
 goto MENU
 
+:POS_MENU
+cls
+echo =======================================================
+echo    🎯 [4] 调节各个位置壁纸的位置 (上下/左右微调与居中复位)
+echo =======================================================
+echo.
+echo 可用槽位：左 (主对话底图) / 中 (活跃终端) / 右 (独立抽屉) / 下 (底部输入框) / 设置
+echo.
+node "%~dp0..\core\theme_engine.js" --status
+echo.
+set "pslot="
+set /p "pslot=请输入要调节位置的槽位 (左/中/右/下/设置，输入 0 返回菜单) [默认 左]: "
+if not defined pslot set "pslot=左"
+set "pslot=%pslot:"=%"
+if "%pslot%"=="0" goto MENU
+
+:POS_LOOP
+echo.
+echo -------------------------------------------------------
+echo   正在调节槽位: 【%pslot%】
+echo   操作选项:
+echo     [1] 或 [W] 向上微调 (y - 5%%)    [2] 或 [S] 向下微调 (y + 5%%)
+echo     [3] 或 [A] 向左微调 (x - 5%%)    [4] 或 [D] 向右微调 (x + 5%%)
+echo     [5] 或 [C] 设为正中心 (50%% 50%%) [6] 或 [R] 恢复默认位置
+echo     或直接输入精确坐标 (例如: 50%% 30%% 或 center 20%% 或 居中 上)
+echo     [0] 返回上级菜单
+echo -------------------------------------------------------
+set "paction="
+set /p "paction=请输入操作 (1-6/W/S/A/D/C/R/坐标/0) [默认 W]: "
+if not defined paction set "paction=W"
+set "paction=%paction:"=%"
+if "%paction%"=="0" goto MENU
+if /i "%paction%"=="W" goto POS_UP
+if "%paction%"=="1" goto POS_UP
+if "%paction%"=="上" goto POS_UP
+if /i "%paction%"=="S" goto POS_DOWN
+if "%paction%"=="2" goto POS_DOWN
+if "%paction%"=="下" goto POS_DOWN
+if /i "%paction%"=="A" goto POS_LEFT
+if "%paction%"=="3" goto POS_LEFT
+if "%paction%"=="左" goto POS_LEFT
+if /i "%paction%"=="D" goto POS_RIGHT
+if "%paction%"=="4" goto POS_RIGHT
+if "%paction%"=="右" goto POS_RIGHT
+if /i "%paction%"=="C" goto POS_CENTER
+if "%paction%"=="5" goto POS_CENTER
+if "%paction%"=="中" goto POS_CENTER
+if "%paction%"=="居中" goto POS_CENTER
+if /i "%paction%"=="R" goto POS_RESET
+if "%paction%"=="6" goto POS_RESET
+if "%paction%"=="复位" goto POS_RESET
+if "%paction%"=="恢复" goto POS_RESET
+
+node "%~dp0..\core\theme_engine.js" --set-pos "%pslot%" "%paction%"
+goto POS_LOOP
+
+:POS_UP
+node "%~dp0..\core\theme_engine.js" --adj-pos "%pslot%" up 5
+goto POS_LOOP
+
+:POS_DOWN
+node "%~dp0..\core\theme_engine.js" --adj-pos "%pslot%" down 5
+goto POS_LOOP
+
+:POS_LEFT
+node "%~dp0..\core\theme_engine.js" --adj-pos "%pslot%" left 5
+goto POS_LOOP
+
+:POS_RIGHT
+node "%~dp0..\core\theme_engine.js" --adj-pos "%pslot%" right 5
+goto POS_LOOP
+
+:POS_CENTER
+node "%~dp0..\core\theme_engine.js" --set-pos "%pslot%" 50% 50%
+goto POS_LOOP
+
+:POS_RESET
+node "%~dp0..\core\theme_engine.js" --reset-pos "%pslot%"
+goto POS_LOOP
+
 :FONT_MENU
 echo.
 echo -------------------------------------------------------
-echo   [4] 自定义字体颜色 (适配亮/暗/二次元壁纸，字迹极清)
+echo   [5] 自定义字体颜色 (适配亮/暗/二次元壁纸，字迹极清)
 echo -------------------------------------------------------
 echo.
 node "%~dp0..\core\theme_engine.js" --list-font-colors
