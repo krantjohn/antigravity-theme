@@ -11,6 +11,7 @@ const {
   revertToBaseline,
   loadSlotsConfig,
   saveSlotsConfig,
+  triggerLiveHotReload,
   setFontColor,
   listFontPresets,
   resolveFontColor,
@@ -75,6 +76,53 @@ async function runTests() {
   console.log('   🧪 Antigravity 动态与静态壁纸深度自动化测试套件');
   console.log('=======================================================');
   console.log('');
+
+  // CRITICAL USER INTEGRITY: Backup user configuration and wallpaper state
+  const antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || path.join(require('os').homedir(), '.gemini', 'antigravity');
+  const userBackupDir = path.join(antigravityDir, 'user_wallpaper_backup');
+  const liveWallpapersDir = path.join(antigravityDir, 'wallpapers');
+  const customCssPath = path.join(antigravityDir, 'custom_theme.css');
+  const goldenConfigPath = path.join(antigravityDir, 'slots_config.golden_backup.json');
+
+  // Ensure user backup directory exists and has all files
+  if (!fs.existsSync(userBackupDir)) {
+    fs.mkdirSync(userBackupDir, { recursive: true });
+    if (fs.existsSync(liveWallpapersDir)) {
+      fs.readdirSync(liveWallpapersDir).forEach(f => {
+        try { fs.copyFileSync(path.join(liveWallpapersDir, f), path.join(userBackupDir, f)); } catch (e) {}
+      });
+    }
+  }
+
+  let userConfigBackup = loadSlotsConfig();
+  if (fs.existsSync(goldenConfigPath)) {
+    try { userConfigBackup = JSON.parse(fs.readFileSync(goldenConfigPath, 'utf8')); } catch (e) {}
+  } else if (fs.existsSync(path.join(userBackupDir, 'slots_config.json'))) {
+    try { userConfigBackup = JSON.parse(fs.readFileSync(path.join(userBackupDir, 'slots_config.json'), 'utf8')); } catch (e) {}
+  }
+
+  async function restoreUserWallpaperEnvironment() {
+    console.log('\n[Restore] 正在自动恢复用户原始壁纸与字体配置 (杜绝误重置)...');
+    if (fs.existsSync(userBackupDir)) {
+      fs.readdirSync(userBackupDir).forEach(f => {
+        try {
+          fs.copyFileSync(path.join(userBackupDir, f), path.join(liveWallpapersDir, f));
+        } catch (e) {}
+      });
+    }
+    let targetConfig = userConfigBackup;
+    if (fs.existsSync(goldenConfigPath)) {
+      try { targetConfig = JSON.parse(fs.readFileSync(goldenConfigPath, 'utf8')); } catch (e) {}
+    }
+    saveSlotsConfig(targetConfig);
+    const userCss = generateMasterCss(targetConfig);
+    fs.writeFileSync(customCssPath, userCss, 'utf-8');
+    try { fs.writeFileSync(path.join(liveWallpapersDir, 'custom_theme.css'), userCss, 'utf-8'); } catch (e) {}
+    await triggerLiveHotReload(userCss, targetConfig);
+    console.log('✓ 用户原始壁纸与配置已 100% 自动恢复！');
+  }
+
+  try {
 
   // Test 1: Config loading and slot aliases
   console.log('[Test 1] 校验槽位别名与配置加载...');
@@ -820,6 +868,9 @@ async function runTests() {
   console.log('\n=======================================================');
   console.log('✨ 所有的 15 项单元与深度端到端实测全部通过 (PASS)！');
   console.log('=======================================================');
+  } finally {
+    await restoreUserWallpaperEnvironment();
+  }
   process.exit(0);
 }
 

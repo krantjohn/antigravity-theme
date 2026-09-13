@@ -68,6 +68,19 @@ try {
   }
 } catch(e) {}
 // =====================================================================
+
+// ================= Antigravity GPU & Rendering Pipeline Acceleration =================
+try {
+  const { app: _app } = require('electron');
+  const _cl = _app ? _app.commandLine : null;
+  if (_cl && process.env.ELECTRON_OZONE_PLATFORM_HINT !== 'headless') {
+    if (!_cl.hasSwitch('enable-gpu-rasterization')) _cl.appendSwitch('enable-gpu-rasterization');
+    if (!_cl.hasSwitch('enable-zero-copy')) _cl.appendSwitch('enable-zero-copy');
+    if (!_cl.hasSwitch('ignore-gpu-blocklist')) _cl.appendSwitch('ignore-gpu-blocklist');
+    if (!_cl.hasSwitch('enable-hardware-overlays')) _cl.appendSwitch('enable-hardware-overlays', 'single-fullscreen,single-on-top,underlay');
+  }
+} catch(e) {}
+// ====================================================================================
 `;
 
 if (mainContent.includes("'remote-debugging-port', '0'")) {
@@ -86,10 +99,13 @@ if (mainContent.includes("'remote-debugging-port', '0'")) {
 if (mainContent.includes('// ================= Antigravity Wallpaper Media Server =================')) {
   mainContent = mainContent.replace(/\/\/ ================= Antigravity Wallpaper Media Server =================[\s\S]*?\/\/ =====================================================================\n?/g, '');
 }
-// Prepend media server startup so port 8315 is listening before any window is created
+if (mainContent.includes('// ================= Antigravity GPU & Rendering Pipeline Acceleration =================')) {
+  mainContent = mainContent.replace(/\/\/ ================= Antigravity GPU & Rendering Pipeline Acceleration =================[\s\S]*?\/\/ ====================================================================================\n?/g, '');
+}
+// Prepend media server startup and GPU parameters so they take effect early
 mainContent = mediaServerInjectionCode + '\n' + mainContent;
 fs.writeFileSync(mainPath, mainContent, 'utf8');
-console.log('✓ main.js 注入完成 (流媒体服务置顶启动)');
+console.log('✓ main.js 注入完成 (流媒体服务置顶启动与 GPU 硬件加速)');
 
 // 3. Patch preload.js (启动自启自动载入 custom_theme.css & 动态视频引擎 并热监听)
 console.log('[3/5] 正在注入 preload.js (前台开机自启 & 动态壁纸自适应引擎)...');
@@ -101,10 +117,11 @@ const themeInjectionCode = `
 (function() {
   const SERVER_URL = 'http://127.0.0.1:8315';
   let cachedConfig = null;
+  let lastAppliedConfigHash = '';
   let isFetching = false;
 
-  // 1. 样式表热注入与双重挂载机制 (<link> 极速挂载 + <style> 容灾同步)
-  async function applyTheme() {
+  // 1. 样式表热注入与双重挂载机制 (<link> 极速挂载 + <style> 容灾同步，避免重复全量拉取 5MB 样式)
+  async function applyTheme(force) {
     try {
       let link = document.getElementById('antigravity-custom-theme-link');
       if (!link) {
@@ -120,17 +137,19 @@ const themeInjectionCode = `
         style.id = 'antigravity-custom-theme';
         (document.head || document.documentElement).appendChild(style);
       }
-      const res = await fetch(SERVER_URL + '/custom_theme.css', { cache: 'no-cache' });
-      if (res.ok) {
-        const text = await res.text();
-        if (text && text !== style.textContent) {
-          style.textContent = text;
+      if (force || !style.textContent) {
+        const res = await fetch(SERVER_URL + '/custom_theme.css', { cache: 'default' });
+        if (res.ok) {
+          const text = await res.text();
+          if (text && text !== style.textContent) {
+            style.textContent = text;
+          }
         }
       }
     } catch(e) {}
   }
 
-  // 2. 从流媒体服务异步拉取最新槽位配置 (纯标准 Web fetch API，不受沙箱限制)
+  // 2. 从流媒体服务异步拉取最新槽位配置
   async function fetchConfig() {
     if (isFetching) return cachedConfig;
     isFetching = true;
@@ -140,115 +159,126 @@ const themeInjectionCode = `
         cachedConfig = await res.json();
       }
     } catch(e) {
-      // 流媒体服务初始化阶段，静默等待重试
     } finally {
       isFetching = false;
     }
     return cachedConfig;
   }
 
-  // 3. 动态视频槽位自动化挂载与播放引擎
+  function checkAndShowVideo(v) {
+    if (!v || v.error) {
+      if (v) v.style.display = 'none';
+      return;
+    }
+    const decoded = (typeof v.webkitDecodedFrameCount === 'number') ? v.webkitDecodedFrameCount : 0;
+    const hasTimeProgress = v.currentTime > 0.05;
+    const isReadyToPaint = v.readyState >= 2 && !v.paused && (decoded > 0 || hasTimeProgress);
+    if (isReadyToPaint && v.style.display !== 'block') {
+      v.style.display = 'block';
+    }
+  }
+
+  // 3. 动态视频槽位自动化挂载与播放引擎 (硬件加速合成层隔离与快速通道)
   function applyVideos() {
     const config = cachedConfig;
     if (!config) return;
 
-    function checkAndShowVideo(v) {
-      if (!v || v.error) {
-        if (v) v.style.display = 'none';
-        return;
-      }
-      const decoded = (typeof v.webkitDecodedFrameCount === 'number') ? v.webkitDecodedFrameCount : 0;
-      const hasTimeProgress = v.currentTime > 0.05;
-      const isReadyToPaint = v.readyState >= 2 && !v.paused && (decoded > 0 || hasTimeProgress);
-      if (isReadyToPaint) {
-        v.style.display = 'block';
-      }
-    }
-
     // [左] 全局底图
     const left = config.left;
-    const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
     if (left && left.type === 'video' && left.file) {
       const vParam = (left && left.version) ? ('?v=' + left.version) : '';
       const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
       const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
-      for (let i = 1; i < allLeftVids.length; i++) {
-        allLeftVids[i].pause();
-        allLeftVids[i].removeAttribute('src');
-        allLeftVids[i].load();
-        allLeftVids[i].remove();
-      }
-      let leftVid = allLeftVids[0];
-      if (!leftVid) {
-        leftVid = document.createElement('video');
-        leftVid.id = 'antigravity-video-left';
-        leftVid.className = 'antigravity-slot-video';
-        leftVid.setAttribute('data-slot', 'left');
-        leftVid.muted = true;
-        leftVid.defaultMuted = true;
-        leftVid.setAttribute('muted', '');
-        leftVid.autoplay = true;
-        leftVid.loop = true;
-        leftVid.playsInline = true;
-        leftVid.setAttribute('playsinline', '');
-        leftVid.setAttribute('autoplay', '');
-        leftVid.setAttribute('loop', '');
-        leftVid.preload = 'auto';
-        leftVid.setAttribute('preload', 'auto');
-        leftVid.crossOrigin = 'anonymous';
-        leftVid.setAttribute('crossorigin', 'anonymous');
-        leftVid.style.display = 'none'; // Start hidden: zero black void!
-        if (posterSrc) {
+      let leftVid = document.getElementById('antigravity-video-left');
+      if (leftVid && leftVid.isConnected && leftVid.dataset.currentSrc === src) {
+        if (leftVid.paused && leftVid.readyState >= 1) {
+          leftVid.play().catch(function(){});
+        }
+        checkAndShowVideo(leftVid);
+      } else {
+        const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
+        for (let i = 1; i < allLeftVids.length; i++) {
+          allLeftVids[i].pause();
+          allLeftVids[i].removeAttribute('src');
+          allLeftVids[i].load();
+          allLeftVids[i].remove();
+        }
+        leftVid = allLeftVids[0];
+        if (!leftVid) {
+          leftVid = document.createElement('video');
+          leftVid.id = 'antigravity-video-left';
+          leftVid.className = 'antigravity-slot-video';
+          leftVid.setAttribute('data-slot', 'left');
+          leftVid.muted = true;
+          leftVid.defaultMuted = true;
+          leftVid.setAttribute('muted', '');
+          leftVid.autoplay = true;
+          leftVid.loop = true;
+          leftVid.playsInline = true;
+          leftVid.setAttribute('playsinline', '');
+          leftVid.setAttribute('autoplay', '');
+          leftVid.setAttribute('loop', '');
+          leftVid.preload = 'auto';
+          leftVid.setAttribute('preload', 'auto');
+          leftVid.crossOrigin = 'anonymous';
+          leftVid.setAttribute('crossorigin', 'anonymous');
+          leftVid.style.transform = 'translate3d(0, 0, 0)';
+          leftVid.style.contain = 'strict';
+          leftVid.style.willChange = 'transform';
+          leftVid.style.display = 'none';
+          if (posterSrc) {
+            leftVid.poster = posterSrc;
+            leftVid.setAttribute('poster', posterSrc);
+          }
+          leftVid.addEventListener('playing', function() {
+            setTimeout(function() { checkAndShowVideo(leftVid); }, 50);
+          });
+          leftVid.addEventListener('timeupdate', function() {
+            checkAndShowVideo(leftVid);
+          });
+          leftVid.addEventListener('canplay', function() {
+            if (leftVid.paused) leftVid.play().catch(function(){});
+          });
+          leftVid.addEventListener('error', function() {
+            leftVid.style.display = 'none';
+          });
+          leftVid.addEventListener('stalled', function() {
+            if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
+              leftVid.style.display = 'none';
+            }
+          });
+          leftVid.addEventListener('waiting', function() {
+            if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
+              leftVid.style.display = 'none';
+            }
+          });
+          (document.body || document.documentElement).prepend(leftVid);
+        }
+        if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
           leftVid.poster = posterSrc;
           leftVid.setAttribute('poster', posterSrc);
         }
-        leftVid.addEventListener('playing', function() {
-          setTimeout(function() { checkAndShowVideo(leftVid); }, 50);
-        });
-        leftVid.addEventListener('timeupdate', function() {
-          checkAndShowVideo(leftVid);
-        });
-        leftVid.addEventListener('canplay', function() {
-          if (leftVid.paused) leftVid.play().catch(function(){});
-        });
-        leftVid.addEventListener('error', function() {
+        if (leftVid.dataset.currentSrc !== src) {
+          leftVid.dataset.currentSrc = src;
           leftVid.style.display = 'none';
-        });
-        leftVid.addEventListener('stalled', function() {
-          if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
-            leftVid.style.display = 'none';
-          }
-        });
-        leftVid.addEventListener('waiting', function() {
-          if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
-            leftVid.style.display = 'none';
-          }
-        });
-        (document.body || document.documentElement).prepend(leftVid);
+          leftVid.src = src;
+          leftVid.load();
+          leftVid.play().catch(function(){});
+          const token = Date.now();
+          leftVid.dataset.loadToken = String(token);
+          setTimeout(function() {
+            if (leftVid.dataset.loadToken === String(token)) {
+              checkAndShowVideo(leftVid);
+            }
+          }, 1500);
+        }
+        if (leftVid.paused && leftVid.readyState >= 1) {
+          leftVid.play().catch(function(){});
+        }
+        checkAndShowVideo(leftVid);
       }
-      if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
-        leftVid.poster = posterSrc;
-        leftVid.setAttribute('poster', posterSrc);
-      }
-      if (leftVid.dataset.currentSrc !== src) {
-        leftVid.dataset.currentSrc = src;
-        leftVid.style.display = 'none';
-        leftVid.src = src;
-        leftVid.load();
-        leftVid.play().catch(function(){});
-        const token = Date.now();
-        leftVid.dataset.loadToken = String(token);
-        setTimeout(function() {
-          if (leftVid.dataset.loadToken === String(token)) {
-            checkAndShowVideo(leftVid);
-          }
-        }, 1500);
-      }
-      if (leftVid.paused && leftVid.readyState >= 1) {
-        leftVid.play().catch(function(){});
-      }
-      checkAndShowVideo(leftVid);
     } else {
+      const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
       for (let i = 0; i < allLeftVids.length; i++) {
         allLeftVids[i].pause();
         allLeftVids[i].removeAttribute('src');
@@ -270,8 +300,8 @@ const themeInjectionCode = `
         'div[data-aux-pane-open="true"] div.flex-1.min-h-0'
       ],
       'bottom': [
-        '#antigravity\\\\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
-        '#antigravity\\\\.agentSidePanelInputBox > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+        '[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+        '[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
         'div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])'
       ],
       'settings': [
@@ -298,12 +328,13 @@ const themeInjectionCode = `
           oldVids[i].remove();
         }
       } else {
+        // 1. Locate current valid targetContainer
         let targetContainer = null;
         for (let i = 0; i < selectors.length; i++) {
           try {
             const el = document.querySelector(selectors[i]);
             if (el && el !== document.body && el !== document.documentElement) {
-              if (slotKey === 'right' && (el.querySelector('#antigravity\\\\.agentSidePanelInputBox') || el.querySelector('[id="antigravity.agentSidePanelInputBox"]'))) {
+              if (slotKey === 'right' && (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\\\.agentSidePanelInputBox'))) {
                 continue;
               }
               targetContainer = el;
@@ -312,6 +343,7 @@ const themeInjectionCode = `
           } catch(e) {}
         }
 
+        // 2. Clean up any video instances that are NOT inside the active targetContainer
         const existingVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
         for (let i = 0; i < existingVids.length; i++) {
           if (!targetContainer || existingVids[i].parentElement !== targetContainer) {
@@ -322,6 +354,7 @@ const themeInjectionCode = `
           }
         }
 
+        // 3. If targetContainer exists, manage the single slot video
         if (targetContainer) {
           const allSlotVidsInContainer = targetContainer.querySelectorAll(':scope > .antigravity-slot-video[data-slot="' + slotKey + '"]');
           for (let i = 1; i < allSlotVidsInContainer.length; i++) {
@@ -331,6 +364,16 @@ const themeInjectionCode = `
             allSlotVidsInContainer[i].remove();
           }
           let vid = allSlotVidsInContainer[0];
+
+          // Fast-path: already mounted in targetContainer with expected source
+          if (vid && vid.dataset.currentSrc === src) {
+            if (vid.paused && vid.readyState >= 1) {
+              vid.play().catch(function(){});
+            }
+            checkAndShowVideo(vid);
+            continue;
+          }
+
           if (!vid) {
             vid = document.createElement('video');
             vid.className = 'antigravity-slot-video';
@@ -348,7 +391,10 @@ const themeInjectionCode = `
             vid.setAttribute('preload', 'auto');
             vid.crossOrigin = 'anonymous';
             vid.setAttribute('crossorigin', 'anonymous');
-            vid.style.display = 'none'; // Start hidden: zero black void!
+            vid.style.transform = 'translate3d(0, 0, 0)';
+            vid.style.contain = 'strict';
+            vid.style.willChange = 'transform';
+            vid.style.display = 'none';
             if (posterSrc) {
               vid.poster = posterSrc;
               vid.setAttribute('poster', posterSrc);
@@ -375,9 +421,11 @@ const themeInjectionCode = `
                 vid.style.display = 'none';
               }
             });
-            const pos = window.getComputedStyle(targetContainer).position;
-            if (!pos || pos === 'static') {
-              targetContainer.style.position = 'relative';
+            if (!targetContainer.dataset.agPositioned) {
+              targetContainer.dataset.agPositioned = 'true';
+              if (!targetContainer.style.position || targetContainer.style.position === 'static') {
+                targetContainer.style.position = 'relative';
+              }
             }
             targetContainer.prepend(vid);
           }
@@ -408,10 +456,16 @@ const themeInjectionCode = `
     }
   }
 
-  // 4. 定时轮询与 DOM 监听自适应驱动
+  // 4. 定时轮询与 DOM 监听自适应驱动 (智能去抖与低开销轮询)
   async function syncAndApply() {
-    await fetchConfig();
-    applyTheme();
+    const cfg = await fetchConfig();
+    if (cfg) {
+      const cfgHash = JSON.stringify(cfg);
+      if (cfgHash !== lastAppliedConfigHash) {
+        lastAppliedConfigHash = cfgHash;
+        await applyTheme(true);
+      }
+    }
     applyVideos();
   }
 
@@ -420,22 +474,59 @@ const themeInjectionCode = `
     syncAndApply();
     if (!window.__antigravityVideoObserver) {
       let debounceTimer = null;
-      const scheduledApply = function() {
+      const scheduledApply = function(mutations) {
+        if (mutations && mutations.length > 0) {
+          let isRelevant = false;
+          for (let i = 0; i < mutations.length; i++) {
+            const m = mutations[i];
+            if (m.type === 'attributes') {
+              isRelevant = true;
+              break;
+            } else if (m.type === 'childList') {
+              for (let j = 0; j < m.addedNodes.length; j++) {
+                const node = m.addedNodes[j];
+                if (node.nodeType === 1) {
+                  const role = node.getAttribute ? node.getAttribute('role') : null;
+                  const ds = node.getAttribute ? node.getAttribute('data-state') : null;
+                  if (role === 'dialog' || ds === 'open' || node.id === 'antigravity.agentSidePanelInputBox' || (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm')))) {
+                    isRelevant = true;
+                    break;
+                  }
+                }
+              }
+              if (isRelevant) break;
+              for (let j = 0; j < m.removedNodes.length; j++) {
+                const node = m.removedNodes[j];
+                if (node.nodeType === 1) {
+                  if (node.id === 'antigravity-video-left' || (node.classList && node.classList.contains('antigravity-slot-video')) || (node.getAttribute && node.getAttribute('role') === 'dialog')) {
+                    isRelevant = true;
+                    break;
+                  }
+                }
+              }
+              if (isRelevant) break;
+            }
+          }
+          if (!isRelevant) return;
+        }
+
         if (debounceTimer) return;
         debounceTimer = setTimeout(function() {
           debounceTimer = null;
           applyVideos();
         }, 100);
       };
+
       window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
       window.__antigravityVideoObserver.observe(document.body || document.documentElement, {
         childList: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'class', 'style', 'hidden']
+        attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
       });
-      // 定期与流媒体配置对齐同步 (每 2 秒)
-      setInterval(syncAndApply, 2000);
+
+      // 定期与流媒体配置对齐同步 (从 2 秒降至 8 秒，仅对比 1KB JSON，零冗余开销)
+      setInterval(syncAndApply, 8000);
     }
   };
 

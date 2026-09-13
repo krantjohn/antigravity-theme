@@ -26,15 +26,21 @@ const MIME_TYPES = {
 const DEFAULT_PORT = 8315;
 
 function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
+  // In-memory caches to eliminate synchronous disk I/O and large string allocations
+  let cachedCssBuf = null;
+  let cachedCssMtime = 0;
+  let cachedCssEtag = '';
+
+  let cachedSlotsContent = null;
+  let cachedSlotsMtime = 0;
+  let cachedSlotsEtag = '';
+
   const server = http.createServer((req, res) => {
     // Enable CORS for Chromium / Electron renderer
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', '*');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
-    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type, ETag');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(200);
@@ -48,7 +54,10 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
 
       // Health check endpoint
       if (pathname === '/health' || pathname === '/ping') {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.writeHead(200, {
+          'Content-Type': 'text/plain',
+          'Cache-Control': 'no-cache'
+        });
         res.end('OK');
         return;
       }
@@ -58,13 +67,33 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         const configPath1 = path.join(wallpapersDir, 'slots_config.json');
         const configPath2 = path.join(path.dirname(wallpapersDir), 'slots_config.json');
         const configPath = fs.existsSync(configPath1) ? configPath1 : (fs.existsSync(configPath2) ? configPath2 : null);
+
         if (configPath) {
-          const content = fs.readFileSync(configPath, 'utf8');
-          res.writeHead(200, {
-            'Content-Type': 'application/json; charset=utf-8',
-            'Content-Length': Buffer.byteLength(content, 'utf8')
-          });
-          res.end(content);
+          try {
+            const stat = fs.statSync(configPath);
+            if (stat.mtimeMs !== cachedSlotsMtime || !cachedSlotsContent) {
+              cachedSlotsContent = fs.readFileSync(configPath, 'utf8');
+              cachedSlotsMtime = stat.mtimeMs;
+              cachedSlotsEtag = `W/"slots-${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+            }
+
+            if (req.headers['if-none-match'] === cachedSlotsEtag) {
+              res.writeHead(304);
+              res.end();
+              return;
+            }
+
+            res.writeHead(200, {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Content-Length': Buffer.byteLength(cachedSlotsContent, 'utf8'),
+              'ETag': cachedSlotsEtag,
+              'Cache-Control': 'no-cache, must-revalidate'
+            });
+            res.end(cachedSlotsContent);
+          } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('{}');
+          }
         } else {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end('{}');
@@ -72,18 +101,38 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         return;
       }
 
-      // API endpoint for custom_theme.css
+      // API endpoint for custom_theme.css (optimized in-memory cache & 304 validation)
       if (pathname === '/custom_theme.css' || pathname === '/theme.css') {
         const cssPath1 = path.join(path.dirname(wallpapersDir), 'custom_theme.css');
         const cssPath2 = path.join(wallpapersDir, 'custom_theme.css');
         const cssPath = fs.existsSync(cssPath1) ? cssPath1 : (fs.existsSync(cssPath2) ? cssPath2 : null);
+
         if (cssPath) {
-          const content = fs.readFileSync(cssPath, 'utf8');
-          res.writeHead(200, {
-            'Content-Type': 'text/css; charset=utf-8',
-            'Content-Length': Buffer.byteLength(content, 'utf8')
-          });
-          res.end(content);
+          try {
+            const stat = fs.statSync(cssPath);
+            if (stat.mtimeMs !== cachedCssMtime || !cachedCssBuf) {
+              cachedCssBuf = fs.readFileSync(cssPath);
+              cachedCssMtime = stat.mtimeMs;
+              cachedCssEtag = `W/"css-${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+            }
+
+            if (req.headers['if-none-match'] === cachedCssEtag) {
+              res.writeHead(304);
+              res.end();
+              return;
+            }
+
+            res.writeHead(200, {
+              'Content-Type': 'text/css; charset=utf-8',
+              'Content-Length': cachedCssBuf.length,
+              'ETag': cachedCssEtag,
+              'Cache-Control': 'no-cache, must-revalidate'
+            });
+            res.end(cachedCssBuf);
+          } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('/* Error reading theme css */');
+          }
         } else {
           res.writeHead(404, { 'Content-Type': 'text/plain' });
           res.end('/* custom_theme.css not found */');
@@ -118,18 +167,31 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
       const fileSize = stat.size;
       const ext = path.extname(filePath).toLowerCase();
       const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      const etag = `W/"${fileSize.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+
+      // 304 Not Modified validation for smooth looping and browser media caching
+      if (req.headers['if-none-match'] === etag) {
+        res.writeHead(304);
+        res.end();
+        return;
+      }
+
+      const isMedia = ext === '.mp4' || ext === '.webm' || ext === '.ogg' || ext === '.jpg' || ext === '.png' || ext === '.gif' || ext === '.webp';
+      const cacheHeader = isMedia ? 'public, max-age=86400, stale-while-revalidate=604800' : 'no-cache';
 
       if (req.method === 'HEAD') {
         res.writeHead(200, {
           'Content-Length': fileSize,
           'Content-Type': contentType,
-          'Accept-Ranges': 'bytes'
+          'Accept-Ranges': 'bytes',
+          'ETag': etag,
+          'Cache-Control': cacheHeader
         });
         res.end();
         return;
       }
 
-      // Range request support for HTML5 video seeking & streaming
+      // Range request support for HTML5 60FPS video seeking & streaming
       const range = req.headers.range;
       if (range) {
         const parts = range.replace(/bytes=/, '').split('-');
@@ -150,12 +212,17 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         }
 
         const chunkSize = (end - start) + 1;
-        const stream = fs.createReadStream(filePath, { start, end });
+        // Optimal 256KB buffer highWaterMark for smooth, low-CPU video streaming
+        const stream = fs.createReadStream(filePath, { start, end, highWaterMark: 256 * 1024 });
         res.writeHead(206, {
           'Content-Range': `bytes ${start}-${end}/${fileSize}`,
           'Accept-Ranges': 'bytes',
           'Content-Length': chunkSize,
-          'Content-Type': contentType
+          'Content-Type': contentType,
+          'ETag': etag,
+          'Cache-Control': cacheHeader,
+          'Connection': 'keep-alive',
+          'Keep-Alive': 'timeout=60'
         });
         stream.pipe(res);
         stream.on('error', () => {
@@ -168,9 +235,13 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         res.writeHead(200, {
           'Content-Length': fileSize,
           'Content-Type': contentType,
-          'Accept-Ranges': 'bytes'
+          'Accept-Ranges': 'bytes',
+          'ETag': etag,
+          'Cache-Control': cacheHeader,
+          'Connection': 'keep-alive',
+          'Keep-Alive': 'timeout=60'
         });
-        const stream = fs.createReadStream(filePath);
+        const stream = fs.createReadStream(filePath, { highWaterMark: 256 * 1024 });
         stream.pipe(res);
         stream.on('error', () => {
           res.destroy();
@@ -292,4 +363,3 @@ module.exports = {
   DEFAULT_PORT,
   MIME_TYPES
 };
-

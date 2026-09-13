@@ -729,6 +729,8 @@ body::before {
   z-index: 0 !important;
   transform: translate3d(0, 0, 0) !important;
   backface-visibility: hidden !important;
+  contain: strict !important;
+  will-change: transform !important;
 }
 
 /* 3. Global Transparent Layout */
@@ -1051,9 +1053,7 @@ div.user-input-buttons-container,
 [class*="user-input-buttons-container"],
 div.group\\/user-input-step div.user-input-buttons-container {
   display: flex !important;
-  background-color: rgba(14, 16, 28, 0.85) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  background-color: rgba(14, 16, 28, 0.92) !important;
   border: 1px solid rgba(244, 114, 182, 0.50) !important;
   border-radius: 9999px !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.60), 0 0 10px rgba(244, 114, 182, 0.30) !important;
@@ -1316,8 +1316,7 @@ textarea::placeholder,
 
 div.relative.flex.flex-col.gap-0.p-1 button,
 div.relative.flex.flex-col.gap-0.p-1 [role="button"] {
-  backdrop-filter: blur(8px) !important;
-  background: rgba(0, 0, 0, 0.35) !important;
+  background: rgba(14, 16, 28, 0.55) !important;
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
   color: #f1f5f9 !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
@@ -1342,9 +1341,9 @@ pre {
 
 pre > div.relative,
 div.relative:has(> .code-block) {
-  background-color: rgba(15, 18, 30, 0.88) !important;
-  backdrop-filter: blur(16px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  background-color: rgba(15, 18, 30, 0.92) !important;
+  backdrop-filter: blur(8px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
   border: 1px solid rgba(244, 114, 182, 0.35) !important;
   border-radius: 12px !important;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 12px rgba(244, 114, 182, 0.15) !important;
@@ -1584,12 +1583,17 @@ header div.shrink-0.flex.items-center.gap-0.5.border-b {
 }
 
 div.flex.items-center.justify-between.pl-3.pr-2.py-1,
-div.group\\/file-row:has([class*="font-medium"]),
 div:has(> div > div > .terminal.xterm) div.flex.items-center.justify-between.pl-3.pr-2.py-1 {
   background-color: rgba(11, 12, 20, 0.18) !important;
   backdrop-filter: blur(14px) saturate(140%) !important;
   -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+div.group\\/file-row:has([class*="font-medium"]),
+div.group\\/file-row {
+  background-color: rgba(11, 12, 20, 0.35) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
 }
 
 div.shrink-0.flex.items-center.gap-0.5.border-b button,
@@ -1721,9 +1725,7 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-f
 div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background [class*="item"],
 div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.relative.flex.items-center,
 div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background button {
-  background-color: rgba(14, 16, 30, 0.40) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  background-color: rgba(14, 16, 30, 0.58) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 8px !important;
   color: #f1f5f9 !important;
@@ -1902,8 +1904,7 @@ div.settings-modal-container {
 [role="dialog"] button.inline-flex,
 [role="dialog"] a.select-none.rounded,
 [role="dialog"] [class*="grow"] button {
-  backdrop-filter: blur(8px) !important;
-  background-color: rgba(26, 32, 60, 0.82) !important;
+  background-color: rgba(26, 32, 60, 0.88) !important;
   border: 1px solid rgba(151, 213, 255, 0.35) !important;
   color: #f1f5f9 !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
@@ -1952,6 +1953,9 @@ div.settings-modal-container {
   pointer-events: none !important;
   user-select: none !important;
   -webkit-user-select: none !important;
+  transform: translate3d(0, 0, 0) !important;
+  backface-visibility: hidden !important;
+  contain: strict !important;
   will-change: transform !important;
 }
 `;
@@ -1977,109 +1981,118 @@ function getClientVideoScript(config) {
       'settings': '${posSettings}'
     };
 
-    function applyVideos() {
-      function checkAndShowVideo(v) {
-        if (!v || v.error) {
-          if (v) v.style.display = 'none';
-          return;
-        }
-        // Strict decoded frame guard: only display video element when frames are actively rendering!
-        // This ensures unsupported codecs (HEVC/H.265 in standard Electron), corrupt streams, or stalled
-        // buffers NEVER overlay a black box over the wallpaper!
-        const decoded = (typeof v.webkitDecodedFrameCount === 'number') ? v.webkitDecodedFrameCount : 0;
-        const hasTimeProgress = v.currentTime > 0.05;
-        const isReadyToPaint = v.readyState >= 2 && !v.paused && (decoded > 0 || hasTimeProgress);
-        if (isReadyToPaint) {
-          v.style.display = 'block';
-        }
+    function checkAndShowVideo(v) {
+      if (!v || v.error) {
+        if (v) v.style.display = 'none';
+        return;
       }
+      const decoded = (typeof v.webkitDecodedFrameCount === 'number') ? v.webkitDecodedFrameCount : 0;
+      const hasTimeProgress = v.currentTime > 0.05;
+      const isReadyToPaint = v.readyState >= 2 && !v.paused && (decoded > 0 || hasTimeProgress);
+      if (isReadyToPaint && v.style.display !== 'block') {
+        v.style.display = 'block';
+      }
+    }
 
+    function applyVideos() {
       // 1. Slot: left (Global base wallpaper)
       const left = config.left;
-      const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
       if (left && left.type === 'video' && left.file) {
         const vParam = (left && left.version) ? ('?v=' + left.version) : ('?v=' + Date.now());
         const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
         const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
-        for (let i = 1; i < allLeftVids.length; i++) {
-          allLeftVids[i].pause();
-          allLeftVids[i].removeAttribute('src');
-          allLeftVids[i].load();
-          allLeftVids[i].remove();
-        }
-        let leftVid = allLeftVids[0];
-        if (!leftVid) {
-          leftVid = document.createElement('video');
-          leftVid.id = 'antigravity-video-left';
-          leftVid.className = 'antigravity-slot-video';
-          leftVid.setAttribute('data-slot', 'left');
-          leftVid.muted = true;
-          leftVid.defaultMuted = true;
-          leftVid.setAttribute('muted', '');
-          leftVid.autoplay = true;
-          leftVid.loop = true;
-          leftVid.playsInline = true;
-          leftVid.setAttribute('playsinline', '');
-          leftVid.setAttribute('autoplay', '');
-          leftVid.setAttribute('loop', '');
-          leftVid.preload = 'auto';
-          leftVid.setAttribute('preload', 'auto');
-          leftVid.crossOrigin = 'anonymous';
-          leftVid.setAttribute('crossorigin', 'anonymous');
-          leftVid.style.objectPosition = '${posLeft}';
-          leftVid.style.display = 'none'; // Start hidden: zero black void!
-          if (posterSrc) {
+        let leftVid = document.getElementById('antigravity-video-left');
+        if (leftVid && leftVid.isConnected && leftVid.dataset.currentSrc === src) {
+          if (leftVid.paused && leftVid.readyState >= 1) {
+            leftVid.play().catch(function() {});
+          }
+          checkAndShowVideo(leftVid);
+        } else {
+          const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
+          for (let i = 1; i < allLeftVids.length; i++) {
+            allLeftVids[i].pause();
+            allLeftVids[i].removeAttribute('src');
+            allLeftVids[i].load();
+            allLeftVids[i].remove();
+          }
+          leftVid = allLeftVids[0];
+          if (!leftVid) {
+            leftVid = document.createElement('video');
+            leftVid.id = 'antigravity-video-left';
+            leftVid.className = 'antigravity-slot-video';
+            leftVid.setAttribute('data-slot', 'left');
+            leftVid.muted = true;
+            leftVid.defaultMuted = true;
+            leftVid.setAttribute('muted', '');
+            leftVid.autoplay = true;
+            leftVid.loop = true;
+            leftVid.playsInline = true;
+            leftVid.setAttribute('playsinline', '');
+            leftVid.setAttribute('autoplay', '');
+            leftVid.setAttribute('loop', '');
+            leftVid.preload = 'auto';
+            leftVid.setAttribute('preload', 'auto');
+            leftVid.crossOrigin = 'anonymous';
+            leftVid.setAttribute('crossorigin', 'anonymous');
+            leftVid.style.objectPosition = '${posLeft}';
+            leftVid.style.transform = 'translate3d(0, 0, 0)';
+            leftVid.style.contain = 'strict';
+            leftVid.style.willChange = 'transform';
+            leftVid.style.display = 'none';
+            if (posterSrc) {
+              leftVid.poster = posterSrc;
+              leftVid.setAttribute('poster', posterSrc);
+            }
+            leftVid.addEventListener('playing', function() {
+              setTimeout(function() { checkAndShowVideo(leftVid); }, 50);
+            });
+            leftVid.addEventListener('timeupdate', function() {
+              checkAndShowVideo(leftVid);
+            });
+            leftVid.addEventListener('canplay', function() {
+              if (leftVid.paused) leftVid.play().catch(function() {});
+            });
+            leftVid.addEventListener('error', function() {
+              leftVid.style.display = 'none';
+            });
+            leftVid.addEventListener('stalled', function() {
+              if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
+                leftVid.style.display = 'none';
+              }
+            });
+            leftVid.addEventListener('waiting', function() {
+              if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
+                leftVid.style.display = 'none';
+              }
+            });
+            (document.body || document.documentElement).prepend(leftVid);
+          }
+          if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
             leftVid.poster = posterSrc;
             leftVid.setAttribute('poster', posterSrc);
           }
-          leftVid.addEventListener('playing', function() {
-            setTimeout(function() { checkAndShowVideo(leftVid); }, 50);
-          });
-          leftVid.addEventListener('timeupdate', function() {
-            checkAndShowVideo(leftVid);
-          });
-          leftVid.addEventListener('canplay', function() {
-            if (leftVid.paused) leftVid.play().catch(function() {});
-          });
-          leftVid.addEventListener('error', function() {
+          if (leftVid.dataset.currentSrc !== src) {
+            leftVid.dataset.currentSrc = src;
             leftVid.style.display = 'none';
-          });
-          leftVid.addEventListener('stalled', function() {
-            if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
-              leftVid.style.display = 'none';
-            }
-          });
-          leftVid.addEventListener('waiting', function() {
-            if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
-              leftVid.style.display = 'none';
-            }
-          });
-          (document.body || document.documentElement).prepend(leftVid);
+            leftVid.src = src;
+            leftVid.load();
+            leftVid.play().catch(function() {});
+            const token = Date.now();
+            leftVid.dataset.loadToken = String(token);
+            setTimeout(function() {
+              if (leftVid.dataset.loadToken === String(token)) {
+                checkAndShowVideo(leftVid);
+              }
+            }, 1500);
+          }
+          leftVid.style.objectPosition = '${posLeft}';
+          if (leftVid.paused && leftVid.readyState >= 1) {
+            leftVid.play().catch(function() {});
+          }
+          checkAndShowVideo(leftVid);
         }
-        if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
-          leftVid.poster = posterSrc;
-          leftVid.setAttribute('poster', posterSrc);
-        }
-        if (leftVid.dataset.currentSrc !== src) {
-          leftVid.dataset.currentSrc = src;
-          leftVid.style.display = 'none';
-          leftVid.src = src;
-          leftVid.load();
-          leftVid.play().catch(function() {});
-          const token = Date.now();
-          leftVid.dataset.loadToken = String(token);
-          setTimeout(function() {
-            if (leftVid.dataset.loadToken === String(token)) {
-              checkAndShowVideo(leftVid);
-            }
-          }, 1500);
-        }
-        leftVid.style.objectPosition = '${posLeft}';
-        if (leftVid.paused && leftVid.readyState >= 1) {
-          leftVid.play().catch(function() {});
-        }
-        checkAndShowVideo(leftVid);
       } else {
+        const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
         for (let i = 0; i < allLeftVids.length; i++) {
           allLeftVids[i].pause();
           allLeftVids[i].removeAttribute('src');
@@ -2129,12 +2142,13 @@ function getClientVideoScript(config) {
             oldVids[i].remove();
           }
         } else {
+          // 1. Locate current valid targetContainer
           let targetContainer = null;
           for (let i = 0; i < selectors.length; i++) {
             try {
               const el = document.querySelector(selectors[i]);
               if (el && el !== document.body && el !== document.documentElement) {
-                if (slotKey === 'right' && (el.querySelector('#antigravity\\\\.agentSidePanelInputBox') || el.querySelector('[id="antigravity.agentSidePanelInputBox"]'))) {
+                if (slotKey === 'right' && (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\\\.agentSidePanelInputBox'))) {
                   continue;
                 }
                 targetContainer = el;
@@ -2143,6 +2157,7 @@ function getClientVideoScript(config) {
             } catch (e) {}
           }
 
+          // 2. Clean up any video instances that are NOT inside the active targetContainer
           const existingVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
           for (let i = 0; i < existingVids.length; i++) {
             if (!targetContainer || existingVids[i].parentElement !== targetContainer) {
@@ -2153,6 +2168,7 @@ function getClientVideoScript(config) {
             }
           }
 
+          // 3. If targetContainer exists, manage the single slot video
           if (targetContainer) {
             const allSlotVidsInContainer = targetContainer.querySelectorAll(':scope > .antigravity-slot-video[data-slot="' + slotKey + '"]');
             for (let i = 1; i < allSlotVidsInContainer.length; i++) {
@@ -2162,6 +2178,16 @@ function getClientVideoScript(config) {
               allSlotVidsInContainer[i].remove();
             }
             let vid = allSlotVidsInContainer[0];
+
+            // Fast-path: already mounted in targetContainer with expected source
+            if (vid && vid.dataset.currentSrc === src) {
+              if (vid.paused && vid.readyState >= 1) {
+                vid.play().catch(function() {});
+              }
+              checkAndShowVideo(vid);
+              continue;
+            }
+
             if (!vid) {
               vid = document.createElement('video');
               vid.className = 'antigravity-slot-video';
@@ -2180,7 +2206,10 @@ function getClientVideoScript(config) {
               vid.crossOrigin = 'anonymous';
               vid.setAttribute('crossorigin', 'anonymous');
               vid.style.objectPosition = slotPositions[slotKey] || 'center center';
-              vid.style.display = 'none'; // Start hidden: zero black void!
+              vid.style.transform = 'translate3d(0, 0, 0)';
+              vid.style.contain = 'strict';
+              vid.style.willChange = 'transform';
+              vid.style.display = 'none';
               if (posterSrc) {
                 vid.poster = posterSrc;
                 vid.setAttribute('poster', posterSrc);
@@ -2207,9 +2236,11 @@ function getClientVideoScript(config) {
                   vid.style.display = 'none';
                 }
               });
-              const pos = window.getComputedStyle(targetContainer).position;
-              if (!pos || pos === 'static') {
-                targetContainer.style.position = 'relative';
+              if (!targetContainer.dataset.agPositioned) {
+                targetContainer.dataset.agPositioned = 'true';
+                if (!targetContainer.style.position || targetContainer.style.position === 'static') {
+                  targetContainer.style.position = 'relative';
+                }
               }
               targetContainer.prepend(vid);
             }
@@ -2251,7 +2282,42 @@ function getClientVideoScript(config) {
     }
 
     let debounceTimer = null;
-    const scheduledApply = function() {
+    const scheduledApply = function(mutations) {
+      if (mutations && mutations.length > 0) {
+        let isRelevant = false;
+        for (let i = 0; i < mutations.length; i++) {
+          const m = mutations[i];
+          if (m.type === 'attributes') {
+            isRelevant = true;
+            break;
+          } else if (m.type === 'childList') {
+            for (let j = 0; j < m.addedNodes.length; j++) {
+              const node = m.addedNodes[j];
+              if (node.nodeType === 1) {
+                const role = node.getAttribute ? node.getAttribute('role') : null;
+                const ds = node.getAttribute ? node.getAttribute('data-state') : null;
+                if (role === 'dialog' || ds === 'open' || node.id === 'antigravity.agentSidePanelInputBox' || (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm')))) {
+                  isRelevant = true;
+                  break;
+                }
+              }
+            }
+            if (isRelevant) break;
+            for (let j = 0; j < m.removedNodes.length; j++) {
+              const node = m.removedNodes[j];
+              if (node.nodeType === 1) {
+                if (node.id === 'antigravity-video-left' || (node.classList && node.classList.contains('antigravity-slot-video')) || (node.getAttribute && node.getAttribute('role') === 'dialog')) {
+                  isRelevant = true;
+                  break;
+                }
+              }
+            }
+            if (isRelevant) break;
+          }
+        }
+        if (!isRelevant) return;
+      }
+
       if (debounceTimer) return;
       debounceTimer = setTimeout(function() {
         debounceTimer = null;
@@ -2266,16 +2332,17 @@ function getClientVideoScript(config) {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'class', 'style', 'hidden']
+      attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
     });
 
-    if (!window.__antigravityInterval) {
-      window.__antigravityInterval = setInterval(function() {
-        if (window.__antigravityApplyVideos) {
-          window.__antigravityApplyVideos();
-        }
-      }, 2500);
+    if (window.__antigravityInterval) {
+      clearInterval(window.__antigravityInterval);
     }
+    window.__antigravityInterval = setInterval(function() {
+      if (window.__antigravityApplyVideos) {
+        window.__antigravityApplyVideos();
+      }
+    }, 10000);
   })();
   `;
 }
@@ -2941,6 +3008,7 @@ module.exports = {
   revertToBaseline,
   loadSlotsConfig,
   saveSlotsConfig,
+  triggerLiveHotReload,
   detectVideoCodec,
   findCompanionPoster,
   extractPosterFromVideo,
