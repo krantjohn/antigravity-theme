@@ -295,9 +295,11 @@ const themeInjectionCode = `
         '[data-panel="terminal"]'
       ],
       'right': [
-        'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto',
-        'div[data-aux-pane-open="true"] .overflow-y-auto',
-        'div[data-aux-pane-open="true"] div.flex-1.min-h-0'
+        'div[data-aux-pane-open="true"] .terminal.xterm',
+        'div[data-aux-pane-open="true"] div.terminal-wrapper',
+        'div[data-aux-pane-open="true"] [data-panel="terminal"]',
+        '[class*="terminal-drawer"]',
+        'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background'
       ],
       'bottom': [
         '[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
@@ -334,8 +336,23 @@ const themeInjectionCode = `
           try {
             const el = document.querySelector(selectors[i]);
             if (el && el !== document.body && el !== document.documentElement) {
-              if (slotKey === 'right' && (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\\\.agentSidePanelInputBox'))) {
-                continue;
+              if (slotKey === 'right') {
+                if (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\\\.agentSidePanelInputBox')) {
+                  continue;
+                }
+                // 防右壁纸污染：整个辅助大容器（Overview总览/时间线/工件预览/代码审查等）必须完全透明，绝不可被右壁纸覆盖！
+                const isTerm = el.classList.contains('xterm') || el.classList.contains('terminal') || !!el.querySelector('.terminal, .xterm, [data-panel="terminal"]');
+                if (!isTerm) {
+                  if (el.getAttribute('aria-label') === 'Auxiliary Pane' || 
+                      el.getAttribute('aria-label') === 'Overview' ||
+                      el.getAttribute('aria-label') === 'Review' ||
+                      el.closest('[aria-label="Overview"]') ||
+                      el.closest('[aria-label="Review"]') ||
+                      el.querySelector('[aria-label="Overview"]') ||
+                      el.querySelector('[aria-label="Review"]')) {
+                    continue;
+                  }
+                }
               }
               targetContainer = el;
               break;

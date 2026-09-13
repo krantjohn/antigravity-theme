@@ -37,37 +37,64 @@ const sampleVideoPath = fs.existsSync('C:/Users/lenvo/Videos/2025-01-18 20-06-44
   ? 'C:/Users/lenvo/Videos/2025-01-18 20-06-44.mp4'
   : path.join(__dirname, 'sample_wallpaper.mp4');
 
-function evalCdp(expression) {
+function evalCdp(expression, retries = 3) {
   return new Promise((resolve, reject) => {
-    http.get('http://127.0.0.1:8314/json', (res) => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => {
-        try {
-          const list = JSON.parse(data);
-          const page = list.find(p => p.type === 'page');
-          if (!page) {
-            return reject(new Error('No CDP page found'));
-          }
-          const ws = new WebSocket(page.webSocketDebuggerUrl);
-          ws.addEventListener('open', () => {
-            ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, awaitPromise: true } }));
-          });
-          ws.addEventListener('message', (evt) => {
-            const resp = JSON.parse(evt.data);
-            ws.close();
-            if (resp.result && resp.result.result) {
-              resolve(resp.result.result.value);
-            } else {
-              resolve(resp);
+    function attempt(remaining) {
+      http.get('http://127.0.0.1:8314/json', (res) => {
+        let data = '';
+        res.on('data', c => data += c);
+        res.on('end', () => {
+          try {
+            const list = JSON.parse(data);
+            const page = list.find(p => p.type === 'page');
+            if (!page) {
+              return reject(new Error('No CDP page found'));
             }
-          });
-          ws.addEventListener('error', reject);
-        } catch (e) {
-          reject(e);
+            const ws = new WebSocket(page.webSocketDebuggerUrl);
+            let responded = false;
+            ws.addEventListener('open', () => {
+              ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, awaitPromise: true } }));
+            });
+            ws.addEventListener('message', (evt) => {
+              responded = true;
+              try {
+                const resp = JSON.parse(evt.data);
+                ws.close();
+                if (resp.result && resp.result.result) {
+                  resolve(resp.result.result.value);
+                } else {
+                  resolve(resp);
+                }
+              } catch(e) {
+                resolve(null);
+              }
+            });
+            ws.addEventListener('error', (err) => {
+              if (responded) return;
+              try { ws.close(); } catch(e) {}
+              if (remaining > 1) {
+                setTimeout(() => attempt(remaining - 1), 150);
+              } else {
+                reject(err);
+              }
+            });
+          } catch (e) {
+            if (remaining > 1) {
+              setTimeout(() => attempt(remaining - 1), 150);
+            } else {
+              reject(e);
+            }
+          }
+        });
+      }).on('error', (err) => {
+        if (remaining > 1) {
+          setTimeout(() => attempt(remaining - 1), 150);
+        } else {
+          reject(err);
         }
       });
-    }).on('error', reject);
+    }
+    attempt(retries);
   });
 }
 
@@ -271,8 +298,8 @@ async function runTests() {
   assert.ok(bottomState.readyState >= 1, 'Bottom video readyState must have readyState >= 1');
   console.log('✓ [Test 5] 槽位【下】动态视频挂载并流畅播放成功');
 
-  // Test 6: Video swap on slot right (sidebar/drawer) with singleton isolation check
-  console.log('\n[Test 6] 测试槽位【右】(独立抽屉/侧栏) 切换为动态视频并校验单例隔离...');
+  // Test 6: Video swap on slot right (sidebar/drawer/terminal) with anti-pollution & singleton isolation check
+  console.log('\n[Test 6] 测试槽位【右】(独立终端/抽屉) 切换为动态视频并校验防污染与单例隔离...');
   const swapRightResult = await swapWallpaper('右', sampleVideoPath);
   assert.ok(swapRightResult);
   await new Promise(r => setTimeout(r, 600));
@@ -281,7 +308,7 @@ async function runTests() {
     new Promise((resolve) => {
       const start = Date.now();
       const check = () => {
-        const hasContainer = !!document.querySelector('div[data-aux-pane-open="true"], [class*="terminal-drawer"]');
+        const hasContainer = !!document.querySelector('div[data-aux-pane-open="true"] .terminal.xterm, [class*="terminal-drawer"]');
         const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
         const v = vids[0];
         if (v && v.paused) {
@@ -330,56 +357,69 @@ async function runTests() {
     assert.strictEqual(rightState.count, 1, 'When right container is open, exactly 1 video instance should be mounted');
   }
 
-  // Test dynamic opening and closing of auxiliary pane
+  // Test dynamic opening and closing of auxiliary pane + Anti-Pollution verification
   const hasToggleBtn = await evalCdp(`!!document.querySelector('button[aria-label="Toggle Auxiliary Pane"]')`);
   if (hasToggleBtn) {
-    // If currently open, close it first so we can deterministically test opening it
-    if (rightState.hasContainer) {
+    // 确保辅助面板打开
+    const isAuxOpen = await evalCdp(`!!document.querySelector('div[data-aux-pane-open="true"]')`);
+    if (!isAuxOpen) {
       await evalCdp(`document.querySelector('button[aria-label="Toggle Auxiliary Pane"]').click()`);
       await new Promise(r => setTimeout(r, 600));
     }
-    console.log('   正在测试动态展开辅助侧栏并校验 slot right 动态视频实时挂载...');
-    await evalCdp(`document.querySelector('button[aria-label="Toggle Auxiliary Pane"]').click()`);
-    let rightOpenState = { count: 0, readyState: 0 };
-    for (let attempt = 0; attempt < 150; attempt++) {
-      await new Promise(r => setTimeout(r, 100));
-      const cdpRightOpenCheck = await evalCdp(`
-        (() => {
-          const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
-          const v = vids[0];
-          if (v && v.paused) v.play().catch(() => {});
-          const container = document.querySelector('div[data-aux-pane-open="true"]');
-          return JSON.stringify({
-            count: vids.length,
-            mountedInContainer: !!(v && container && container.contains(v)),
-            readyState: v ? v.readyState : 0,
-            paused: v ? v.paused : null
-          });
-        })()
-      `);
-      rightOpenState = JSON.parse(cdpRightOpenCheck);
-      if (rightOpenState.count === 1 && rightOpenState.readyState >= 1) break;
+
+    // 1. 防污染校验：在 Overview 总览/任务列表界面下，右壁纸严禁渗透污染，必须保持 100% 透明！
+    const hasOverviewTab = await evalCdp(`!!document.querySelector('button[aria-label="Overview tab"]')`);
+    if (hasOverviewTab) {
+      await evalCdp(`document.querySelector('button[aria-label="Overview tab"]').click()`);
+      await new Promise(r => setTimeout(r, 500));
     }
-    console.log('   CDP 侧栏展开后视频挂载状态:', rightOpenState);
-    assert.strictEqual(rightOpenState.count, 1, 'Exactly 1 right video must be mounted when auxiliary pane is open');
-    assert.ok(rightOpenState.mountedInContainer, 'Video must be contained inside auxiliary drawer');
-    assert.ok(rightOpenState.readyState >= 1, 'Right video must have readyState >= 1');
+    const overviewRightVids = await evalCdp(`document.querySelectorAll('.antigravity-slot-video[data-slot="right"]').length`);
+    console.log('   CDP Overview 总览区右壁纸渗透校验 (应为0/透明):', overviewRightVids);
+    assert.strictEqual(overviewRightVids, 0, 'Overview pane must remain transparent without right slot video pollution');
 
-    // Close auxiliary pane again
-    await evalCdp(`document.querySelector('button[aria-label="Toggle Auxiliary Pane"]').click()`);
-    await new Promise(r => setTimeout(r, 800));
+    // 2. 独立终端挂载校验：切换到 Terminal tab 时，右壁纸视频应正确挂载到终端
+    const hasTermTab = await evalCdp(`!!document.querySelector('button[aria-label="Terminal tab"]')`);
+    if (hasTermTab) {
+      console.log('   正在测试辅助面板切换至 Terminal 终端并校验 slot right 动态视频实时挂载...');
+      await evalCdp(`document.querySelector('button[aria-label="Terminal tab"]').click()`);
+      let termOpenState = { count: 0, readyState: 0 };
+      for (let attempt = 0; attempt < 150; attempt++) {
+        await new Promise(r => setTimeout(r, 100));
+        const cdpTermOpenCheck = await evalCdp(`
+          (() => {
+            const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
+            const v = vids[0];
+            if (v && v.paused) v.play().catch(() => {});
+            const container = document.querySelector('div[data-aux-pane-open="true"]');
+            return JSON.stringify({
+              count: vids.length,
+              mountedInContainer: !!(v && container && container.contains(v)),
+              readyState: v ? v.readyState : 0,
+              paused: v ? v.paused : null
+            });
+          })()
+        `);
+        termOpenState = JSON.parse(cdpTermOpenCheck);
+        if (termOpenState.count === 1 && termOpenState.readyState >= 1) break;
+      }
+      console.log('   CDP 终端切换后视频挂载状态:', termOpenState);
+      assert.strictEqual(termOpenState.count, 1, 'Exactly 1 right video must be mounted when terminal tab is active');
+      assert.ok(termOpenState.mountedInContainer, 'Video must be contained inside auxiliary drawer terminal');
+      assert.ok(termOpenState.readyState >= 1, 'Right video must have readyState >= 1');
 
-    const cdpRightClosedCheck = await evalCdp(`
-      (() => {
-        const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
-        return JSON.stringify({ count: vids.length });
-      })()
-    `);
-    const rightClosedState = JSON.parse(cdpRightClosedCheck);
-    assert.strictEqual(rightClosedState.count, 0, 'Video must be cleanly unmounted when auxiliary pane is closed');
-    console.log('   ✓ 辅助侧栏动态展开挂载与收起卸载生命周期闭环验证通过');
+      // 切换回 Overview 界面，右壁纸必须被干净卸载，恢复纯净透明
+      if (hasOverviewTab) {
+        await evalCdp(`document.querySelector('button[aria-label="Overview tab"]').click()`);
+        await new Promise(r => setTimeout(r, 500));
+        const backToOverviewCount = await evalCdp(`document.querySelectorAll('.antigravity-slot-video[data-slot="right"]').length`);
+        assert.strictEqual(backToOverviewCount, 0, 'Right video must be cleanly unmounted when switching back to Overview');
+        console.log('   ✓ 切换回 Overview 时右壁纸成功卸载并恢复纯净透明');
+      }
+    }
+
+    console.log('   ✓ 辅助侧栏防污染与终端生命周期闭环验证通过');
   }
-  console.log('✓ [Test 6] 槽位【右】单例隔离校验通过 (准确控制视频实例，无DOM泄漏)');
+  console.log('✓ [Test 6] 槽位【右】单例隔离与防污染校验通过 (准确控制视频实例，无DOM泄漏，无界面污染)');
 
   // Test 7: Swapping back to static image (JPG) - Backward Compatibility
   console.log('\n[Test 7] 验证完全向后兼容：切换回静态壁纸 (JPG)...');

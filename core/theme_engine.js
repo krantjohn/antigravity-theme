@@ -1667,9 +1667,10 @@ div[data-aux-pane-open="true"] .bg-background,
   background: transparent !important;
 }
 
-/* 12.2 【右】仅在右侧对话列表抽屉（Conversation面板，宽度约250px）独立展示右壁纸 */
-div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
-div[data-aux-pane-open="true"] div.flex-1.min-h-0 > div.flex.flex-col.gap-2.overflow-y-auto {
+/* 12.2 【右】仅在右侧独立终端或特定侧栏抽屉展示右壁纸 */
+div[data-aux-pane-open="true"] .terminal.xterm,
+div[data-aux-pane-open="true"] [data-panel="terminal"],
+[class*="terminal-drawer"] {
   position: relative !important;
   background-color: transparent !important;
   background-image: 
@@ -1682,6 +1683,22 @@ div[data-aux-pane-open="true"] div.flex-1.min-h-0 > div.flex.flex-col.gap-2.over
   background-repeat: no-repeat !important;
   border-left: 1px solid rgba(249, 168, 212, 0.35) !important;
   box-shadow: none !important;
+}
+
+/* 严禁右壁纸污染整个辅助面板、Overview总览、任务时间线、Artifact工件预览或Review审查区！ */
+[aria-label="Auxiliary Pane"],
+[aria-label="Auxiliary Pane"] > div,
+[aria-label="Overview"],
+[aria-label="Overview"] *,
+[aria-label="Review"],
+[aria-label="Review"] *,
+div[role="region"][aria-label="Overview"],
+div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
+div[data-aux-pane-open="true"]:not(:has(.terminal.xterm)):not(:has([data-panel="terminal"])) [aria-label="Auxiliary Pane"],
+div[data-aux-pane-open="true"] .py-3.flex.h-full.w-full.flex-col.gap-6.flex-grow.min-h-0.overflow-y-auto {
+  background-image: none !important;
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
 .antigravity-slot-video[data-slot="right"] {
@@ -2109,9 +2126,11 @@ function getClientVideoScript(config) {
           '[data-panel="terminal"]'
         ],
         'right': [
-          'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto',
-          'div[data-aux-pane-open="true"] .overflow-y-auto',
-          'div[data-aux-pane-open="true"] div.flex-1.min-h-0'
+          'div[data-aux-pane-open="true"] .terminal.xterm',
+          'div[data-aux-pane-open="true"] div.terminal-wrapper',
+          'div[data-aux-pane-open="true"] [data-panel="terminal"]',
+          '[class*="terminal-drawer"]',
+          'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background'
         ],
         'bottom': [
           '#antigravity\\\\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
@@ -2148,8 +2167,23 @@ function getClientVideoScript(config) {
             try {
               const el = document.querySelector(selectors[i]);
               if (el && el !== document.body && el !== document.documentElement) {
-                if (slotKey === 'right' && (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\\\.agentSidePanelInputBox'))) {
-                  continue;
+                if (slotKey === 'right') {
+                  if (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\\\.agentSidePanelInputBox')) {
+                    continue;
+                  }
+                  // 防右壁纸污染：整个辅助大容器（Overview总览/时间线/工件预览/代码审查等）必须完全透明，绝不可被右壁纸覆盖！
+                  const isTerm = el.classList.contains('xterm') || el.classList.contains('terminal') || !!el.querySelector('.terminal, .xterm, [data-panel="terminal"]');
+                  if (!isTerm) {
+                    if (el.getAttribute('aria-label') === 'Auxiliary Pane' || 
+                        el.getAttribute('aria-label') === 'Overview' ||
+                        el.getAttribute('aria-label') === 'Review' ||
+                        el.closest('[aria-label="Overview"]') ||
+                        el.closest('[aria-label="Review"]') ||
+                        el.querySelector('[aria-label="Overview"]') ||
+                        el.querySelector('[aria-label="Review"]')) {
+                      continue;
+                    }
+                  }
                 }
                 targetContainer = el;
                 break;
