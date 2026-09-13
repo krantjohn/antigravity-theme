@@ -11,6 +11,12 @@ const {
   revertToBaseline,
   loadSlotsConfig,
   saveSlotsConfig,
+  setFontColor,
+  listFontPresets,
+  resolveFontColor,
+  parseHexColor,
+  adjustBrightness,
+  FONT_PRESETS,
   SLOTS_META,
   SLOT_ALIASES,
   VIDEO_EXTS,
@@ -478,8 +484,168 @@ async function runTests() {
   }
   console.log('✓ [Test 11] Wallpaper Engine 槽位热切换及基线还原验证通过');
 
+  // Test 12: Font color presets, aliases, hex parsing, luminance and contrast outline algorithm
+  console.log('\n[Test 12] 校验字体颜色预设、别名解析与自定义 Hex 颜色感知亮度算法...');
+  const presets = listFontPresets();
+  assert.ok(presets['pure-white'], 'Preset pure-white must exist');
+  assert.ok(presets['obsidian-black'], 'Preset obsidian-black must exist');
+  assert.ok(presets['sakura-pink'], 'Preset sakura-pink must exist');
+  assert.ok(presets['cyber-cyan'], 'Preset cyber-cyan must exist');
+  assert.ok(presets['golden-sand'], 'Preset golden-sand must exist');
+  assert.ok(presets['emerald-green'], 'Preset emerald-green must exist');
+
+  for (const [key, p] of Object.entries(presets)) {
+    assert.ok(p.id, `${key} must have id`);
+    assert.ok(p.name, `${key} must have name`);
+    assert.ok(p.primary, `${key} must have primary color`);
+    assert.ok(p.secondary, `${key} must have secondary color`);
+    assert.ok(p.muted, `${key} must have muted color`);
+    assert.ok(p.shadow, `${key} must have shadow`);
+    assert.ok(p.terminal, `${key} must have terminal color`);
+    assert.ok(p.terminalShadow, `${key} must have terminalShadow`);
+    assert.ok(typeof p.isDarkText === 'boolean', `${key} must declare isDarkText boolean`);
+    assert.ok(p.desc, `${key} must have description`);
+  }
+
+  // Verify alias and index resolution
+  assert.strictEqual(resolveFontColor('1').id, 'pure-white');
+  assert.strictEqual(resolveFontColor('white').id, 'pure-white');
+  assert.strictEqual(resolveFontColor('纯白').id, 'pure-white');
+  assert.strictEqual(resolveFontColor('2').id, 'obsidian-black');
+  assert.strictEqual(resolveFontColor('black').id, 'obsidian-black');
+  assert.strictEqual(resolveFontColor('暗夜曜黑').id, 'obsidian-black');
+  assert.strictEqual(resolveFontColor('3').id, 'sakura-pink');
+  assert.strictEqual(resolveFontColor('pink').id, 'sakura-pink');
+  assert.strictEqual(resolveFontColor('4').id, 'cyber-cyan');
+  assert.strictEqual(resolveFontColor('5').id, 'golden-sand');
+  assert.strictEqual(resolveFontColor('6').id, 'emerald-green');
+
+  // Verify Hex parsing and safety (including 3, 4, 6, 8-digit hex)
+  assert.deepStrictEqual(parseHexColor('#ffffff'), { r: 255, g: 255, b: 255, hex: '#ffffff' });
+  assert.deepStrictEqual(parseHexColor('ffffff'), { r: 255, g: 255, b: 255, hex: '#ffffff' });
+  assert.deepStrictEqual(parseHexColor('#fff'), { r: 255, g: 255, b: 255, hex: '#ffffff' });
+  assert.deepStrictEqual(parseHexColor('#ffff'), { r: 255, g: 255, b: 255, hex: '#ffffff' });
+  assert.deepStrictEqual(parseHexColor('#ffffff00'), { r: 255, g: 255, b: 255, hex: '#ffffff' });
+  assert.deepStrictEqual(parseHexColor('0f172a'), { r: 15, g: 23, b: 42, hex: '#0f172a' });
+  assert.strictEqual(parseHexColor('not-a-color'), null);
+  assert.strictEqual(parseHexColor(''), null);
+  assert.strictEqual(parseHexColor(null), null);
+
+  // Verify brightness adjustment (including zero-luminance edge case)
+  const lightened = adjustBrightness('#101010', 50);
+  assert.ok(lightened.startsWith('#'));
+  const darkened = adjustBrightness('#f0f0f0', -20);
+  assert.ok(darkened.startsWith('#'));
+  const lightenedBlack = adjustBrightness('#000000', 30);
+  assert.notStrictEqual(lightenedBlack, '#000000', 'adjustBrightness must lighten pure black #000000 without getting stuck at 0');
+  assert.strictEqual(lightenedBlack, '#4d4d4d', 'adjustBrightness(#000000, 30) should be #4d4d4d');
+
+  // Verify custom Hex luminance and contrast outline logic
+  const darkCustom = resolveFontColor('#1a1a2e');
+  assert.strictEqual(darkCustom.isDarkText, true);
+  assert.ok(darkCustom.shadow.includes('#ffffff') || darkCustom.shadow.includes('255, 255, 255'), 'Dark text must have bright white glow shadow');
+
+  const brightCustom = resolveFontColor('#fefefe');
+  assert.strictEqual(brightCustom.isDarkText, false);
+  assert.ok(brightCustom.shadow.includes('0, 0, 0'), 'Light text must have dark shadow outline');
+
+  // Verify object resolution (e.g. from saved config)
+  assert.strictEqual(resolveFontColor({ id: 'obsidian-black' }).id, 'obsidian-black');
+  assert.strictEqual(resolveFontColor({ customHex: '#123456' }).id, 'custom-123456');
+
+  // Verify common color names
+  assert.strictEqual(resolveFontColor('red').primary, '#ef4444');
+  assert.strictEqual(resolveFontColor('blue').primary, '#3b82f6');
+
+  // Verify strict fallback vs default fallback
+  assert.strictEqual(resolveFontColor('gibberish-color-xyz', false), null, 'Strict resolve must return null on invalid input');
+  assert.strictEqual(resolveFontColor(null).id, 'pure-white');
+  assert.strictEqual(resolveFontColor('gibberish-color-xyz').id, 'pure-white');
+
+  // Verify setFontColor rejects invalid input safely without corrupting configuration
+  const invalidResult = await setFontColor('completely-invalid-color-12345');
+  assert.strictEqual(invalidResult, false, 'setFontColor must return false on invalid color input');
+  console.log('✓ [Test 12] 字体颜色预设、别名多模态映射、亮度自适应与边界防御算法全部正确');
+
+  // Test 13: Live font color switching, slots_config persistence, CSS generation & CDP live verification
+  console.log('\n[Test 13] 校验字体颜色切换、持久化、样式编译及 CDP 实时热重载...');
+  const setBlackResult = await setFontColor('obsidian-black');
+  assert.ok(setBlackResult, 'setFontColor obsidian-black must succeed');
+
+  const configAfterBlack = loadSlotsConfig();
+  assert.strictEqual(configAfterBlack.fontColor.id, 'obsidian-black');
+  assert.ok(configAfterBlack.left, 'left slot preserved');
+  assert.ok(configAfterBlack.mid, 'mid slot preserved');
+  assert.ok(configAfterBlack.right, 'right slot preserved');
+
+  const cssAfterBlack = fs.readFileSync(path.join(antigravityDir, 'custom_theme.css'), 'utf8');
+  assert.ok(cssAfterBlack.includes('#0f172a'), 'custom_theme.css must contain obsidian-black primary color');
+  assert.ok(cssAfterBlack.includes('#ffffff') || cssAfterBlack.includes('255, 255, 255'), 'custom_theme.css must contain white outline glow for dark text');
+  assert.ok(cssAfterBlack.includes('rgba(255, 255, 255, 0.88)'), 'Inline code must have light background in dark text mode');
+
+  await new Promise(r => setTimeout(r, 600));
+  const cdpFontCheckBlack = await evalCdp(`
+    (() => {
+      const sheet = document.getElementById('antigravity-custom-theme')?.sheet;
+      if (!sheet) return JSON.stringify({ hasSheet: false });
+      let fontFound = false;
+      for (const rule of sheet.cssRules) {
+        if (rule.cssText && (rule.cssText.includes('#0f172a') || rule.cssText.includes('rgb(15, 23, 42)'))) {
+          fontFound = true;
+          break;
+        }
+      }
+      return JSON.stringify({
+        hasSheet: true,
+        fontFound
+      });
+    })()
+  `);
+  const fontStateBlack = JSON.parse(cdpFontCheckBlack);
+  console.log('   CDP 暗夜曜黑字体生效状态:', fontStateBlack);
+  assert.strictEqual(fontStateBlack.hasSheet, true, 'Antigravity style tag must exist');
+  assert.strictEqual(fontStateBlack.fontFound, true, 'Obsidian-black color must be present in active CDP stylesheet rules');
+
+  console.log('   正在测试自定义 Hex 颜色 (#ff69b4)...');
+  const setHexResult = await setFontColor('#ff69b4');
+  assert.ok(setHexResult, 'setFontColor #ff69b4 must succeed');
+
+  const configAfterHex = loadSlotsConfig();
+  assert.strictEqual(configAfterHex.fontColor.primary, '#ff69b4');
+  const cssAfterHex = fs.readFileSync(path.join(antigravityDir, 'custom_theme.css'), 'utf8');
+  assert.ok(cssAfterHex.includes('#ff69b4'), 'custom_theme.css must contain #ff69b4');
+
+  await new Promise(r => setTimeout(r, 600));
+  const cdpFontCheckHex = await evalCdp(`
+    (() => {
+      const sheet = document.getElementById('antigravity-custom-theme')?.sheet;
+      if (!sheet) return JSON.stringify({ hasSheet: false });
+      let hexFound = false;
+      for (const rule of sheet.cssRules) {
+        if (rule.cssText && (rule.cssText.includes('#ff69b4') || rule.cssText.includes('rgb(255, 105, 180)'))) {
+          hexFound = true;
+          break;
+        }
+      }
+      return JSON.stringify({ hasSheet: true, hexFound });
+    })()
+  `);
+  const fontStateHex = JSON.parse(cdpFontCheckHex);
+  console.log('   CDP 自定义粉色生效状态:', fontStateHex);
+  assert.strictEqual(fontStateHex.hexFound, true, 'Custom hex color must be present in active CDP stylesheet rules');
+
+  console.log('   正在恢复黄金基线并校验字体颜色重置...');
+  await revertToBaseline();
+  const baselineConfigAfterRevert = loadSlotsConfig();
+  assert.strictEqual(baselineConfigAfterRevert.fontColor.id, 'pure-white');
+  const baselineCss = fs.readFileSync(path.join(antigravityDir, 'custom_theme.css'), 'utf8');
+  assert.ok(baselineCss.includes('#ffffff'), 'Baseline CSS must contain pure-white color');
+  assert.ok(baselineCss.includes('.terminal.xterm [class*="xterm-color-7"], .terminal.xterm [class*="xterm-fg-7"] { color: #ffffff !important;'), 'Baseline terminal xterm-color-7 must be #ffffff, NOT dark slate');
+  assert.ok(baselineCss.includes('rgba(10, 11, 20, 0.75)'), 'Inline code must have dark background in light text mode');
+  console.log('✓ [Test 13] 字体颜色切换、持久化、样式编译及 CDP 实时热重载全流程通过');
+
   console.log('\n=======================================================');
-  console.log('✨ 所有的 11 项单元与深度端到端实测全部通过 (PASS)！');
+  console.log('✨ 所有的 13 项单元与深度端到端实测全部通过 (PASS)！');
   console.log('=======================================================');
   process.exit(0);
 }

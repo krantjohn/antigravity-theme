@@ -4,6 +4,22 @@ cd /d "%~dp0.."
 
 if "%~1"=="" goto MENU
 set "arg1=%~1"
+if /i "%arg1%"=="font" (
+    if "%~2"=="" (
+        goto FONT_MENU
+    ) else (
+        node "%~dp0..\core\theme_engine.js" --set-font-color %2 %3 %4
+        exit /b %ERRORLEVEL%
+    )
+)
+if /i "%arg1%"=="fonts" (
+    node "%~dp0..\core\theme_engine.js" --list-font-colors
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="set-font" (
+    node "%~dp0..\core\theme_engine.js" --set-font-color %2 %3 %4
+    exit /b %ERRORLEVEL%
+)
 if "%arg1:~0,1%"=="-" (
     node "%~dp0..\core\theme_engine.js" %*
 ) else (
@@ -14,23 +30,25 @@ exit /b %ERRORLEVEL%
 :MENU
 cls
 echo =======================================================
-echo    🌸 Antigravity Theme Customizer —— 壁纸管理中心 
+echo    🌸 Antigravity Theme Customizer —— 壁纸与样式中心 
 echo =======================================================
 echo.
 echo   [1] 更换本地壁纸 (输入路径或直接拖入视频/图片)
 echo   [2] 浏览 Steam Wallpaper Engine 创意工坊壁纸并选择 
 echo   [3] 搜索 Steam Wallpaper Engine 创意工坊壁纸 
-echo   [4] 查看当前各个槽位壁纸状态 
-echo   [5] 退出 
+echo   [4] 自定义字体颜色与预设 (解决亮/暗壁纸字体不清问题)
+echo   [5] 查看当前各个槽位与字体状态 
+echo   [6] 退出 
 echo.
 set "choice="
-set /p "choice=请选择操作 (1-5) [默认 1]: "
+set /p "choice=请选择操作 (1-6) [默认 1]: "
 if not defined choice set "choice=1"
 if "%choice%"=="1" goto LOCAL_SWAP
 if "%choice%"=="2" goto WE_LIST
 if "%choice%"=="3" goto WE_SEARCH
-if "%choice%"=="4" goto VIEW_STATUS
-if "%choice%"=="5" goto EXIT
+if "%choice%"=="4" goto FONT_MENU
+if "%choice%"=="5" goto VIEW_STATUS
+if "%choice%"=="6" goto EXIT
 goto MENU
 
 :LOCAL_SWAP
@@ -106,6 +124,25 @@ if not defined slot set "slot=左"
 set "slot=%slot:"=%"
 echo.
 node "%~dp0..\core\theme_engine.js" --swap-we "%we_id%" "%slot%"
+echo.
+pause
+goto MENU
+
+:FONT_MENU
+echo.
+echo -------------------------------------------------------
+echo   [4] 自定义字体颜色 (适配亮/暗/二次元壁纸，字迹极清)
+echo -------------------------------------------------------
+echo.
+node "%~dp0..\core\theme_engine.js" --list-font-colors
+echo.
+set "fchoice="
+set /p "fchoice=请输入预设序号(1-6)、预设名或自定义Hex代码 (例如 #ffffff / #1a1a2e，输入 0 返回): "
+if not defined fchoice goto MENU
+set "fchoice=%fchoice:"=%"
+if "%fchoice%"=="0" goto MENU
+echo.
+node "%~dp0..\core\theme_engine.js" --set-font-color "%fchoice%"
 echo.
 pause
 goto MENU

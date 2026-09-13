@@ -35,10 +35,14 @@
   - **`右`（独立抽屉面板）**：右侧侧栏独立画卷，多栏无缝协同。
   - **`下`（底部输入框）**：提问输入框精美画中画插图。
   - **`设置`（设置弹窗）**：设置窗口专属插画背景。
+- 🎨 **全界面自定义字体颜色与自适应抗炫光轮廓 (Font Color Customizer)**：
+  - 彻底解决“更换不同明暗/高对比壁纸后，应用内文字看不清”的痛点！
+  - 内置 6 套高对比发光轮廓预设：`纯白高对比 (pure-white)`、`暗夜曜黑 (obsidian-black)`、`樱花粉 (sakura-pink)`、`赛博青 (cyber-cyan)`、`暖金 (golden-sand)`、`翡翠绿 (emerald-green)`。
+  - 支持直接输入任意 Hex 颜色值（如 `#ffffff`, `#1a1a2e`, `#ff69b4`）。
+  - 自动基于感知亮度计算轮廓：亮色文字配深邃投影，暗色文字配白芒微光边缘，无论壁纸多亮多暗，字迹均清晰通透。
+  - 全面覆盖主对话区、Markdown 输出、输入框、侧边栏、终端与设置弹窗。
 - 💖 **圣园未花同款柔光粉边界**：
   - 采用精确调配的柔和樱粉发色（`rgba(249, 168, 212)`），配以多层羽化弥散流光阴影，拒绝粗暴嵌套，通透纯净。
-- 🖤 **极清曜石黑文字 + 柔和光晕**：
-  - 终端文本重构为曜石黑（Obsidian Black）高对比度呈现，自带微发光白芒边缘，背景再花也能清晰看清每一行代码，永不眼花。
 - 💎 **通透毛玻璃磨砂（Glassmorphism）**：
   - 深度穿透全窗口，消除多余嵌套边框，消灭全局外层烦人滚动条，全界面丝滑通透。
 - ⚡ **0.3 秒极速热重载 (Hot-Reload)**：
@@ -100,7 +104,8 @@
   - 选项 [1]：更换本地壁纸（拖入图片或视频文件即可）；
   - 选项 [2]：浏览 Steam Wallpaper Engine 已订阅壁纸库；
   - 选项 [3]：搜索 Steam Wallpaper Engine 壁纸；
-  - 选项 [4]：查看当前各槽位状态。
+  - 选项 [4]：自定义字体颜色与预设（解决亮/暗壁纸字迹不清问题）；
+  - 选项 [5]：查看当前各槽位与字体状态。
 - 或直接双击运行 **`bin/wallpaper_engine.bat`**：
   - 专属 Wallpaper Engine 工坊选择器，快速按序号或工坊 ID 将壁纸应用到指定的 Antigravity 槽位！
 
@@ -141,8 +146,25 @@ node core/theme_engine.js --swap "下" "D:\你的输入框壁纸.png"
 # 更换【设置面板插画】(设置槽位)
 node core/theme_engine.js --swap "设置" "D:\你的设置壁纸.png"
 
-# 查看当前 5 大槽位的壁纸类型与状态
+# 查看当前 5 大槽位壁纸类型与当前字体颜色
 node core/theme_engine.js --status
+```
+
+#### 3. 自定义字体颜色与高对比抗眩光预设
+```bash
+# 查看所有可用字体预设与当前生效状态 (支持 --list-font-colors, --fonts, fonts)
+node core/theme_engine.js --list-font-colors
+bin\swap_wallpaper.bat fonts
+
+# 使用预设名称或序号切换字体 (1-6，支持 --font 或直接 font)
+node core/theme_engine.js --set-font-color obsidian-black   # 曜黑+白辉光 (适合超亮/纯白壁纸)
+node core/theme_engine.js --font sakura-pink                # 樱花粉
+bin\swap_wallpaper.bat font 1                               # 切换为纯白高对比 (默认)
+
+# 使用任意自定义 Hex 颜色值 (支持 3/4/6/8 位 Hex，带不带 # 均可，自动计算感知亮度与轮廓发光)
+node core/theme_engine.js --font "#ff69b4"
+node core/theme_engine.js --font "1a1a2e"
+bin\swap_wallpaper.bat font "#00e5ff"
 ```
 
 ---
@@ -184,7 +206,7 @@ antigravity-theme/
 │   ├── auto_patcher.js         # 核心补丁生成器：解包asar、注入preload/utils/main
 │   └── patch_core.js           # 固化替换工具：解除占用、安全替换核心、唤醒进程
 ├── tests/
-│   ├── test_suite.js           # 11 项全功能深度端到端自动化测试套件
+│   ├── test_suite.js           # 13 项全功能深度端到端自动化测试套件
 │   ├── test_wallpaper_engine.js# Steam Wallpaper Engine 模块 14 项专业测试
 │   └── test_media_server.js    # 流媒体服务器与 HTTP 206 单元测试
 ├── wallpapers/                 # 5 槽位默认预设素材 (蓝途圣园未花/普拉娜/妃咲等)

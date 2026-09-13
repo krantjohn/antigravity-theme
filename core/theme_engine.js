@@ -56,6 +56,201 @@ const SLOT_ALIASES = {
   '设置': 'settings', 'settings': 'settings'
 };
 
+const FONT_PRESETS = {
+  'pure-white': {
+    id: 'pure-white',
+    name: '纯白高对比 (Pure White)',
+    primary: '#ffffff',
+    secondary: '#f1f5f9',
+    muted: '#94a3b8',
+    terminal: '#ffffff',
+    shadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)',
+    terminalShadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)',
+    isDarkText: false,
+    desc: '适合绝大多数暗色、炫彩或复杂壁纸，纯白字体配深色轮廓，极致清晰',
+    aliases: ['1', 'white', 'pure-white', '纯白', '白', '高对比白']
+  },
+  'obsidian-black': {
+    id: 'obsidian-black',
+    name: '暗夜曜黑 (Obsidian Black)',
+    primary: '#0f172a',
+    secondary: '#1e293b',
+    muted: '#475569',
+    terminal: '#05070d',
+    shadow: '0 0 2px #ffffff, 0 1px 3px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.85)',
+    terminalShadow: '0 0 2px #ffffff, 0 1px 2px rgba(255, 255, 255, 0.98), 0 0 1px #ffffff, 0 0 5px rgba(255, 255, 255, 0.85)',
+    isDarkText: true,
+    desc: '适合纯白、超亮浅色动漫或明亮风景壁纸，曜黑字体搭配白辉光描边，不晃眼且字迹清晰',
+    aliases: ['2', 'black', 'obsidian-black', '暗黑', '黑', '曜黑', '暗夜曜黑']
+  },
+  'sakura-pink': {
+    id: 'sakura-pink',
+    name: '樱花粉 (Sakura Pink)',
+    primary: '#fdf2f8',
+    secondary: '#fbcfe8',
+    muted: '#f472b6',
+    terminal: '#fdf2f8',
+    shadow: '0 1px 3px rgba(0, 0, 0, 0.92), 0 0 4px rgba(244, 114, 182, 0.50)',
+    terminalShadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(244, 114, 182, 0.60)',
+    isDarkText: false,
+    desc: '粉系二次元主题、甜美唯美风格壁纸的最佳搭档',
+    aliases: ['3', 'pink', 'sakura-pink', '樱花粉', '粉', '粉色']
+  },
+  'cyber-cyan': {
+    id: 'cyber-cyan',
+    name: '赛博青 (Cyber Cyan)',
+    primary: '#e0f2fe',
+    secondary: '#7dd3fc',
+    muted: '#38bdf8',
+    terminal: '#e0f2fe',
+    shadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(56, 189, 248, 0.50)',
+    terminalShadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(56, 189, 248, 0.60)',
+    isDarkText: false,
+    desc: '赛博朋克、科幻机甲、极客科技风壁纸搭档',
+    aliases: ['4', 'cyan', 'cyber-cyan', '赛博青', '青', '青色', '蓝']
+  },
+  'golden-sand': {
+    id: 'golden-sand',
+    name: '暖金 (Golden Sand)',
+    primary: '#fef08a',
+    secondary: '#fde047',
+    muted: '#eab308',
+    terminal: '#fef08a',
+    shadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(234, 179, 8, 0.45)',
+    terminalShadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(234, 179, 8, 0.55)',
+    isDarkText: false,
+    desc: '落日余晖、暖色调动漫与高贵金色系壁纸搭档',
+    aliases: ['5', 'gold', 'golden-sand', '暖金', '金', '金色', '黄']
+  },
+  'emerald-green': {
+    id: 'emerald-green',
+    name: '翡翠绿 (Emerald Green)',
+    primary: '#ecfdf5',
+    secondary: '#a7f3d0',
+    muted: '#34d399',
+    terminal: '#ecfdf5',
+    shadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(52, 211, 153, 0.45)',
+    terminalShadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(52, 211, 153, 0.55)',
+    isDarkText: false,
+    desc: '自然清新、护眼绿色系壁纸搭档',
+    aliases: ['6', 'green', 'emerald-green', '翡翠绿', '绿', '绿色']
+  }
+};
+
+function parseHexColor(input) {
+  if (!input || typeof input !== 'string') return null;
+  let s = input.trim();
+  if (s.startsWith('#')) s = s.slice(1);
+  if (s.length === 3) {
+    s = s.split('').map(c => c + c).join('');
+  } else if (s.length === 4) {
+    s = s.slice(0, 3).split('').map(c => c + c).join('');
+  } else if (s.length === 8) {
+    s = s.slice(0, 6);
+  }
+  if (!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+  const num = parseInt(s, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  const hex = '#' + s.toLowerCase();
+  return { r, g, b, hex };
+}
+
+function adjustBrightness(hex, percent) {
+  const parsed = parseHexColor(hex);
+  if (!parsed) return hex;
+  let { r, g, b } = parsed;
+  if (percent >= 0) {
+    const factor = percent / 100;
+    r = Math.min(255, Math.max(0, Math.round(r + (255 - r) * factor)));
+    g = Math.min(255, Math.max(0, Math.round(g + (255 - g) * factor)));
+    b = Math.min(255, Math.max(0, Math.round(b + (255 - b) * factor)));
+  } else {
+    const factor = Math.abs(percent) / 100;
+    r = Math.min(255, Math.max(0, Math.round(r - r * factor)));
+    g = Math.min(255, Math.max(0, Math.round(g - g * factor)));
+    b = Math.min(255, Math.max(0, Math.round(b - b * factor)));
+  }
+  const toHex = (n) => n.toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+const COMMON_COLOR_NAMES = {
+  'white': 'pure-white',
+  'black': 'obsidian-black',
+  'pink': 'sakura-pink',
+  'cyan': 'cyber-cyan',
+  'gold': 'golden-sand',
+  'green': 'emerald-green',
+  'red': '#ef4444',
+  'blue': '#3b82f6',
+  'purple': '#a855f7',
+  'yellow': '#eab308',
+  'orange': '#f97316',
+  'gray': '#94a3b8',
+  'grey': '#94a3b8'
+};
+
+function resolveFontColor(input, fallbackToDefault = true) {
+  if (!input) {
+    return fallbackToDefault ? FONT_PRESETS['pure-white'] : null;
+  }
+  if (typeof input === 'object') {
+    if (input.id && FONT_PRESETS[input.id]) return FONT_PRESETS[input.id];
+    if (input.customHex) return resolveFontColor(input.customHex, fallbackToDefault);
+    if (input.hex) return resolveFontColor(input.hex, fallbackToDefault);
+    if (input.color) return resolveFontColor(input.color, fallbackToDefault);
+    if (input.primary && input.shadow) return input;
+    if (input.primary) return resolveFontColor(input.primary, fallbackToDefault);
+    if (input.preset && FONT_PRESETS[input.preset]) return FONT_PRESETS[input.preset];
+  }
+  const str = String(input).trim().toLowerCase();
+  
+  for (const [key, preset] of Object.entries(FONT_PRESETS)) {
+    if (key.toLowerCase() === str) return preset;
+    if (preset.aliases && preset.aliases.some(a => a.toLowerCase() === str)) {
+      return preset;
+    }
+  }
+
+  if (COMMON_COLOR_NAMES[str]) {
+    const mapped = COMMON_COLOR_NAMES[str];
+    if (FONT_PRESETS[mapped]) return FONT_PRESETS[mapped];
+    return resolveFontColor(mapped, fallbackToDefault);
+  }
+
+  const parsed = parseHexColor(str);
+  if (parsed) {
+    const { r, g, b, hex } = parsed;
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    const isDarkText = lum < 128;
+    return {
+      id: 'custom-' + hex.slice(1),
+      name: `自定义颜色 (${hex.toUpperCase()})`,
+      primary: hex,
+      secondary: isDarkText 
+        ? adjustBrightness(hex, 30) 
+        : adjustBrightness(hex, -20),
+      muted: isDarkText 
+        ? adjustBrightness(hex, 60) 
+        : adjustBrightness(hex, -40),
+      terminal: hex,
+      shadow: isDarkText
+        ? '0 0 2px #ffffff, 0 1px 3px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.85)'
+        : '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.90)',
+      terminalShadow: isDarkText
+        ? '0 0 2px #ffffff, 0 1px 2px rgba(255, 255, 255, 0.98), 0 0 1px #ffffff, 0 0 5px rgba(255, 255, 255, 0.85)'
+        : '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.90)',
+      isDarkText,
+      desc: `用户自定义 Hex 颜色 ${hex.toUpperCase()} (${isDarkText ? '暗色系/白辉光轮廓' : '亮色系/深邃暗影轮廓'})`,
+      customHex: hex
+    };
+  }
+
+  return fallbackToDefault ? FONT_PRESETS['pure-white'] : null;
+}
+
 // Kept for backward compatibility
 const SLOTS = {
   '左': { file: 'left_wallpaper.jpg', key: 'left', desc: 'AI主对话界面 / 全局底图' },
@@ -135,6 +330,13 @@ function loadSlotsConfig() {
     }
   }
 
+  if (!config.fontColor) {
+    config.fontColor = FONT_PRESETS['pure-white'];
+    modified = true;
+  } else {
+    config.fontColor = resolveFontColor(config.fontColor);
+  }
+
   if (modified || !fs.existsSync(slotsConfigPath)) {
     saveSlotsConfig(config);
   }
@@ -183,6 +385,8 @@ function generateMasterCss(slotsConfig) {
     slotsConfig = loadSlotsConfig();
   }
 
+  const font = resolveFontColor(slotsConfig.fontColor);
+
   const isLeftVideo = slotsConfig.left && slotsConfig.left.type === 'video';
   const isMidVideo = slotsConfig.mid && slotsConfig.mid.type === 'video';
   const isRightVideo = slotsConfig.right && slotsConfig.right.type === 'video';
@@ -206,7 +410,7 @@ function generateMasterCss(slotsConfig) {
 /* 1. Global Base & 消灭外层全局拖动条 */
 html, body {
   background-color: #0b0c14 !important;
-  color: #f1f5f9 !important;
+  color: ${font.primary} !important;
   overflow: hidden !important;
   width: 100% !important;
   height: 100% !important;
@@ -339,6 +543,22 @@ aside, nav, [class*="sidebar"], [class*="Sidebar"], [class*="navigation"], [clas
   -webkit-backdrop-filter: blur(10px) !important;
   border-right: 1px solid rgba(226, 232, 240, 0.12) !important;
   box-shadow: none !important;
+  color: ${font.primary} !important;
+}
+
+aside span, aside p, aside div, aside a, aside button,
+nav span, nav p, nav div, nav a, nav button,
+[class*="sidebar"] span, [class*="sidebar"] div, [class*="sidebar"] button,
+[class*="file-tree"] span, [class*="file-tree"] div,
+[class*="explorer"] span, [class*="explorer"] div,
+[class*="tree-view"] span {
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
+}
+
+aside [class*="text-muted"], nav [class*="text-muted"], [class*="sidebar"] [class*="text-muted"] {
+  color: ${font.secondary} !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 /* 6. Top Header & Title Bar & Navigation Buttons */
@@ -348,6 +568,13 @@ header, [class*="header"], [class*="Header"], [class*="titlebar"], [class*="menu
   -webkit-backdrop-filter: blur(10px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: none !important;
+  color: ${font.primary} !important;
+}
+
+header span, header p, header div,
+[class*="header"] span, [class*="titlebar"] span {
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 button[aria-label="Go Back"],
@@ -358,7 +585,7 @@ button[aria-label*="Back"],
 button[aria-label*="返回"],
 button[aria-label*="撤销"] {
   opacity: 1 !important;
-  color: #ffffff !important;
+  color: ${font.primary} !important;
   visibility: visible !important;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
   transition: all 0.2s ease !important;
@@ -373,7 +600,7 @@ button[aria-label*="Undo"]:hover {
 }
 
 /* ==========================================================================
-   7. 专属落樱微光气泡 (Mika Blossom Mist Glass)
+   7. 主对话区文字排版与专属落樱微光气泡 (Mika Blossom Mist Glass)
    ========================================================================== */
 div.relative.p-px.rounded-xl.bg-card-border:has([class*="user-input"]),
 div.relative.p-px.rounded-xl.bg-card-border:has([class*="user"]),
@@ -401,11 +628,80 @@ div.group\\/user-input-step div.bg-card {
 }
 
 div.group\\/user-input-step .whitespace-pre-wrap,
+div.group\\/user-input-step p,
+[class*="user-message"],
+[class*="user-message"] p,
 [class*="user-message"] span,
-[class*="user-message"] div {
-  color: #ffffff !important;
+[class*="user-message"] div,
+div[class*="user-input-step"] p,
+div[class*="user-input-step"] span,
+div[class*="user-input-step"] div {
+  color: ${font.primary} !important;
   font-weight: 500 !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9) !important;
+  text-shadow: ${font.shadow} !important;
+}
+
+/* 7.1 主对话区 AI 回复 Markdown 渲染与文本深度高对比度增强 */
+main,
+main p,
+main span:not([class*="syntax"]):not([class*="token"]):not([class*="hljs"]),
+main li,
+main td,
+main th,
+main div.prose,
+main [class*="prose"],
+main .markdown,
+main [class*="markdown"],
+main [class*="chat-turn"],
+main [class*="message-bubble"],
+div[class*="assistant-message"],
+div[data-message-author-role="assistant"] {
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
+}
+
+main [class*="text-muted"],
+main [class*="text-secondary"],
+main time,
+main .text-xs,
+main .text-sm {
+  color: ${font.secondary} !important;
+  text-shadow: ${font.shadow} !important;
+}
+
+main h1, main h2, main h3, main h4, main h5, main h6 {
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
+  font-weight: 700 !important;
+}
+
+main a {
+  color: ${font.muted} !important;
+  text-shadow: ${font.shadow} !important;
+  text-decoration: underline !important;
+}
+
+main strong, main b {
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
+  font-weight: 700 !important;
+}
+
+main blockquote {
+  border-left: 3px solid ${font.muted} !important;
+  color: ${font.secondary} !important;
+  text-shadow: ${font.shadow} !important;
+}
+
+main code:not(pre code),
+p > code,
+li > code {
+  color: ${font.primary} !important;
+  background-color: ${font.isDarkText ? 'rgba(255, 255, 255, 0.88)' : 'rgba(10, 11, 20, 0.75)'} !important;
+  border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.12)'} !important;
+  text-shadow: ${font.shadow} !important;
+  border-radius: 4px !important;
+  padding: 1px 4px !important;
 }
 
 div.group\\/user-input-step [class*="thumbnail"],
@@ -439,7 +735,7 @@ div.group\\/user-input-step:focus-within div.user-input-buttons-container {
 
 div.user-input-buttons-container button,
 [class*="user-input-buttons-container"] button {
-  color: #f1f5f9 !important;
+  color: ${font.primary} !important;
   opacity: 0.90 !important;
   transition: all 0.18s ease !important;
   border-radius: 9999px !important;
@@ -465,8 +761,8 @@ div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border [role="option"] {
 
 div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer span,
 div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer div {
-  color: #ffffff !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer svg {
@@ -569,12 +865,12 @@ div[data-mention-menu],
 #antigravity\.agentSidePanelInputBox div[role="listbox"],
 #antigravity\.agentSidePanelInputBox div.absolute.bottom-full.bg-card,
 #antigravity\.agentSidePanelInputBox div[class*="bottom-full"] {
-  background-color: rgba(16, 18, 32, 0.90) !important;
+  background-color: ${font.isDarkText ? 'rgba(255, 255, 255, 0.95)' : 'rgba(16, 18, 32, 0.90)'} !important;
   backdrop-filter: blur(20px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-  border: 1px solid rgba(244, 114, 182, 0.40) !important;
+  border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.20)' : 'rgba(244, 114, 182, 0.40)'} !important;
   border-radius: 16px !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 20px rgba(244, 114, 182, 0.20) !important;
+  box-shadow: ${font.isDarkText ? '0 16px 48px rgba(0, 0, 0, 0.25), 0 0 15px rgba(255, 255, 255, 0.6)' : '0 16px 48px rgba(0, 0, 0, 0.85), 0 0 20px rgba(244, 114, 182, 0.20)'} !important;
   background-image: none !important;
   overflow: hidden !important;
   z-index: 50 !important;
@@ -627,8 +923,8 @@ div[role="listbox"][data-mention-menu] div,
 [data-mention-menu] div,
 #antigravity\.agentSidePanelInputBox [role="listbox"] span,
 #antigravity\.agentSidePanelInputBox [role="listbox"] div {
-  color: #ffffff !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 div[role="listbox"][data-mention-menu] svg,
@@ -653,18 +949,22 @@ div[role="listbox"][data-mention-menu] svg,
 
 [contenteditable="true"],
 textarea,
-div.max-h-\\[300px\\] {
-  color: #ffffff !important;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95) !important;
+div.max-h-\[300px\] {
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
   font-weight: 500 !important;
   position: relative !important;
   z-index: 1 !important;
 }
 
+input::placeholder,
+textarea::placeholder,
+[contenteditable="true"]::before,
 [data-placeholder]::before,
 [placeholder] {
-  color: rgba(255, 255, 255, 0.85) !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95) !important;
+  color: ${font.secondary} !important;
+  opacity: 0.85 !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 div.relative.flex.flex-col.gap-0.p-1 button,
@@ -672,14 +972,22 @@ div.relative.flex.flex-col.gap-0.p-1 [role="button"] {
   backdrop-filter: blur(8px) !important;
   background: rgba(0, 0, 0, 0.35) !important;
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  color: #ffffff !important;
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
   position: relative !important;
   z-index: 1 !important;
 }
 
 /* 9. Code Blocks */
-pre, code, [class*="code-block"] {
-  background-color: rgba(10, 11, 20, 0.88) !important;
+pre, [class*="code-block"] {
+  background-color: ${font.isDarkText ? 'rgba(248, 250, 252, 0.94)' : 'rgba(10, 11, 20, 0.88)'} !important;
+  border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.16)' : 'rgba(255, 255, 255, 0.12)'} !important;
+  border-radius: 8px !important;
+  color: ${font.primary} !important;
+}
+pre code {
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 /* 10. Popovers & Dialogs 通用 */
@@ -691,14 +999,27 @@ pre, code, [class*="code-block"] {
 [role="menu"],
 [role="listbox"]:not([data-mention-menu]),
 [cmdk-root] {
-  background-color: #121322 !important;
+  background-color: ${font.isDarkText ? '#f8fafc' : '#121322'} !important;
   background-image: none !important;
-  border: 1px solid rgba(226, 232, 240, 0.38) !important;
+  border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.20)' : 'rgba(226, 232, 240, 0.38)'} !important;
   border-radius: 10px !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.90) !important;
+  box-shadow: ${font.isDarkText ? '0 16px 48px rgba(0, 0, 0, 0.25)' : '0 16px 48px rgba(0, 0, 0, 0.90)'} !important;
   opacity: 1 !important;
   visibility: visible !important;
   z-index: 99999 !important;
+}
+
+[data-radix-popper-content] span,
+[data-radix-menu-content] span,
+[data-radix-dropdown-menu-content] span,
+[data-radix-popover-content] span,
+[role="menu"] span,
+[role="menu"] div,
+[role="menuitem"],
+[cmdk-root] span,
+[cmdk-root] div {
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 /* ==========================================================================
@@ -776,25 +1097,32 @@ div:has(> .xterm-screen) {
 .terminal.xterm div {
   font-family: 'Maple Mono NF CN', 'Maple Mono CN', 'Maple Mono', 'Sarasa Term SC', 'LXGW WenKai Mono', 'Microsoft YaHei UI', monospace !important;
   font-feature-settings: 'liga' 1, 'calt' 1 !important;
-  color: #05070d !important;
+  color: ${font.terminal} !important;
   font-weight: 600 !important;
   letter-spacing: 0px !important;
-  text-shadow: 
-    0 0 2px #ffffff,
-    0 1px 2px rgba(255, 255, 255, 0.98),
-    0 0 1px #ffffff,
-    0 0 5px rgba(255, 255, 255, 0.85) !important;
+  text-shadow: ${font.terminalShadow} !important;
 }
 
-/* 终端彩色语法项 */
+/* 终端彩色语法项 (根据文字明暗自适应对比度与阴影轮廓) */
+${font.isDarkText ? `
 .terminal.xterm [class*="xterm-color-0"] { color: #334155 !important; }
-.terminal.xterm [class*="xterm-color-1"], .terminal.xterm [class*="xterm-fg-1"] { color: #b91c1c !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #fff !important; }
-.terminal.xterm [class*="xterm-color-2"], .terminal.xterm [class*="xterm-fg-2"] { color: #047857 !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #fff !important; }
-.terminal.xterm [class*="xterm-color-3"], .terminal.xterm [class*="xterm-fg-3"] { color: #b45309 !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #fff !important; }
-.terminal.xterm [class*="xterm-color-4"], .terminal.xterm [class*="xterm-fg-4"] { color: #1d4ed8 !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #fff !important; }
-.terminal.xterm [class*="xterm-color-5"], .terminal.xterm [class*="xterm-fg-5"] { color: #be185d !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #fff !important; }
-.terminal.xterm [class*="xterm-color-6"], .terminal.xterm [class*="xterm-fg-6"] { color: #0f766e !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #fff !important; }
-.terminal.xterm [class*="xterm-color-7"], .terminal.xterm [class*="xterm-fg-7"] { color: #0f172a !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #fff !important; }
+.terminal.xterm [class*="xterm-color-1"], .terminal.xterm [class*="xterm-fg-1"] { color: #b91c1c !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
+.terminal.xterm [class*="xterm-color-2"], .terminal.xterm [class*="xterm-fg-2"] { color: #047857 !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
+.terminal.xterm [class*="xterm-color-3"], .terminal.xterm [class*="xterm-fg-3"] { color: #b45309 !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
+.terminal.xterm [class*="xterm-color-4"], .terminal.xterm [class*="xterm-fg-4"] { color: #1d4ed8 !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
+.terminal.xterm [class*="xterm-color-5"], .terminal.xterm [class*="xterm-fg-5"] { color: #be185d !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
+.terminal.xterm [class*="xterm-color-6"], .terminal.xterm [class*="xterm-fg-6"] { color: #0f766e !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
+.terminal.xterm [class*="xterm-color-7"], .terminal.xterm [class*="xterm-fg-7"] { color: ${font.terminal} !important; text-shadow: ${font.terminalShadow} !important; }
+` : `
+.terminal.xterm [class*="xterm-color-0"] { color: #94a3b8 !important; text-shadow: ${font.terminalShadow} !important; }
+.terminal.xterm [class*="xterm-color-1"], .terminal.xterm [class*="xterm-fg-1"] { color: #f87171 !important; text-shadow: ${font.terminalShadow} !important; }
+.terminal.xterm [class*="xterm-color-2"], .terminal.xterm [class*="xterm-fg-2"] { color: #4ade80 !important; text-shadow: ${font.terminalShadow} !important; }
+.terminal.xterm [class*="xterm-color-3"], .terminal.xterm [class*="xterm-fg-3"] { color: #facc15 !important; text-shadow: ${font.terminalShadow} !important; }
+.terminal.xterm [class*="xterm-color-4"], .terminal.xterm [class*="xterm-fg-4"] { color: #60a5fa !important; text-shadow: ${font.terminalShadow} !important; }
+.terminal.xterm [class*="xterm-color-5"], .terminal.xterm [class*="xterm-fg-5"] { color: #f472b6 !important; text-shadow: ${font.terminalShadow} !important; }
+.terminal.xterm [class*="xterm-color-6"], .terminal.xterm [class*="xterm-fg-6"] { color: #38bdf8 !important; text-shadow: ${font.terminalShadow} !important; }
+.terminal.xterm [class*="xterm-color-7"], .terminal.xterm [class*="xterm-fg-7"] { color: ${font.terminal} !important; text-shadow: ${font.terminalShadow} !important; }
+`}
 
 /* 终端光标：深曜黑搭配霓虹绯红外发光边框 */
 .xterm .xterm-cursor-block, 
@@ -830,7 +1158,7 @@ div.group\\/file-row button {
   background-color: rgba(255, 255, 255, 0.08) !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   border-radius: 6px !important;
-  color: #f1f5f9 !important;
+  color: ${font.primary} !important;
   transition: all 0.18s ease !important;
 }
 
@@ -844,8 +1172,8 @@ div.group\\/file-row button:hover {
 
 div.flex.items-center.justify-between.pl-3.pr-2.py-1 span,
 div.group\\/file-row span {
-  color: #ffffff !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
   font-weight: 600 !important;
 }
 
@@ -944,9 +1272,9 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-f
 
 div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.select-none.pl-4.pr-3 span,
 div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.gap-1\\.5.select-none span {
-  color: #fdf2f8 !important;
+  color: ${font.primary} !important;
   font-weight: 600 !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.gap-1\\.5.px-2.py-1.text-sm.rounded-md,
@@ -958,9 +1286,9 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background button {
   -webkit-backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 8px !important;
-  color: #ffffff !important;
+  color: ${font.primary} !important;
   font-weight: 500 !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+  text-shadow: ${font.shadow} !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
   transition: all 0.2s ease !important;
 }
@@ -1053,7 +1381,8 @@ div.settings-modal-container {
   background-color: transparent !important;
   border-radius: 10px !important;
   border: 1px solid transparent !important;
-  color: #e2e8f0 !important;
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
   margin-top: 2px !important;
   margin-bottom: 2px !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -1061,8 +1390,8 @@ div.settings-modal-container {
 
 [role="dialog"] div.bg-sidebar button span,
 [role="dialog"] div.bg-sidebar button svg {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 [role="dialog"] div.bg-sidebar button:hover,
@@ -1110,21 +1439,21 @@ div.settings-modal-container {
 
 [role="dialog"] h1, [role="dialog"] h2, [role="dialog"] h3,
 [role="dialog"] [class*="font-semibold"], [role="dialog"] [class*="font-medium"] {
-  color: #ffffff !important;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.8) !important;
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 [role="dialog"] p, [role="dialog"] [class*="text-muted-foreground"],
 [role="dialog"] [class*="text-secondary-foreground"], [role="dialog"] span {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+  color: ${font.secondary} !important;
+  text-shadow: ${font.shadow} !important;
 }
 
 [role="dialog"] [role="combobox"], [role="dialog"] select, [role="dialog"] [role="group"],
 [role="dialog"] div.inline-flex.items-center.rounded-lg.border {
   background-color: rgba(18, 22, 44, 0.88) !important;
   border: 1px solid rgba(151, 213, 255, 0.40) !important;
-  color: #ffffff !important;
+  color: ${font.primary} !important;
   border-radius: 8px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
@@ -1135,8 +1464,8 @@ div.settings-modal-container {
   backdrop-filter: blur(8px) !important;
   background-color: rgba(26, 32, 60, 0.82) !important;
   border: 1px solid rgba(151, 213, 255, 0.35) !important;
-  color: #ffffff !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
   border-radius: 8px !important;
   transition: all 0.2s ease !important;
 }
@@ -1147,7 +1476,7 @@ div.settings-modal-container {
   background-color: rgba(56, 189, 248, 0.40) !important;
   border-color: rgba(151, 213, 255, 0.85) !important;
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;
-  color: #ffffff !important;
+  color: ${font.primary} !important;
 }
 
 [role="dialog"] [role="group"] button {
@@ -1222,6 +1551,9 @@ function getClientVideoScript(config) {
           leftVid.setAttribute('playsinline', '');
           leftVid.setAttribute('autoplay', '');
           leftVid.setAttribute('loop', '');
+          leftVid.addEventListener('loadedmetadata', function() {
+            if (leftVid.paused) leftVid.play().catch(function() {});
+          });
           leftVid.addEventListener('canplay', function() {
             if (leftVid.paused) leftVid.play().catch(function() {});
           });
@@ -1246,6 +1578,7 @@ function getClientVideoScript(config) {
           leftVid.dataset.currentSrc = src;
           leftVid.src = src;
           leftVid.load();
+          leftVid.play().catch(function() {});
         }
         if (leftVid.paused && leftVid.readyState >= 1) {
           leftVid.play().catch(function() {});
@@ -1346,6 +1679,9 @@ function getClientVideoScript(config) {
               vid.setAttribute('playsinline', '');
               vid.setAttribute('autoplay', '');
               vid.setAttribute('loop', '');
+              vid.addEventListener('loadedmetadata', function() {
+                if (vid.paused) vid.play().catch(function() {});
+              });
               vid.addEventListener('canplay', function() {
                 if (vid.paused) vid.play().catch(function() {});
               });
@@ -1374,6 +1710,7 @@ function getClientVideoScript(config) {
               vid.dataset.currentSrc = src;
               vid.src = src;
               vid.load();
+              vid.play().catch(function() {});
             }
             if (vid.paused && vid.readyState >= 1) {
               vid.play().catch(function() {});
@@ -1572,6 +1909,7 @@ async function revertToBaseline() {
       desc: meta.desc
     };
   }
+  baselineConfig.fontColor = FONT_PRESETS['pure-white'];
   saveSlotsConfig(baselineConfig);
 
   console.log(`✓ 初版文件已全部还原，正在重新编译并输出黄金基线样式...`);
@@ -1590,13 +1928,75 @@ async function revertToBaseline() {
   return reloadPromise;
 }
 
+async function setFontColor(colorOrPreset) {
+  if (!colorOrPreset) {
+    console.error('❌ 请输入有效的预设名称或 Hex 颜色值 (例如: pure-white, obsidian-black, #ffffff, #1a1a2e)');
+    return false;
+  }
+  const resolved = resolveFontColor(colorOrPreset, false);
+  if (!resolved) {
+    console.error(`❌ 未识别的字体预设或无效 Hex 颜色: "${colorOrPreset}"`);
+    console.error(`   支持的预设序号: 1 - ${Object.keys(FONT_PRESETS).length}`);
+    console.error(`   支持的预设名称: ${Object.keys(FONT_PRESETS).join(', ')}`);
+    console.error(`   支持的Hex代码: 例如 #ffffff, #1a1a2e, #ff69b4, #00e5ff (或不带#如 1a1a2e)`);
+    console.error(`   提示: 可使用 node core/theme_engine.js --list-font-colors 查看所有预设详情。`);
+    return false;
+  }
+  const slotsConfig = loadSlotsConfig();
+  slotsConfig.fontColor = resolved;
+  saveSlotsConfig(slotsConfig);
+
+  console.log(`[1/3] 已选定字体颜色: 【${resolved.name}】 (${resolved.primary})`);
+  console.log(`      ${resolved.desc}`);
+
+  console.log(`[2/3] 重新编译并输出 custom_theme.css...`);
+  const css = generateMasterCss(slotsConfig);
+  fs.writeFileSync(customCssPath, css, 'utf-8');
+  try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch(e) {}
+  console.log(`✓ custom_theme.css 已更新 (${(css.length / 1024 / 1024).toFixed(2)} MB)`);
+
+  console.log(`[3/3] 触发界面热重载与实时生效...`);
+  const reloadPromise = await triggerLiveHotReload(css, slotsConfig);
+  console.log(`✨ 字体颜色切换完成！已在应用内实时生效。`);
+  return reloadPromise;
+}
+
+function listFontPresets() {
+  const config = loadSlotsConfig();
+  const current = resolveFontColor(config.fontColor);
+  console.log('====================================================================');
+  console.log('   🎨 Antigravity 字体颜色与高对比预设列表');
+  console.log('====================================================================\n');
+  console.log(`当前激活字体颜色: 【${current.name}】 (${current.primary})\n`);
+  
+  console.log('序号 | 预设名称                 | 主色调   | 轮廓发光       | 适用壁纸场景');
+  console.log('-----+--------------------------+----------+----------------+------------------------------------');
+  let idx = 1;
+  for (const [key, preset] of Object.entries(FONT_PRESETS)) {
+    const isCurrent = (current.id === preset.id) ? ' 👉 [当前]' : '';
+    const nameStr = (preset.name + isCurrent).padEnd(24);
+    const colorStr = preset.primary.padEnd(8);
+    const outlineStr = preset.isDarkText ? '高亮白光轮廓' : '深邃暗影轮廓';
+    console.log(`  ${idx}  | ${nameStr} | ${colorStr} | ${outlineStr} | ${preset.desc}`);
+    idx++;
+  }
+  console.log('\n💡 支持自定义颜色: 可直接输入任意 Hex 颜色值 (例如: #ffffff, #1a1a2e, #ff69b4, #00e5ff)');
+  console.log('   CLI 用法: node core/theme_engine.js --set-font-color <预设名/序号/Hex>');
+  console.log('   批处理用法: bin\\swap_wallpaper.bat --font <预设名/序号/Hex>\n');
+  return FONT_PRESETS;
+}
+
 function listSlotsStatus() {
   const config = loadSlotsConfig();
+  const font = resolveFontColor(config.fontColor);
   console.log('=======================================================');
   console.log('   🌸 Antigravity 壁纸槽位状态一览');
   console.log('=======================================================');
   console.log('');
+  console.log(`🎨 当前字体颜色: 【${font.name}】 (${font.primary}) [${font.desc}]`);
+  console.log('');
   for (const [key, item] of Object.entries(config)) {
+    if (key === 'fontColor') continue;
     const isVid = item.type === 'video';
     const typeLabel = isVid ? '🎬 [动态视频]' : '🖼️ [静态壁纸]';
     const filePath = path.join(wallpapersDir, item.file);
@@ -1669,6 +2069,28 @@ if (require.main === module) {
   } else if (args[0] === '--list-we' || args[0] === '--we-list' || args[0] === '-we') {
     const search = args.slice(1).join(' ');
     listWallpaperEngineWallpapers(search);
+  } else if (
+    args[0] === '--set-font-color' || args[0] === '--set-font' || args[0] === '--font-color' ||
+    args[0] === '--font' || args[0] === '-font' || args[0] === '-f' ||
+    args[0] === 'set-font' || (args[0] === 'font' && args[1])
+  ) {
+    if (!args[1]) {
+      console.error('❌ 请输入字体预设名称、序号或 Hex 颜色代码 (例如: pure-white, obsidian-black, #ffffff, #1a1a2e)');
+      console.error('   提示: 可使用 node core/theme_engine.js --list-font-colors 查看所有可用预设。');
+      process.exit(1);
+    }
+    setFontColor(args[1]).then(ok => {
+      if (!ok) process.exit(1);
+    }).catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
+  } else if (
+    args[0] === '--list-font-colors' || args[0] === '--list-fonts' || args[0] === '--font-colors' ||
+    args[0] === '--fonts' || args[0] === '-fonts' || args[0] === '-list-fonts' ||
+    args[0] === 'list-fonts' || args[0] === 'fonts' || (args[0] === 'font' && !args[1])
+  ) {
+    listFontPresets();
   } else if (args[0] === '--set-left' && args[1]) {
     swapWallpaper('左', args[1]);
   } else if (args[0] === '--set-mid' && args[1]) {
@@ -1748,6 +2170,12 @@ module.exports = {
   saveSlotsConfig,
   getClientVideoScript,
   listSlotsStatus,
+  setFontColor,
+  listFontPresets,
+  resolveFontColor,
+  parseHexColor,
+  adjustBrightness,
+  FONT_PRESETS,
   SLOTS,
   SLOTS_META,
   SLOT_ALIASES,

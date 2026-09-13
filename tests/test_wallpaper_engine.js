@@ -178,6 +178,16 @@ async function runWallpaperEngineTests() {
   const batOut = execSync(`cmd.exe /c "call "${swapBat}" --status"`, { encoding: 'utf8' });
   assert.ok(batOut.includes('Antigravity 壁纸槽位状态一览'), 'swap_wallpaper.bat --status must succeed');
 
+  // Test swap_wallpaper.bat font commands (both with and without dashes)
+  const fontListOut = execSync(`cmd.exe /c "call "${swapBat}" fonts"`, { encoding: 'utf8' });
+  assert.ok(fontListOut.includes('Antigravity 字体颜色与高对比预设列表'), 'swap_wallpaper.bat fonts must list presets');
+
+  const fontDashListOut = execSync(`cmd.exe /c "call "${swapBat}" --fonts"`, { encoding: 'utf8' });
+  assert.ok(fontDashListOut.includes('Antigravity 字体颜色与高对比预设列表'), 'swap_wallpaper.bat --fonts must list presets');
+
+  const setFontOut = execSync(`cmd.exe /c "call "${swapBat}" font 1"`, { encoding: 'utf8' });
+  assert.ok(setFontOut.includes('已选定字体颜色'), 'swap_wallpaper.bat font 1 must succeed');
+
   const weBatOut = execSync(`cmd.exe /c "call "${weBat}" --list-we"`, { encoding: 'utf8' });
   assert.ok(weBatOut.includes('Steam Wallpaper Engine'), 'wallpaper_engine.bat --list-we must succeed');
   console.log('✓ [Test 14] 真实批处理文件调用与双引号安全处理验证通过\n');
