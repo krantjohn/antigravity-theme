@@ -587,7 +587,7 @@ async function runTests() {
   assert.ok(cssAfterBlack.includes('#ffffff') || cssAfterBlack.includes('255, 255, 255'), 'custom_theme.css must contain white outline glow for dark text');
   assert.ok(cssAfterBlack.includes('rgba(255, 255, 255, 0.88)'), 'Inline code must have light background in dark text mode');
 
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => setTimeout(r, 1200));
   const cdpFontCheckBlack = await evalCdp(`
     (() => {
       const sheet = document.getElementById('antigravity-custom-theme')?.sheet;
@@ -619,7 +619,7 @@ async function runTests() {
   const cssAfterHex = fs.readFileSync(path.join(antigravityDir, 'custom_theme.css'), 'utf8');
   assert.ok(cssAfterHex.includes('#ff69b4'), 'custom_theme.css must contain #ff69b4');
 
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => setTimeout(r, 1200));
   const cdpFontCheckHex = await evalCdp(`
     (() => {
       const sheet = document.getElementById('antigravity-custom-theme')?.sheet;

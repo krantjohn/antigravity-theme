@@ -152,12 +152,26 @@ const themeInjectionCode = `
     const config = cachedConfig;
     if (!config) return;
 
+    function checkAndShowVideo(v) {
+      if (!v || v.error) {
+        if (v) v.style.display = 'none';
+        return;
+      }
+      const decoded = (typeof v.webkitDecodedFrameCount === 'number') ? v.webkitDecodedFrameCount : 0;
+      const hasTimeProgress = v.currentTime > 0.05;
+      const isReadyToPaint = v.readyState >= 2 && !v.paused && (decoded > 0 || hasTimeProgress);
+      if (isReadyToPaint) {
+        v.style.display = 'block';
+      }
+    }
+
     // [左] 全局底图
     const left = config.left;
     const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
     if (left && left.type === 'video' && left.file) {
       const vParam = (left && left.version) ? ('?v=' + left.version) : '';
       const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
+      const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
       for (let i = 1; i < allLeftVids.length; i++) {
         allLeftVids[i].pause();
         allLeftVids[i].removeAttribute('src');
@@ -179,35 +193,61 @@ const themeInjectionCode = `
         leftVid.setAttribute('playsinline', '');
         leftVid.setAttribute('autoplay', '');
         leftVid.setAttribute('loop', '');
+        leftVid.preload = 'auto';
+        leftVid.setAttribute('preload', 'auto');
+        leftVid.crossOrigin = 'anonymous';
+        leftVid.setAttribute('crossorigin', 'anonymous');
+        leftVid.style.display = 'none'; // Start hidden: zero black void!
+        if (posterSrc) {
+          leftVid.poster = posterSrc;
+          leftVid.setAttribute('poster', posterSrc);
+        }
+        leftVid.addEventListener('playing', function() {
+          setTimeout(function() { checkAndShowVideo(leftVid); }, 50);
+        });
+        leftVid.addEventListener('timeupdate', function() {
+          checkAndShowVideo(leftVid);
+        });
         leftVid.addEventListener('canplay', function() {
           if (leftVid.paused) leftVid.play().catch(function(){});
         });
-        leftVid.addEventListener('loadeddata', function() {
-          if (leftVid.paused) leftVid.play().catch(function(){});
-        });
-        let retryTimer = null;
         leftVid.addEventListener('error', function() {
-          if (retryTimer) return;
-          retryTimer = setTimeout(function() {
-            retryTimer = null;
-            if (leftVid && leftVid.error) {
-              leftVid.src = src;
-              leftVid.load();
-              leftVid.play().catch(function(){});
-            }
-          }, 1200);
+          leftVid.style.display = 'none';
+        });
+        leftVid.addEventListener('stalled', function() {
+          if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
+            leftVid.style.display = 'none';
+          }
+        });
+        leftVid.addEventListener('waiting', function() {
+          if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
+            leftVid.style.display = 'none';
+          }
         });
         (document.body || document.documentElement).prepend(leftVid);
       }
+      if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
+        leftVid.poster = posterSrc;
+        leftVid.setAttribute('poster', posterSrc);
+      }
       if (leftVid.dataset.currentSrc !== src) {
         leftVid.dataset.currentSrc = src;
+        leftVid.style.display = 'none';
         leftVid.src = src;
         leftVid.load();
+        leftVid.play().catch(function(){});
+        const token = Date.now();
+        leftVid.dataset.loadToken = String(token);
+        setTimeout(function() {
+          if (leftVid.dataset.loadToken === String(token)) {
+            checkAndShowVideo(leftVid);
+          }
+        }, 1500);
       }
       if (leftVid.paused && leftVid.readyState >= 1) {
         leftVid.play().catch(function(){});
       }
-      leftVid.style.display = 'block';
+      checkAndShowVideo(leftVid);
     } else {
       for (let i = 0; i < allLeftVids.length; i++) {
         allLeftVids[i].pause();
@@ -246,6 +286,7 @@ const themeInjectionCode = `
       const isVideo = slotData && slotData.type === 'video' && slotData.file;
       const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : '';
       const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
+      const posterSrc = (isVideo && slotData.poster) ? (SERVER_URL + '/' + encodeURIComponent(slotData.poster) + vParam) : '';
       const selectors = slotSelectors[slotKey];
 
       if (!isVideo) {
@@ -303,23 +344,36 @@ const themeInjectionCode = `
             vid.setAttribute('playsinline', '');
             vid.setAttribute('autoplay', '');
             vid.setAttribute('loop', '');
+            vid.preload = 'auto';
+            vid.setAttribute('preload', 'auto');
+            vid.crossOrigin = 'anonymous';
+            vid.setAttribute('crossorigin', 'anonymous');
+            vid.style.display = 'none'; // Start hidden: zero black void!
+            if (posterSrc) {
+              vid.poster = posterSrc;
+              vid.setAttribute('poster', posterSrc);
+            }
+            vid.addEventListener('playing', function() {
+              setTimeout(function() { checkAndShowVideo(vid); }, 50);
+            });
+            vid.addEventListener('timeupdate', function() {
+              checkAndShowVideo(vid);
+            });
             vid.addEventListener('canplay', function() {
               if (vid.paused) vid.play().catch(function(){});
             });
-            vid.addEventListener('loadeddata', function() {
-              if (vid.paused) vid.play().catch(function(){});
-            });
-            let retryTimer = null;
             vid.addEventListener('error', function() {
-              if (retryTimer) return;
-              retryTimer = setTimeout(function() {
-                retryTimer = null;
-                if (vid && vid.error) {
-                  vid.src = src;
-                  vid.load();
-                  vid.play().catch(function(){});
-                }
-              }, 1200);
+              vid.style.display = 'none';
+            });
+            vid.addEventListener('stalled', function() {
+              if ((vid.webkitDecodedFrameCount || 0) === 0 && (vid.currentTime || 0) === 0) {
+                vid.style.display = 'none';
+              }
+            });
+            vid.addEventListener('waiting', function() {
+              if ((vid.webkitDecodedFrameCount || 0) === 0 && (vid.currentTime || 0) === 0) {
+                vid.style.display = 'none';
+              }
             });
             const pos = window.getComputedStyle(targetContainer).position;
             if (!pos || pos === 'static') {
@@ -327,14 +381,28 @@ const themeInjectionCode = `
             }
             targetContainer.prepend(vid);
           }
+          if (posterSrc && vid.getAttribute('poster') !== posterSrc) {
+            vid.poster = posterSrc;
+            vid.setAttribute('poster', posterSrc);
+          }
           if (vid.dataset.currentSrc !== src) {
             vid.dataset.currentSrc = src;
+            vid.style.display = 'none';
             vid.src = src;
             vid.load();
+            vid.play().catch(function(){});
+            const token = Date.now();
+            vid.dataset.loadToken = String(token);
+            setTimeout(function() {
+              if (vid.dataset.loadToken === String(token)) {
+                checkAndShowVideo(vid);
+              }
+            }, 1500);
           }
           if (vid.paused && vid.readyState >= 1) {
             vid.play().catch(function(){});
           }
+          checkAndShowVideo(vid);
         }
       }
     }
@@ -357,12 +425,14 @@ const themeInjectionCode = `
         debounceTimer = setTimeout(function() {
           debounceTimer = null;
           applyVideos();
-        }, 120);
+        }, 100);
       };
       window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
       window.__antigravityVideoObserver.observe(document.body || document.documentElement, {
         childList: true,
-        subtree: true
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'class', 'style', 'hidden']
       });
       // 定期与流媒体配置对齐同步 (每 2 秒)
       setInterval(syncAndApply, 2000);

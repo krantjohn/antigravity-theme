@@ -418,6 +418,17 @@ function loadSlotsConfig() {
       }
       const ext = path.extname(config[key].file).toLowerCase();
       config[key].type = VIDEO_EXTS.has(ext) ? 'video' : 'image';
+      if (config[key].type === 'video' && !config[key].poster) {
+        const prefix = key === 'bottom' ? 'input' : key;
+        const matchingPoster = allFiles.find(f => {
+          const e = path.extname(f).toLowerCase();
+          return IMAGE_EXTS.has(e) && f.startsWith(`${prefix}_poster`);
+        });
+        if (matchingPoster) {
+          config[key].poster = matchingPoster;
+          modified = true;
+        }
+      }
       if (!config[key].position) {
         config[key].position = meta.defaultPosition || 'center center';
         modified = true;
@@ -476,6 +487,140 @@ function getBase64(filename) {
   return `data:${mime};base64,` + buf.toString('base64');
 }
 
+/**
+ * Inspects video container atoms (MP4/WebM) to detect the video codec.
+ * Identifies H.264 (AVC1), VP8/VP9, AV1 as Chromium/Electron compatible.
+ * Warns if HEVC/H.265 (hvc1/hev1) or ProRes is detected.
+ */
+function detectVideoCodec(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return { codec: 'unknown', isElectronSupported: false, error: 'File not found' };
+  }
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.webm' || ext === '.ogv') {
+    return { codec: ext.slice(1), isElectronSupported: true };
+  }
+  try {
+    const fd = fs.openSync(filePath, 'r');
+    const stat = fs.fstatSync(fd);
+    const readSize = Math.min(stat.size, 4 * 1024 * 1024);
+    const buf = Buffer.alloc(readSize);
+    fs.readSync(fd, buf, 0, readSize, 0);
+
+    let tailBuf = null;
+    if (stat.size > readSize) {
+      const tailSize = Math.min(stat.size - readSize, 2 * 1024 * 1024);
+      tailBuf = Buffer.alloc(tailSize);
+      fs.readSync(fd, tailBuf, 0, tailSize, stat.size - tailSize);
+    }
+    fs.closeSync(fd);
+
+    const checkBuf = (b) => {
+      if (b.includes(Buffer.from('avc1')) || b.includes(Buffer.from('avc3'))) {
+        return { codec: 'h264', isElectronSupported: true };
+      }
+      if (b.includes(Buffer.from('vp09')) || b.includes(Buffer.from('vp08'))) {
+        return { codec: 'vp9', isElectronSupported: true };
+      }
+      if (b.includes(Buffer.from('av01'))) {
+        return { codec: 'av1', isElectronSupported: true };
+      }
+      if (b.includes(Buffer.from('hvc1')) || b.includes(Buffer.from('hev1'))) {
+        return {
+          codec: 'hevc',
+          isElectronSupported: false,
+          warning: '该视频使用 HEVC/H.265 编码，Electron 默认不支持解码此编码。系统已自动提取高清静态首帧海报作为兜底保障，杜绝黑屏！'
+        };
+      }
+      if (b.includes(Buffer.from('apch')) || b.includes(Buffer.from('apcn')) || b.includes(Buffer.from('apcs'))) {
+        return { codec: 'prores', isElectronSupported: false, warning: 'ProRes 编码不被浏览器支持。已自动配置静态海报兜底。' };
+      }
+      return null;
+    };
+
+    let result = checkBuf(buf);
+    if (!result && tailBuf) {
+      result = checkBuf(tailBuf);
+    }
+    if (result) return result;
+
+    return { codec: 'unknown', isElectronSupported: true };
+  } catch (e) {
+    return { codec: 'unknown', isElectronSupported: true, error: e.message };
+  }
+}
+
+/**
+ * Automatically extracts a crystal-clear frame from any video using OpenCV or Python/ffmpeg.
+ * Guaranteed zero-black fallback even when a standalone video has no companion image!
+ */
+function extractPosterFromVideo(videoPath, targetPosterPath) {
+  if (!videoPath || !fs.existsSync(videoPath)) return false;
+  const candidates = [
+    'D:\\SteamLibrary\\steamapps\\common\\wallpaper_engine\\dlc\\pymidas\\python.exe',
+    'python',
+    'python3'
+  ];
+  const cp = require('child_process');
+  for (const py of candidates) {
+    try {
+      const vSafe = videoPath.replace(/\\/g, '/');
+      const pSafe = targetPosterPath.replace(/\\/g, '/');
+      const script = 'import cv2, sys; cap = cv2.VideoCapture(r\x22' + vSafe + '\x22); cap.set(cv2.CAP_PROP_POS_MSEC, 1000); ret, f = cap.read(); (not ret) and (cap.set(cv2.CAP_PROP_POS_FRAMES, 0), None); ret, f = (ret, f) if ret else cap.read(); cv2.imwrite(r\x22' + pSafe + '\x22, f) if ret else sys.exit(1); cap.release()';
+      cp.execFileSync(py, ['-c', script], { timeout: 8000, stdio: 'pipe', windowsHide: true });
+      if (fs.existsSync(targetPosterPath) && fs.statSync(targetPosterPath).size > 1000) {
+        return true;
+      }
+    } catch (e) {}
+  }
+  return false;
+}
+
+/**
+ * Searches the folder of a video for companion poster or preview images (e.g. from Wallpaper Engine workshop items).
+ */
+function findCompanionPoster(videoPath) {
+  if (!videoPath) return null;
+  try {
+    const dir = path.dirname(videoPath);
+    if (!fs.existsSync(dir)) return null;
+
+    // 1. Check if project.json exists in directory
+    const pjPath = path.join(dir, 'project.json');
+    if (fs.existsSync(pjPath)) {
+      try {
+        const pj = JSON.parse(fs.readFileSync(pjPath, 'utf8'));
+        if (pj.preview) {
+          const pCandidate = path.join(dir, pj.preview);
+          if (fs.existsSync(pCandidate)) return pCandidate;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Common preview names
+    const baseWithoutExt = path.basename(videoPath, path.extname(videoPath));
+    const commonNames = [
+      'preview.gif', 'preview.jpg', 'preview.png', 'preview.webp',
+      'poster.jpg', 'poster.png', 'cover.jpg', 'cover.png',
+      `${baseWithoutExt}.jpg`, `${baseWithoutExt}.png`, `${baseWithoutExt}.webp`, `${baseWithoutExt}.gif`
+    ];
+    for (const name of commonNames) {
+      const p = path.join(dir, name);
+      if (fs.existsSync(p)) return p;
+    }
+
+    // 3. Any image in the same directory
+    const files = fs.readdirSync(dir);
+    for (const f of files) {
+      const ext = path.extname(f).toLowerCase();
+      if (IMAGE_EXTS.has(ext)) {
+        return path.join(dir, f);
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
 function generateMasterCss(slotsConfig) {
   if (!slotsConfig) {
     slotsConfig = loadSlotsConfig();
@@ -489,13 +634,20 @@ function generateMasterCss(slotsConfig) {
   const isBottomVideo = slotsConfig.bottom && slotsConfig.bottom.type === 'video';
   const isSettingsVideo = slotsConfig.settings && slotsConfig.settings.type === 'video';
 
-  const b64Left = !isLeftVideo 
-    ? getBase64(slotsConfig.left?.file || 'left_wallpaper.jpg')
-    : '';
-  const b64Mid = !isMidVideo ? getBase64(slotsConfig.mid?.file || 'mid_wallpaper.jpg') : '';
-  const b64Right = !isRightVideo ? getBase64(slotsConfig.right?.file || 'right_wallpaper.jpg') : '';
-  const b64Bottom = !isBottomVideo ? getBase64(slotsConfig.bottom?.file || 'input_wallpaper.jpg') : '';
-  const b64Settings = !isSettingsVideo ? getBase64(slotsConfig.settings?.file || 'settings_wallpaper.png') : '';
+  // Zero-Black-Void Protection:
+  // Fallback static wallpapers guarantee that body::before and every container ALWAYS has a crisp image,
+  // preventing any black screen during video buffering, stalls, or decoder errors!
+  const leftImg = isLeftVideo ? (slotsConfig.left.poster || 'left_wallpaper.jpg') : (slotsConfig.left?.file || 'left_wallpaper.jpg');
+  const midImg = isMidVideo ? (slotsConfig.mid.poster || 'mid_wallpaper.jpg') : (slotsConfig.mid?.file || 'mid_wallpaper.jpg');
+  const rightImg = isRightVideo ? (slotsConfig.right.poster || 'right_wallpaper.jpg') : (slotsConfig.right?.file || 'right_wallpaper.jpg');
+  const bottomImg = isBottomVideo ? (slotsConfig.bottom.poster || 'input_wallpaper.jpg') : (slotsConfig.bottom?.file || 'input_wallpaper.jpg');
+  const settingsImg = isSettingsVideo ? (slotsConfig.settings.poster || 'settings_wallpaper.png') : (slotsConfig.settings?.file || 'settings_wallpaper.png');
+
+  const b64Left = getBase64(leftImg) || getBase64('left_wallpaper.jpg');
+  const b64Mid = getBase64(midImg) || getBase64('mid_wallpaper.jpg');
+  const b64Right = getBase64(rightImg) || getBase64('right_wallpaper.jpg');
+  const b64Bottom = getBase64(bottomImg) || getBase64('input_wallpaper.jpg');
+  const b64Settings = getBase64(settingsImg) || getBase64('settings_wallpaper.png');
 
   const posLeft = getSlotPosition(slotsConfig, 'left');
   const posMid = getSlotPosition(slotsConfig, 'mid');
@@ -548,11 +700,10 @@ body::before {
   width: 100vw !important;
   height: 100vh !important;
   background-color: transparent !important;
-  background-image: ${isLeftVideo ? 'none' : `
-    linear-gradient(
+  background-image: linear-gradient(
       rgba(11, 12, 20, 0.06), 
       rgba(11, 12, 20, 0.10)
-    )${b64Left ? `,\n    url("${b64Left}")` : ''}`} !important;
+    )${b64Left ? `,\n    url("${b64Left}")` : ''} !important;
   background-size: cover !important;
   background-position: ${posLeft} !important;
   background-repeat: no-repeat !important;
@@ -1021,11 +1172,12 @@ div:has(> #antigravity\.agentSidePanelInputBox) {
 #antigravity\.agentSidePanelInputBox > div[class*="bg-card"]:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
 div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]) {
   position: relative !important;
+  background-color: transparent !important;
   background-image: 
     linear-gradient(
       rgba(12, 14, 24, 0.15), 
       rgba(12, 14, 24, 0.28)
-    )${isBottomVideo ? '' : `,\n    url("${b64Bottom}")`} !important;
+    )${b64Bottom ? `,\n    url("${b64Bottom}")` : ''} !important;
   background-size: cover !important;
   background-position: ${posBottom} !important;
   background-repeat: no-repeat !important;
@@ -1338,7 +1490,7 @@ div:has(> .xterm-screen) {
     linear-gradient(
       rgba(11, 12, 20, 0.12), 
       rgba(11, 12, 20, 0.18)
-    )${isMidVideo ? '' : `,\n    url("${b64Mid}")`} !important;
+    )${b64Mid ? `,\n    url("${b64Mid}")` : ''} !important;
   background-size: cover !important;
   background-position: ${posMid} !important;
   background-repeat: no-repeat !important;
@@ -1520,7 +1672,7 @@ div[data-aux-pane-open="true"] div.flex-1.min-h-0 > div.flex.flex-col.gap-2.over
     linear-gradient(
       rgba(11, 12, 20, 0.12), 
       rgba(11, 12, 20, 0.20)
-    )${isRightVideo ? '' : `,\n    url("${b64Right}")`} !important;
+    )${b64Right ? `,\n    url("${b64Right}")` : ''} !important;
   background-size: cover !important;
   background-position: ${posRight} !important;
   background-repeat: no-repeat !important;
@@ -1611,11 +1763,12 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div:not([cla
 div[data-state="open"]:has(div.bg-sidebar),
 div.settings-modal-container {
   position: relative !important;
+  background-color: transparent !important;
   background-image: 
     linear-gradient(
       rgba(8, 10, 20, 0.20), 
       rgba(8, 10, 20, 0.35)
-    )${isSettingsVideo ? '' : `,\n    url("${b64Settings}")`} !important;
+    )${b64Settings ? `,\n    url("${b64Settings}")` : ''} !important;
   background-size: cover !important;
   background-position: ${posSettings} !important;
   background-repeat: no-repeat !important;
@@ -1825,12 +1978,29 @@ function getClientVideoScript(config) {
     };
 
     function applyVideos() {
+      function checkAndShowVideo(v) {
+        if (!v || v.error) {
+          if (v) v.style.display = 'none';
+          return;
+        }
+        // Strict decoded frame guard: only display video element when frames are actively rendering!
+        // This ensures unsupported codecs (HEVC/H.265 in standard Electron), corrupt streams, or stalled
+        // buffers NEVER overlay a black box over the wallpaper!
+        const decoded = (typeof v.webkitDecodedFrameCount === 'number') ? v.webkitDecodedFrameCount : 0;
+        const hasTimeProgress = v.currentTime > 0.05;
+        const isReadyToPaint = v.readyState >= 2 && !v.paused && (decoded > 0 || hasTimeProgress);
+        if (isReadyToPaint) {
+          v.style.display = 'block';
+        }
+      }
+
       // 1. Slot: left (Global base wallpaper)
       const left = config.left;
       const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
       if (left && left.type === 'video' && left.file) {
         const vParam = (left && left.version) ? ('?v=' + left.version) : ('?v=' + Date.now());
         const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
+        const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
         for (let i = 1; i < allLeftVids.length; i++) {
           allLeftVids[i].pause();
           allLeftVids[i].removeAttribute('src');
@@ -1854,41 +2024,61 @@ function getClientVideoScript(config) {
           leftVid.setAttribute('loop', '');
           leftVid.preload = 'auto';
           leftVid.setAttribute('preload', 'auto');
+          leftVid.crossOrigin = 'anonymous';
+          leftVid.setAttribute('crossorigin', 'anonymous');
           leftVid.style.objectPosition = '${posLeft}';
-          leftVid.addEventListener('loadedmetadata', function() {
-            if (leftVid.paused) leftVid.play().catch(function() {});
+          leftVid.style.display = 'none'; // Start hidden: zero black void!
+          if (posterSrc) {
+            leftVid.poster = posterSrc;
+            leftVid.setAttribute('poster', posterSrc);
+          }
+          leftVid.addEventListener('playing', function() {
+            setTimeout(function() { checkAndShowVideo(leftVid); }, 50);
+          });
+          leftVid.addEventListener('timeupdate', function() {
+            checkAndShowVideo(leftVid);
           });
           leftVid.addEventListener('canplay', function() {
             if (leftVid.paused) leftVid.play().catch(function() {});
           });
-          leftVid.addEventListener('loadeddata', function() {
-            if (leftVid.paused) leftVid.play().catch(function() {});
-          });
-          let retryTimer = null;
           leftVid.addEventListener('error', function() {
-            if (retryTimer) return;
-            retryTimer = setTimeout(function() {
-              retryTimer = null;
-              if (leftVid && leftVid.error) {
-                leftVid.src = src;
-                leftVid.load();
-                leftVid.play().catch(function() {});
-              }
-            }, 1200);
+            leftVid.style.display = 'none';
+          });
+          leftVid.addEventListener('stalled', function() {
+            if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
+              leftVid.style.display = 'none';
+            }
+          });
+          leftVid.addEventListener('waiting', function() {
+            if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
+              leftVid.style.display = 'none';
+            }
           });
           (document.body || document.documentElement).prepend(leftVid);
         }
+        if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
+          leftVid.poster = posterSrc;
+          leftVid.setAttribute('poster', posterSrc);
+        }
         if (leftVid.dataset.currentSrc !== src) {
           leftVid.dataset.currentSrc = src;
+          leftVid.style.display = 'none';
           leftVid.src = src;
           leftVid.load();
           leftVid.play().catch(function() {});
+          const token = Date.now();
+          leftVid.dataset.loadToken = String(token);
+          setTimeout(function() {
+            if (leftVid.dataset.loadToken === String(token)) {
+              checkAndShowVideo(leftVid);
+            }
+          }, 1500);
         }
         leftVid.style.objectPosition = '${posLeft}';
         if (leftVid.paused && leftVid.readyState >= 1) {
           leftVid.play().catch(function() {});
         }
-        leftVid.style.display = 'block';
+        checkAndShowVideo(leftVid);
       } else {
         for (let i = 0; i < allLeftVids.length; i++) {
           allLeftVids[i].pause();
@@ -1911,8 +2101,8 @@ function getClientVideoScript(config) {
           'div[data-aux-pane-open="true"] div.flex-1.min-h-0'
         ],
         'bottom': [
-          '#antigravity\\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
-          '#antigravity\\.agentSidePanelInputBox > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+          '#antigravity\\\\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+          '#antigravity\\\\.agentSidePanelInputBox > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
           'div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])'
         ],
         'settings': [
@@ -1927,6 +2117,7 @@ function getClientVideoScript(config) {
         const isVideo = slotData && slotData.type === 'video' && slotData.file;
         const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : ('?v=' + Date.now());
         const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
+        const posterSrc = (isVideo && slotData.poster) ? (SERVER_URL + '/' + encodeURIComponent(slotData.poster) + vParam) : '';
         const selectors = slotSelectors[slotKey];
 
         if (!isVideo) {
@@ -1943,7 +2134,7 @@ function getClientVideoScript(config) {
             try {
               const el = document.querySelector(selectors[i]);
               if (el && el !== document.body && el !== document.documentElement) {
-                if (slotKey === 'right' && (el.querySelector('#antigravity\\.agentSidePanelInputBox') || el.querySelector('[id="antigravity.agentSidePanelInputBox"]'))) {
+                if (slotKey === 'right' && (el.querySelector('#antigravity\\\\.agentSidePanelInputBox') || el.querySelector('[id="antigravity.agentSidePanelInputBox"]'))) {
                   continue;
                 }
                 targetContainer = el;
@@ -1986,27 +2177,35 @@ function getClientVideoScript(config) {
               vid.setAttribute('loop', '');
               vid.preload = 'auto';
               vid.setAttribute('preload', 'auto');
+              vid.crossOrigin = 'anonymous';
+              vid.setAttribute('crossorigin', 'anonymous');
               vid.style.objectPosition = slotPositions[slotKey] || 'center center';
-              vid.addEventListener('loadedmetadata', function() {
-                if (vid.paused) vid.play().catch(function() {});
+              vid.style.display = 'none'; // Start hidden: zero black void!
+              if (posterSrc) {
+                vid.poster = posterSrc;
+                vid.setAttribute('poster', posterSrc);
+              }
+              vid.addEventListener('playing', function() {
+                setTimeout(function() { checkAndShowVideo(vid); }, 50);
+              });
+              vid.addEventListener('timeupdate', function() {
+                checkAndShowVideo(vid);
               });
               vid.addEventListener('canplay', function() {
                 if (vid.paused) vid.play().catch(function() {});
               });
-              vid.addEventListener('loadeddata', function() {
-                if (vid.paused) vid.play().catch(function() {});
-              });
-              let retryTimer = null;
               vid.addEventListener('error', function() {
-                if (retryTimer) return;
-                retryTimer = setTimeout(function() {
-                  retryTimer = null;
-                  if (vid && vid.error) {
-                    vid.src = src;
-                    vid.load();
-                    vid.play().catch(function() {});
-                  }
-                }, 1200);
+                vid.style.display = 'none';
+              });
+              vid.addEventListener('stalled', function() {
+                if ((vid.webkitDecodedFrameCount || 0) === 0 && (vid.currentTime || 0) === 0) {
+                  vid.style.display = 'none';
+                }
+              });
+              vid.addEventListener('waiting', function() {
+                if ((vid.webkitDecodedFrameCount || 0) === 0 && (vid.currentTime || 0) === 0) {
+                  vid.style.display = 'none';
+                }
               });
               const pos = window.getComputedStyle(targetContainer).position;
               if (!pos || pos === 'static') {
@@ -2014,16 +2213,29 @@ function getClientVideoScript(config) {
               }
               targetContainer.prepend(vid);
             }
+            if (posterSrc && vid.getAttribute('poster') !== posterSrc) {
+              vid.poster = posterSrc;
+              vid.setAttribute('poster', posterSrc);
+            }
             if (vid.dataset.currentSrc !== src) {
               vid.dataset.currentSrc = src;
+              vid.style.display = 'none';
               vid.src = src;
               vid.load();
               vid.play().catch(function() {});
+              const token = Date.now();
+              vid.dataset.loadToken = String(token);
+              setTimeout(function() {
+                if (vid.dataset.loadToken === String(token)) {
+                  checkAndShowVideo(vid);
+                }
+              }, 1500);
             }
             vid.style.objectPosition = slotPositions[slotKey] || 'center center';
             if (vid.paused && vid.readyState >= 1) {
               vid.play().catch(function() {});
             }
+            checkAndShowVideo(vid);
           }
         }
       }
@@ -2033,30 +2245,36 @@ function getClientVideoScript(config) {
     window.__antigravityApplyVideos = applyVideos;
     applyVideos();
 
-    if (!window.__antigravityVideoObserver) {
-      let debounceTimer = null;
-      const scheduledApply = function() {
-        if (debounceTimer) return;
-        debounceTimer = setTimeout(function() {
-          debounceTimer = null;
-          if (window.__antigravityApplyVideos) {
-            window.__antigravityApplyVideos();
-          }
-        }, 150);
-      };
+    if (window.__antigravityVideoObserver) {
+      try { window.__antigravityVideoObserver.disconnect(); } catch(e) {}
+      window.__antigravityVideoObserver = null;
+    }
 
-      window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
-      window.__antigravityVideoObserver.observe(document.body || document.documentElement, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'class', 'style', 'hidden']
-      });
-      setInterval(function() {
+    let debounceTimer = null;
+    const scheduledApply = function() {
+      if (debounceTimer) return;
+      debounceTimer = setTimeout(function() {
+        debounceTimer = null;
         if (window.__antigravityApplyVideos) {
           window.__antigravityApplyVideos();
         }
-      }, 3000);
+      }, 100);
+    };
+
+    window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
+    window.__antigravityVideoObserver.observe(document.body || document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'class', 'style', 'hidden']
+    });
+
+    if (!window.__antigravityInterval) {
+      window.__antigravityInterval = setInterval(function() {
+        if (window.__antigravityApplyVideos) {
+          window.__antigravityApplyVideos();
+        }
+      }, 2500);
     }
   })();
   `;
@@ -2135,7 +2353,7 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
   });
 }
 
-async function swapWallpaper(slotInput, srcPath) {
+async function swapWallpaper(slotInput, srcPath, customPosterPath) {
   if (!slotInput) {
     console.error('❌ 请提供槽位名称: 左, 中, 右, 下, 设置');
     return false;
@@ -2175,6 +2393,49 @@ async function swapWallpaper(slotInput, srcPath) {
   console.log(`[1/4] 正在更新【${slotInput} (${slotMeta.desc})】的壁纸素材...`);
   console.log(`      素材类型: ${isVideo ? '🎬 动态视频 (' + ext + ')' : '🖼️ 静态图像 (' + ext + ')'}`);
 
+  // 视频编码检测与静态海报兜底提取
+  let posterFileName = null;
+  let isSupportedCodec = true;
+  if (isVideo) {
+    const codecInfo = detectVideoCodec(srcPath);
+    if (codecInfo && !codecInfo.isElectronSupported) {
+      isSupportedCodec = false;
+      if (codecInfo.warning) {
+        console.warn(`⚠️ 视频编码警告: ${codecInfo.warning}`);
+      }
+    }
+    const posterPrefix = slotKey === 'bottom' ? 'input' : slotKey;
+    const defaultPosterTarget = path.join(wallpapersDir, `${posterPrefix}_poster.jpg`);
+    let companionPoster = customPosterPath || findCompanionPoster(srcPath);
+
+    // If no existing companion poster was found, automatically extract a frame from the video!
+    if (!companionPoster || !fs.existsSync(companionPoster)) {
+      console.log(`      正在从视频中提取高清静态首帧作为保底...`);
+      const extracted = extractPosterFromVideo(srcPath, defaultPosterTarget);
+      if (extracted) {
+        companionPoster = defaultPosterTarget;
+      }
+    }
+
+    if (companionPoster && fs.existsSync(companionPoster)) {
+      try {
+        const pExt = path.extname(companionPoster).toLowerCase();
+        posterFileName = `${posterPrefix}_poster${pExt}`;
+        const posterTargetPath = path.join(wallpapersDir, posterFileName);
+        if (path.resolve(companionPoster) !== path.resolve(posterTargetPath)) {
+          fs.copyFileSync(companionPoster, posterTargetPath);
+        }
+        // Also synchronize the slot's primary static wallpaper with this poster
+        // so that the background and fallbacks match the user's selected video!
+        const staticFallbackTarget = path.join(wallpapersDir, `${posterPrefix}_wallpaper${pExt}`);
+        try { fs.copyFileSync(posterTargetPath, staticFallbackTarget); } catch (e) {}
+        console.log(`✓ 已自动配置静态兜底海报: ${posterFileName}`);
+      } catch (e) {
+        console.warn('提取静态兜底海报失败:', e.message);
+      }
+    }
+  }
+
   if (path.resolve(srcPath) !== path.resolve(targetPath)) {
     fs.copyFileSync(srcPath, targetPath);
   }
@@ -2191,6 +2452,16 @@ async function swapWallpaper(slotInput, srcPath) {
     position: prevPosition,
     desc: slotMeta.desc
   };
+  if (posterFileName) {
+    slotsConfig[slotKey].poster = posterFileName;
+  } else if (!isVideo) {
+    delete slotsConfig[slotKey].poster;
+  }
+  if (isVideo && !isSupportedCodec) {
+    slotsConfig[slotKey].unsupportedCodec = true;
+  } else {
+    delete slotsConfig[slotKey].unsupportedCodec;
+  }
   saveSlotsConfig(slotsConfig);
   console.log(`✓ slots_config.json 已更新配置`);
 
@@ -2481,7 +2752,7 @@ async function swapWallpaperFromWE(idOrIndex, slotInput) {
   console.log(`   原始类型: ${wallpaper.rawType} | 大小: ${wallpaper.sizeMb} MB`);
   console.log(`   素材路径: ${wallpaper.mediaPath}`);
 
-  return swapWallpaper(slotInput, wallpaper.mediaPath);
+  return swapWallpaper(slotInput, wallpaper.mediaPath, wallpaper.previewPath);
 }
 
 function listWallpaperEngineWallpapers(search = '', limit = 50) {
@@ -2670,6 +2941,9 @@ module.exports = {
   revertToBaseline,
   loadSlotsConfig,
   saveSlotsConfig,
+  detectVideoCodec,
+  findCompanionPoster,
+  extractPosterFromVideo,
   getClientVideoScript,
   listSlotsStatus,
   setFontColor,

@@ -9,12 +9,17 @@ const MIME_TYPES = {
   '.ogv': 'video/ogg',
   '.mov': 'video/quicktime',
   '.m4v': 'video/mp4',
+  '.mkv': 'video/x-matroska',
+  '.avi': 'video/x-msvideo',
+  '.flv': 'video/x-flv',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
-  '.json': 'application/json',
+  '.bmp': 'image/bmp',
+  '.svg': 'image/svg+xml',
+  '.json': 'application/json; charset=utf-8',
   '.css': 'text/css; charset=utf-8'
 };
 
@@ -26,6 +31,7 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -85,7 +91,7 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         return;
       }
 
-      // Security check: restrict access to wallpapersDir and sanitize file name
+      // Security check: sanitize file name
       const safeName = path.basename(pathname);
       if (!safeName || safeName === '.' || safeName === '..') {
         res.writeHead(400, { 'Content-Type': 'text/plain' });
@@ -93,16 +99,19 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         return;
       }
 
-      let filePath = path.join(wallpapersDir, safeName);
-      if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-        const altPath = path.join(path.dirname(wallpapersDir), safeName);
-        if (fs.existsSync(altPath) && fs.statSync(altPath).isFile()) {
-          filePath = altPath;
-        } else {
-          res.writeHead(404, { 'Content-Type': 'text/plain' });
-          res.end('Not Found');
-          return;
-        }
+      // Candidate search locations for files
+      const candidatePaths = [
+        path.join(wallpapersDir, safeName),
+        path.join(path.dirname(wallpapersDir), safeName),
+        path.join(path.dirname(wallpapersDir), 'wallpapers', safeName),
+        path.join(__dirname, '..', 'wallpapers', safeName)
+      ];
+
+      let filePath = candidatePaths.find(p => fs.existsSync(p) && fs.statSync(p).isFile());
+      if (!filePath) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not Found: ' + safeName);
+        return;
       }
 
       const stat = fs.statSync(filePath);
