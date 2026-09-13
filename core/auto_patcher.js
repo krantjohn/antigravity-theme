@@ -86,9 +86,10 @@ if (mainContent.includes("'remote-debugging-port', '0'")) {
 if (mainContent.includes('// ================= Antigravity Wallpaper Media Server =================')) {
   mainContent = mainContent.replace(/\/\/ ================= Antigravity Wallpaper Media Server =================[\s\S]*?\/\/ =====================================================================\n?/g, '');
 }
-mainContent += '\n' + mediaServerInjectionCode;
+// Prepend media server startup so port 8315 is listening before any window is created
+mainContent = mediaServerInjectionCode + '\n' + mainContent;
 fs.writeFileSync(mainPath, mainContent, 'utf8');
-console.log('✓ main.js 注入完成');
+console.log('✓ main.js 注入完成 (流媒体服务置顶启动)');
 
 // 3. Patch preload.js (启动自启自动载入 custom_theme.css & 动态视频引擎 并热监听)
 console.log('[3/5] 正在注入 preload.js (前台开机自启 & 动态壁纸自适应引擎)...');
@@ -98,286 +99,281 @@ let preloadContent = fs.readFileSync(preloadPath, 'utf8');
 const themeInjectionCode = `
 // ================= Antigravity Master Theme & Dynamic Video Auto-Loader =================
 (function() {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    const customCssPath = '${customCssPath}';
-    const antigravityDir = path.dirname(customCssPath);
-    const slotsConfigPath = path.join(antigravityDir, 'slots_config.json').replace(/\\\\/g, '/');
-    const SERVER_URL = 'http://127.0.0.1:8315';
-    // 0. 确保流媒体服务 (8315) 持续运行
+  const SERVER_URL = 'http://127.0.0.1:8315';
+  let cachedConfig = null;
+  let isFetching = false;
+
+  // 1. 样式表热注入与双重挂载机制 (<link> 极速挂载 + <style> 容灾同步)
+  async function applyTheme() {
     try {
-      const _p1 = path.join(__dirname, 'media_server.js');
-      const _p2 = path.join(antigravityDir, 'media_server.js');
-      const _mediaPath = fs.existsSync(_p1) ? _p1 : (fs.existsSync(_p2) ? _p2 : null);
-      if (_mediaPath) {
-        const { isMediaServerRunning, startMediaServer } = require(_mediaPath);
-        isMediaServerRunning(8315).then(running => {
-          if (!running) {
-            startMediaServer(path.join(antigravityDir, 'wallpapers'), 8315);
-          }
-        }).catch(() => {});
+      let link = document.getElementById('antigravity-custom-theme-link');
+      if (!link) {
+        link = document.createElement('link');
+        link.id = 'antigravity-custom-theme-link';
+        link.rel = 'stylesheet';
+        link.href = SERVER_URL + '/custom_theme.css';
+        (document.head || document.documentElement).appendChild(link);
+      }
+      let style = document.getElementById('antigravity-custom-theme');
+      if (!style) {
+        style = document.createElement('style');
+        style.id = 'antigravity-custom-theme';
+        (document.head || document.documentElement).appendChild(style);
+      }
+      const res = await fetch(SERVER_URL + '/custom_theme.css', { cache: 'no-cache' });
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text !== style.textContent) {
+          style.textContent = text;
+        }
       }
     } catch(e) {}
+  }
 
-    // In-memory cache for configuration to avoid UI-thread disk I/O on DOM mutations
-    let cachedConfig = null;
-    let lastMtime = 0;
-    const reloadConfig = () => {
-      try {
-        if (fs.existsSync(slotsConfigPath)) {
-          const stat = fs.statSync(slotsConfigPath);
-          if (stat.mtimeMs !== lastMtime || !cachedConfig) {
-            lastMtime = stat.mtimeMs;
-            cachedConfig = JSON.parse(fs.readFileSync(slotsConfigPath, 'utf8'));
+  // 2. 从流媒体服务异步拉取最新槽位配置 (纯标准 Web fetch API，不受沙箱限制)
+  async function fetchConfig() {
+    if (isFetching) return cachedConfig;
+    isFetching = true;
+    try {
+      const res = await fetch(SERVER_URL + '/api/slots', { cache: 'no-cache' });
+      if (res.ok) {
+        cachedConfig = await res.json();
+      }
+    } catch(e) {
+      // 流媒体服务初始化阶段，静默等待重试
+    } finally {
+      isFetching = false;
+    }
+    return cachedConfig;
+  }
+
+  // 3. 动态视频槽位自动化挂载与播放引擎
+  function applyVideos() {
+    const config = cachedConfig;
+    if (!config) return;
+
+    // [左] 全局底图
+    const left = config.left;
+    const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
+    if (left && left.type === 'video' && left.file) {
+      const vParam = (left && left.version) ? ('?v=' + left.version) : '';
+      const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
+      for (let i = 1; i < allLeftVids.length; i++) {
+        allLeftVids[i].pause();
+        allLeftVids[i].removeAttribute('src');
+        allLeftVids[i].load();
+        allLeftVids[i].remove();
+      }
+      let leftVid = allLeftVids[0];
+      if (!leftVid) {
+        leftVid = document.createElement('video');
+        leftVid.id = 'antigravity-video-left';
+        leftVid.className = 'antigravity-slot-video';
+        leftVid.setAttribute('data-slot', 'left');
+        leftVid.muted = true;
+        leftVid.defaultMuted = true;
+        leftVid.setAttribute('muted', '');
+        leftVid.autoplay = true;
+        leftVid.loop = true;
+        leftVid.playsInline = true;
+        leftVid.setAttribute('playsinline', '');
+        leftVid.setAttribute('autoplay', '');
+        leftVid.setAttribute('loop', '');
+        leftVid.addEventListener('canplay', function() {
+          if (leftVid.paused) leftVid.play().catch(function(){});
+        });
+        leftVid.addEventListener('loadeddata', function() {
+          if (leftVid.paused) leftVid.play().catch(function(){});
+        });
+        let retryTimer = null;
+        leftVid.addEventListener('error', function() {
+          if (retryTimer) return;
+          retryTimer = setTimeout(function() {
+            retryTimer = null;
+            if (leftVid && leftVid.error) {
+              leftVid.src = src;
+              leftVid.load();
+              leftVid.play().catch(function(){});
+            }
+          }, 1200);
+        });
+        (document.body || document.documentElement).prepend(leftVid);
+      }
+      if (leftVid.dataset.currentSrc !== src) {
+        leftVid.dataset.currentSrc = src;
+        leftVid.src = src;
+        leftVid.load();
+      }
+      if (leftVid.paused && leftVid.readyState >= 1) {
+        leftVid.play().catch(function(){});
+      }
+      leftVid.style.display = 'block';
+    } else {
+      for (let i = 0; i < allLeftVids.length; i++) {
+        allLeftVids[i].pause();
+        allLeftVids[i].removeAttribute('src');
+        allLeftVids[i].load();
+        allLeftVids[i].remove();
+      }
+    }
+
+    // [中/右/下/设置] 容器槽位
+    const slotSelectors = {
+      'mid': [
+        '.terminal.xterm',
+        'div.terminal-wrapper',
+        '[data-panel="terminal"]'
+      ],
+      'right': [
+        'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto',
+        'div[data-aux-pane-open="true"] .overflow-y-auto',
+        'div[data-aux-pane-open="true"] div.flex-1.min-h-0'
+      ],
+      'bottom': [
+        '#antigravity\\\\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+        '#antigravity\\\\.agentSidePanelInputBox > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+        'div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])'
+      ],
+      'settings': [
+        '[role="dialog"]',
+        'div[data-state="open"]:has(div.bg-sidebar)',
+        'div.settings-modal-container'
+      ]
+    };
+
+    for (const slotKey in slotSelectors) {
+      const slotData = config[slotKey];
+      const isVideo = slotData && slotData.type === 'video' && slotData.file;
+      const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : '';
+      const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
+      const selectors = slotSelectors[slotKey];
+
+      if (!isVideo) {
+        const oldVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
+        for (let i = 0; i < oldVids.length; i++) {
+          oldVids[i].pause();
+          oldVids[i].removeAttribute('src');
+          oldVids[i].load();
+          oldVids[i].remove();
+        }
+      } else {
+        let targetContainer = null;
+        for (let i = 0; i < selectors.length; i++) {
+          try {
+            const el = document.querySelector(selectors[i]);
+            if (el && el !== document.body && el !== document.documentElement) {
+              if (slotKey === 'right' && (el.querySelector('#antigravity\\\\.agentSidePanelInputBox') || el.querySelector('[id="antigravity.agentSidePanelInputBox"]'))) {
+                continue;
+              }
+              targetContainer = el;
+              break;
+            }
+          } catch(e) {}
+        }
+
+        const existingVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
+        for (let i = 0; i < existingVids.length; i++) {
+          if (!targetContainer || existingVids[i].parentElement !== targetContainer) {
+            existingVids[i].pause();
+            existingVids[i].removeAttribute('src');
+            existingVids[i].load();
+            existingVids[i].remove();
           }
         }
-      } catch(e) {}
-    };
-    reloadConfig();
 
-    // 1. 样式表热注入
-    const applyTheme = () => {
-      try {
-        if (fs.existsSync(customCssPath)) {
-          let style = document.getElementById('antigravity-custom-theme');
-          if (!style) {
-            style = document.createElement('style');
-            style.id = 'antigravity-custom-theme';
-            (document.head || document.documentElement).appendChild(style);
+        if (targetContainer) {
+          const allSlotVidsInContainer = targetContainer.querySelectorAll(':scope > .antigravity-slot-video[data-slot="' + slotKey + '"]');
+          for (let i = 1; i < allSlotVidsInContainer.length; i++) {
+            allSlotVidsInContainer[i].pause();
+            allSlotVidsInContainer[i].removeAttribute('src');
+            allSlotVidsInContainer[i].load();
+            allSlotVidsInContainer[i].remove();
           }
-          style.textContent = fs.readFileSync(customCssPath, 'utf8');
-        }
-      } catch(e) {}
-    };
-
-    // 2. 动态视频槽位自动化挂载
-    const applyVideos = () => {
-      try {
-        reloadConfig();
-        const config = cachedConfig;
-        if (!config) return;
-
-        // [左] 全局底图
-        const left = config.left;
-        const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
-        if (left && left.type === 'video' && left.file) {
-          const vParam = (left && left.version) ? ('?v=' + left.version) : '';
-          const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
-          for (let i = 1; i < allLeftVids.length; i++) {
-            allLeftVids[i].pause();
-            allLeftVids[i].removeAttribute('src');
-            allLeftVids[i].load();
-            allLeftVids[i].remove();
-          }
-          let leftVid = allLeftVids[0];
-          if (!leftVid) {
-            leftVid = document.createElement('video');
-            leftVid.id = 'antigravity-video-left';
-            leftVid.className = 'antigravity-slot-video';
-            leftVid.setAttribute('data-slot', 'left');
-            leftVid.muted = true;
-            leftVid.defaultMuted = true;
-            leftVid.setAttribute('muted', '');
-            leftVid.autoplay = true;
-            leftVid.loop = true;
-            leftVid.playsInline = true;
-            leftVid.setAttribute('playsinline', '');
-            leftVid.addEventListener('canplay', function() {
-              if (leftVid.paused) leftVid.play().catch(function(){});
+          let vid = allSlotVidsInContainer[0];
+          if (!vid) {
+            vid = document.createElement('video');
+            vid.className = 'antigravity-slot-video';
+            vid.setAttribute('data-slot', slotKey);
+            vid.muted = true;
+            vid.defaultMuted = true;
+            vid.setAttribute('muted', '');
+            vid.autoplay = true;
+            vid.loop = true;
+            vid.playsInline = true;
+            vid.setAttribute('playsinline', '');
+            vid.setAttribute('autoplay', '');
+            vid.setAttribute('loop', '');
+            vid.addEventListener('canplay', function() {
+              if (vid.paused) vid.play().catch(function(){});
             });
-            leftVid.addEventListener('loadeddata', function() {
-              if (leftVid.paused) leftVid.play().catch(function(){});
+            vid.addEventListener('loadeddata', function() {
+              if (vid.paused) vid.play().catch(function(){});
             });
-            leftVid.addEventListener('error', function() {
-              setTimeout(function() {
-                if (leftVid && leftVid.error) {
-                  leftVid.dataset.currentSrc = '';
-                  leftVid.src = src;
-                  leftVid.load();
-                  leftVid.play().catch(function(){});
+            let retryTimer = null;
+            vid.addEventListener('error', function() {
+              if (retryTimer) return;
+              retryTimer = setTimeout(function() {
+                retryTimer = null;
+                if (vid && vid.error) {
+                  vid.src = src;
+                  vid.load();
+                  vid.play().catch(function(){});
                 }
               }, 1200);
             });
-            (document.body || document.documentElement).prepend(leftVid);
+            const pos = window.getComputedStyle(targetContainer).position;
+            if (!pos || pos === 'static') {
+              targetContainer.style.position = 'relative';
+            }
+            targetContainer.prepend(vid);
           }
-          if (leftVid.error || leftVid.dataset.currentSrc !== src) {
-            leftVid.dataset.currentSrc = src;
-            leftVid.src = src;
-            leftVid.load();
+          if (vid.dataset.currentSrc !== src) {
+            vid.dataset.currentSrc = src;
+            vid.src = src;
+            vid.load();
           }
-          if (leftVid.paused) {
-            leftVid.play().catch(function(){});
-          }
-          leftVid.style.display = 'block';
-        } else {
-          for (let i = 0; i < allLeftVids.length; i++) {
-            allLeftVids[i].pause();
-            allLeftVids[i].removeAttribute('src');
-            allLeftVids[i].load();
-            allLeftVids[i].remove();
+          if (vid.paused && vid.readyState >= 1) {
+            vid.play().catch(function(){});
           }
         }
-
-        // [中/右/下/设置] 容器槽位
-        const slotSelectors = {
-          'mid': [
-            '.terminal.xterm',
-            'div.terminal-wrapper',
-            '[data-panel="terminal"]'
-          ],
-          'right': [
-            'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto',
-            'div[data-aux-pane-open="true"] .overflow-y-auto',
-            'div[data-aux-pane-open="true"] div.flex-1.min-h-0'
-          ],
-          'bottom': [
-            '#antigravity\\.agentSidePanelInputBox > div.bg-card',
-            '#antigravity\\.agentSidePanelInputBox > div[class*="bg-card"]',
-            'div.rounded-2xl.bg-card-border > div.bg-card'
-          ],
-          'settings': [
-            '[role="dialog"]',
-            'div[data-state="open"]:has(div.bg-sidebar)',
-            'div.settings-modal-container'
-          ]
-        };
-
-        for (const slotKey in slotSelectors) {
-          const slotData = config[slotKey];
-          const isVideo = slotData && slotData.type === 'video' && slotData.file;
-          const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : '';
-          const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
-          const selectors = slotSelectors[slotKey];
-
-          if (!isVideo) {
-            const oldVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
-            for (let i = 0; i < oldVids.length; i++) {
-              oldVids[i].pause();
-              oldVids[i].removeAttribute('src');
-              oldVids[i].load();
-              oldVids[i].remove();
-            }
-          } else {
-            let targetContainer = null;
-            for (let i = 0; i < selectors.length; i++) {
-              try {
-                const el = document.querySelector(selectors[i]);
-                if (el && el !== document.body && el !== document.documentElement) {
-                  if (slotKey === 'right' && (el.querySelector('#antigravity\\.agentSidePanelInputBox') || el.querySelector('[id="antigravity.agentSidePanelInputBox"]'))) {
-                    continue;
-                  }
-                  targetContainer = el;
-                  break;
-                }
-              } catch(e) {}
-            }
-
-            const existingVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
-            for (let i = 0; i < existingVids.length; i++) {
-              if (!targetContainer || existingVids[i].parentElement !== targetContainer) {
-                existingVids[i].pause();
-                existingVids[i].removeAttribute('src');
-                existingVids[i].load();
-                existingVids[i].remove();
-              }
-            }
-
-            if (targetContainer) {
-              const allSlotVidsInContainer = targetContainer.querySelectorAll(':scope > .antigravity-slot-video[data-slot="' + slotKey + '"]');
-              for (let i = 1; i < allSlotVidsInContainer.length; i++) {
-                allSlotVidsInContainer[i].pause();
-                allSlotVidsInContainer[i].removeAttribute('src');
-                allSlotVidsInContainer[i].load();
-                allSlotVidsInContainer[i].remove();
-              }
-              let vid = allSlotVidsInContainer[0];
-              if (!vid) {
-                vid = document.createElement('video');
-                vid.className = 'antigravity-slot-video';
-                vid.setAttribute('data-slot', slotKey);
-                vid.muted = true;
-                vid.defaultMuted = true;
-                vid.setAttribute('muted', '');
-                vid.autoplay = true;
-                vid.loop = true;
-                vid.playsInline = true;
-                vid.setAttribute('playsinline', '');
-                vid.addEventListener('canplay', function() {
-                  if (vid.paused) vid.play().catch(function(){});
-                });
-                vid.addEventListener('loadeddata', function() {
-                  if (vid.paused) vid.play().catch(function(){});
-                });
-                vid.addEventListener('error', function() {
-                  setTimeout(function() {
-                    if (vid && vid.error) {
-                      vid.dataset.currentSrc = '';
-                      vid.src = src;
-                      vid.load();
-                      vid.play().catch(function(){});
-                    }
-                  }, 1200);
-                });
-                const pos = window.getComputedStyle(targetContainer).position;
-                if (!pos || pos === 'static') {
-                  targetContainer.style.position = 'relative';
-                }
-                targetContainer.prepend(vid);
-              }
-              if (vid.error || vid.dataset.currentSrc !== src) {
-                vid.dataset.currentSrc = src;
-                vid.src = src;
-                vid.load();
-              }
-              if (vid.paused) {
-                vid.play().catch(function(){});
-              }
-            }
-          }
-        }
-      } catch(err) {}
-    };
-
-    const initEngine = () => {
-      applyTheme();
-      applyVideos();
-      if (!window.__antigravityVideoObserver) {
-        let debounceTimer = null;
-        const scheduledApply = function() {
-          if (debounceTimer) return;
-          debounceTimer = setTimeout(function() {
-            debounceTimer = null;
-            applyVideos();
-          }, 150);
-        };
-        window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
-        window.__antigravityVideoObserver.observe(document.body || document.documentElement, {
-          childList: true,
-          subtree: true
-        });
-        setInterval(applyVideos, 3000);
       }
-    };
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initEngine);
-    } else {
-      initEngine();
     }
+  }
 
-    try {
-      if (fs.existsSync(customCssPath)) {
-        fs.watchFile(customCssPath, { interval: 300 }, applyTheme);
-      }
-      if (fs.existsSync(slotsConfigPath)) {
-        fs.watchFile(slotsConfigPath, { interval: 300 }, () => {
-          reloadConfig();
+  // 4. 定时轮询与 DOM 监听自适应驱动
+  async function syncAndApply() {
+    await fetchConfig();
+    applyTheme();
+    applyVideos();
+  }
+
+  const initEngine = () => {
+    applyTheme();
+    syncAndApply();
+    if (!window.__antigravityVideoObserver) {
+      let debounceTimer = null;
+      const scheduledApply = function() {
+        if (debounceTimer) return;
+        debounceTimer = setTimeout(function() {
+          debounceTimer = null;
           applyVideos();
-        });
-      }
-    } catch(e) {}
-  } catch(err) {}
+        }, 120);
+      };
+      window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
+      window.__antigravityVideoObserver.observe(document.body || document.documentElement, {
+        childList: true,
+        subtree: true
+      });
+      // 定期与流媒体配置对齐同步 (每 2 秒)
+      setInterval(syncAndApply, 2000);
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEngine);
+  } else {
+    initEngine();
+  }
 })();
 // =========================================================================
 `;

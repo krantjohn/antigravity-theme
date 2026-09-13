@@ -14,7 +14,8 @@ const MIME_TYPES = {
   '.png': 'image/png',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
-  '.json': 'application/json'
+  '.json': 'application/json',
+  '.css': 'text/css; charset=utf-8'
 };
 
 const DEFAULT_PORT = 8315;
@@ -48,14 +49,38 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
 
       // API endpoint for slots config
       if (pathname === '/api/slots' || pathname === '/slots_config.json') {
-        const configPath = path.join(wallpapersDir, 'slots_config.json');
-        if (fs.existsSync(configPath)) {
+        const configPath1 = path.join(wallpapersDir, 'slots_config.json');
+        const configPath2 = path.join(path.dirname(wallpapersDir), 'slots_config.json');
+        const configPath = fs.existsSync(configPath1) ? configPath1 : (fs.existsSync(configPath2) ? configPath2 : null);
+        if (configPath) {
           const content = fs.readFileSync(configPath, 'utf8');
-          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Content-Length': Buffer.byteLength(content, 'utf8')
+          });
           res.end(content);
         } else {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end('{}');
+        }
+        return;
+      }
+
+      // API endpoint for custom_theme.css
+      if (pathname === '/custom_theme.css' || pathname === '/theme.css') {
+        const cssPath1 = path.join(path.dirname(wallpapersDir), 'custom_theme.css');
+        const cssPath2 = path.join(wallpapersDir, 'custom_theme.css');
+        const cssPath = fs.existsSync(cssPath1) ? cssPath1 : (fs.existsSync(cssPath2) ? cssPath2 : null);
+        if (cssPath) {
+          const content = fs.readFileSync(cssPath, 'utf8');
+          res.writeHead(200, {
+            'Content-Type': 'text/css; charset=utf-8',
+            'Content-Length': Buffer.byteLength(content, 'utf8')
+          });
+          res.end(content);
+        } else {
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          res.end('/* custom_theme.css not found */');
         }
         return;
       }
@@ -68,11 +93,16 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         return;
       }
 
-      const filePath = path.join(wallpapersDir, safeName);
+      let filePath = path.join(wallpapersDir, safeName);
       if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('Not Found');
-        return;
+        const altPath = path.join(path.dirname(wallpapersDir), safeName);
+        if (fs.existsSync(altPath) && fs.statSync(altPath).isFile()) {
+          filePath = altPath;
+        } else {
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          res.end('Not Found');
+          return;
+        }
       }
 
       const stat = fs.statSync(filePath);

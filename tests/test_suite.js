@@ -283,22 +283,25 @@ async function runTests() {
     }
     console.log('   正在测试动态展开辅助侧栏并校验 slot right 动态视频实时挂载...');
     await evalCdp(`document.querySelector('button[aria-label="Toggle Auxiliary Pane"]').click()`);
-    await new Promise(r => setTimeout(r, 800));
-
-    const cdpRightOpenCheck = await evalCdp(`
-      (() => {
-        const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
-        const v = vids[0];
-        const container = document.querySelector('div[data-aux-pane-open="true"]');
-        return JSON.stringify({
-          count: vids.length,
-          mountedInContainer: !!(v && container && container.contains(v)),
-          readyState: v ? v.readyState : 0,
-          paused: v ? v.paused : null
-        });
-      })()
-    `);
-    const rightOpenState = JSON.parse(cdpRightOpenCheck);
+    let rightOpenState = { count: 0, readyState: 0 };
+    for (let attempt = 0; attempt < 30; attempt++) {
+      await new Promise(r => setTimeout(r, 100));
+      const cdpRightOpenCheck = await evalCdp(`
+        (() => {
+          const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
+          const v = vids[0];
+          const container = document.querySelector('div[data-aux-pane-open="true"]');
+          return JSON.stringify({
+            count: vids.length,
+            mountedInContainer: !!(v && container && container.contains(v)),
+            readyState: v ? v.readyState : 0,
+            paused: v ? v.paused : null
+          });
+        })()
+      `);
+      rightOpenState = JSON.parse(cdpRightOpenCheck);
+      if (rightOpenState.count === 1 && rightOpenState.readyState >= 1) break;
+    }
     console.log('   CDP 侧栏展开后视频挂载状态:', rightOpenState);
     assert.strictEqual(rightOpenState.count, 1, 'Exactly 1 right video must be mounted when auxiliary pane is open');
     assert.ok(rightOpenState.mountedInContainer, 'Video must be contained inside auxiliary drawer');

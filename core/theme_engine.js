@@ -191,7 +191,7 @@ function generateMasterCss(slotsConfig) {
 
   const b64Left = !isLeftVideo 
     ? getBase64(slotsConfig.left?.file || 'left_wallpaper.jpg')
-    : (getBase64('left_wallpaper.jpg') || getBase64('left_poster.jpg') || '');
+    : '';
   const b64Mid = !isMidVideo ? getBase64(slotsConfig.mid?.file || 'mid_wallpaper.jpg') : '';
   const b64Right = !isRightVideo ? getBase64(slotsConfig.right?.file || 'right_wallpaper.jpg') : '';
   const b64Bottom = !isBottomVideo ? getBase64(slotsConfig.bottom?.file || 'input_wallpaper.jpg') : '';
@@ -242,11 +242,11 @@ body::before {
   width: 100vw !important;
   height: 100vh !important;
   background-color: transparent !important;
-  background-image: 
+  background-image: ${isLeftVideo ? 'none' : `
     linear-gradient(
       rgba(11, 12, 20, 0.06), 
       rgba(11, 12, 20, 0.10)
-    )${b64Left ? `,\n    url("${b64Left}")` : ''} !important;
+    )${b64Left ? `,\n    url("${b64Left}")` : ''}`} !important;
   background-size: cover !important;
   background-position: center !important;
   background-repeat: no-repeat !important;
@@ -491,10 +491,44 @@ div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border [class*="hover\\:bg"]
   transform: translateX(3px) !important;
 }
 
-/* 8. 底部输入卡片（仅最外层单个卡片容器挂载壁纸，坚决杜绝内部子元素重复应用导致切片重叠） */
-#antigravity\.agentSidePanelInputBox > div.bg-card,
-#antigravity\.agentSidePanelInputBox > div[class*="bg-card"],
-div.rounded-2xl.bg-card-border > div.bg-card {
+/* 8.1 底部输入卡片外层容器与展开面板彻底通透化，彻底消灭一切实心黑块与黑底 */
+#antigravity\.agentSidePanelInputBox,
+div[data-testid="agent-input-box"],
+div.rounded-2xl.bg-card-border:has(> div.bg-card),
+div:has(> #antigravity\.agentSidePanelInputBox) {
+  background-color: transparent !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+[data-testid="running-items-panel"],
+[data-testid="running-items-panel"][class*="grid-rows-[0fr]"] {
+  background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  margin-bottom: 0 !important;
+  padding: 0 !important;
+}
+
+[data-testid="running-items-panel"] > div > div,
+[data-testid="running-items-panel"] div[class*="rounded-t-2xl"] {
+  background-color: rgba(14, 16, 28, 0.60) !important;
+  backdrop-filter: blur(14px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
+  border: 1px solid rgba(244, 114, 182, 0.35) !important;
+  border-bottom: none !important;
+  border-radius: 14px 14px 0 0 !important;
+  margin-bottom: 2px !important;
+}
+
+/* 8.2 底部输入卡片（仅对真正的输入容器挂载壁纸，严格排除指令菜单、下拉列表、弹窗与浮层） */
+#antigravity\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
+#antigravity\.agentSidePanelInputBox > div[class*="bg-card"]:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
+div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]) {
   position: relative !important;
   background-image: 
     linear-gradient(
@@ -509,10 +543,99 @@ div.rounded-2xl.bg-card-border > div.bg-card {
 }
 
 /* 强制输入卡片内部所有子元素（文本输入行、工具栏、附件预览栏）背景透明且无多余贴图 */
-#antigravity\.agentSidePanelInputBox > div.bg-card div:not([class*="thumbnail"]):not(img),
-div.rounded-2xl.bg-card-border > div.bg-card div:not([class*="thumbnail"]):not(img) {
+#antigravity\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img),
+div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img) {
   background-image: none !important;
   background-color: transparent !important;
+}
+
+/* 8.3 Actions / Slash Command Popup Menu 磨砂琉璃质感（彻底杜绝输入框壁纸渗漏或重复切片） */
+div[role="listbox"],
+div[role="menu"],
+div[data-mention-menu],
+[data-mention-menu],
+[role="listbox"][data-mention-menu],
+[data-radix-popper-content-wrapper] div,
+#antigravity\.agentSidePanelInputBox [role="listbox"],
+#antigravity\.agentSidePanelInputBox [data-mention-menu],
+#antigravity\.agentSidePanelInputBox div.absolute,
+#antigravity\.agentSidePanelInputBox div[class*="bottom-full"] {
+  background-image: none !important;
+}
+
+div[role="listbox"][data-mention-menu],
+div[role="listbox"][aria-label="Mentions"],
+div[data-mention-menu],
+#antigravity\.agentSidePanelInputBox div[role="listbox"],
+#antigravity\.agentSidePanelInputBox div.absolute.bottom-full.bg-card,
+#antigravity\.agentSidePanelInputBox div[class*="bottom-full"] {
+  background-color: rgba(16, 18, 32, 0.90) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  border: 1px solid rgba(244, 114, 182, 0.40) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 20px rgba(244, 114, 182, 0.20) !important;
+  background-image: none !important;
+  overflow: hidden !important;
+  z-index: 50 !important;
+}
+
+div[role="listbox"][data-mention-menu] div[class*="overflow-y-auto"],
+[data-mention-menu] div[class*="overflow-y-auto"],
+#antigravity\.agentSidePanelInputBox div[role="listbox"] div[class*="overflow-y-auto"] {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+div[role="listbox"][data-mention-menu] [role="option"],
+div[role="listbox"][data-mention-menu] div[id^="typeahead-item"],
+div[role="listbox"][data-mention-menu] div.cursor-pointer,
+[data-mention-menu] [role="option"],
+[data-mention-menu] div[id^="typeahead-item"],
+[data-mention-menu] div.cursor-pointer,
+#antigravity\.agentSidePanelInputBox [role="listbox"] [role="option"],
+#antigravity\.agentSidePanelInputBox [role="listbox"] div.cursor-pointer {
+  border-radius: 10px !important;
+  margin: 2px 4px !important;
+  padding: 6px 10px !important;
+  transition: all 0.16s ease !important;
+  background-image: none !important;
+  border: 1px solid transparent !important;
+}
+
+div[role="listbox"][data-mention-menu] [role="option"]:hover,
+div[role="listbox"][data-mention-menu] [role="option"][aria-selected="true"],
+div[role="listbox"][data-mention-menu] div.cursor-pointer:hover,
+[data-mention-menu] [role="option"]:hover,
+[data-mention-menu] [role="option"][aria-selected="true"],
+[data-mention-menu] div.cursor-pointer:hover,
+#antigravity\.agentSidePanelInputBox [role="listbox"] [role="option"]:hover,
+#antigravity\.agentSidePanelInputBox [role="listbox"] [role="option"][aria-selected="true"],
+#antigravity\.agentSidePanelInputBox [role="listbox"] div.cursor-pointer:hover {
+  background: linear-gradient(
+    90deg, 
+    rgba(244, 114, 182, 0.28) 0%, 
+    rgba(56, 189, 248, 0.20) 100%
+  ) !important;
+  border: 1px solid rgba(244, 114, 182, 0.50) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 10px rgba(244, 114, 182, 0.25) !important;
+}
+
+div[role="listbox"][data-mention-menu] span,
+div[role="listbox"][data-mention-menu] div,
+[data-mention-menu] span,
+[data-mention-menu] div,
+#antigravity\.agentSidePanelInputBox [role="listbox"] span,
+#antigravity\.agentSidePanelInputBox [role="listbox"] div {
+  color: #ffffff !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+}
+
+div[role="listbox"][data-mention-menu] svg,
+[data-mention-menu] svg,
+#antigravity\.agentSidePanelInputBox [role="listbox"] svg {
+  color: #f472b6 !important;
+  filter: drop-shadow(0 0 4px rgba(244, 114, 182, 0.6)) !important;
 }
 
 .antigravity-slot-video[data-slot="bottom"] {
@@ -566,9 +689,10 @@ pre, code, [class*="code-block"] {
 [data-radix-popover-content],
 [data-radix-select-content],
 [role="menu"],
-[role="listbox"],
+[role="listbox"]:not([data-mention-menu]),
 [cmdk-root] {
   background-color: #121322 !important;
+  background-image: none !important;
   border: 1px solid rgba(226, 232, 240, 0.38) !important;
   border-radius: 10px !important;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.90) !important;
@@ -1096,20 +1220,34 @@ function getClientVideoScript(config) {
           leftVid.loop = true;
           leftVid.playsInline = true;
           leftVid.setAttribute('playsinline', '');
+          leftVid.setAttribute('autoplay', '');
+          leftVid.setAttribute('loop', '');
           leftVid.addEventListener('canplay', function() {
             if (leftVid.paused) leftVid.play().catch(function() {});
           });
           leftVid.addEventListener('loadeddata', function() {
             if (leftVid.paused) leftVid.play().catch(function() {});
           });
+          let retryTimer = null;
+          leftVid.addEventListener('error', function() {
+            if (retryTimer) return;
+            retryTimer = setTimeout(function() {
+              retryTimer = null;
+              if (leftVid && leftVid.error) {
+                leftVid.src = src;
+                leftVid.load();
+                leftVid.play().catch(function() {});
+              }
+            }, 1200);
+          });
           (document.body || document.documentElement).prepend(leftVid);
         }
-        if (leftVid.dataset.currentSrc !== src || leftVid.error || leftVid.readyState === 0) {
+        if (leftVid.dataset.currentSrc !== src) {
           leftVid.dataset.currentSrc = src;
           leftVid.src = src;
           leftVid.load();
         }
-        if (leftVid.paused) {
+        if (leftVid.paused && leftVid.readyState >= 1) {
           leftVid.play().catch(function() {});
         }
         leftVid.style.display = 'block';
@@ -1135,9 +1273,9 @@ function getClientVideoScript(config) {
           'div[data-aux-pane-open="true"] div.flex-1.min-h-0'
         ],
         'bottom': [
-          '#antigravity\\.agentSidePanelInputBox > div.bg-card',
-          '#antigravity\\.agentSidePanelInputBox > div[class*="bg-card"]',
-          'div.rounded-2xl.bg-card-border > div.bg-card'
+          '#antigravity\\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+          '#antigravity\\.agentSidePanelInputBox > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+          'div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])'
         ],
         'settings': [
           '[role="dialog"]',
@@ -1206,11 +1344,25 @@ function getClientVideoScript(config) {
               vid.loop = true;
               vid.playsInline = true;
               vid.setAttribute('playsinline', '');
+              vid.setAttribute('autoplay', '');
+              vid.setAttribute('loop', '');
               vid.addEventListener('canplay', function() {
                 if (vid.paused) vid.play().catch(function() {});
               });
               vid.addEventListener('loadeddata', function() {
                 if (vid.paused) vid.play().catch(function() {});
+              });
+              let retryTimer = null;
+              vid.addEventListener('error', function() {
+                if (retryTimer) return;
+                retryTimer = setTimeout(function() {
+                  retryTimer = null;
+                  if (vid && vid.error) {
+                    vid.src = src;
+                    vid.load();
+                    vid.play().catch(function() {});
+                  }
+                }, 1200);
               });
               const pos = window.getComputedStyle(targetContainer).position;
               if (!pos || pos === 'static') {
@@ -1218,12 +1370,12 @@ function getClientVideoScript(config) {
               }
               targetContainer.prepend(vid);
             }
-            if (vid.dataset.currentSrc !== src || vid.error || vid.readyState === 0) {
+            if (vid.dataset.currentSrc !== src) {
               vid.dataset.currentSrc = src;
               vid.src = src;
               vid.load();
             }
-            if (vid.paused) {
+            if (vid.paused && vid.readyState >= 1) {
               vid.play().catch(function() {});
             }
           }
@@ -1381,6 +1533,7 @@ async function swapWallpaper(slotInput, srcPath) {
   console.log(`[2/4] 重新编译并输出 custom_theme.css...`);
   const css = generateMasterCss(slotsConfig);
   fs.writeFileSync(customCssPath, css, 'utf-8');
+  try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch(e) {}
   console.log(`✓ custom_theme.css 已更新 (${(css.length / 1024 / 1024).toFixed(2)} MB)`);
 
   console.log(`[3/4] 启动 / 校验动态壁纸本地流媒体服务器 (8315)...`);
@@ -1424,6 +1577,7 @@ async function revertToBaseline() {
   console.log(`✓ 初版文件已全部还原，正在重新编译并输出黄金基线样式...`);
   const css = generateMasterCss(baselineConfig);
   fs.writeFileSync(customCssPath, css, 'utf-8');
+  try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch(e) {}
 
   // Also update baselineCssPath so that baseline backup does not contain stale buggy selectors
   if (fs.existsSync(baselineCssPath)) {
@@ -1543,6 +1697,7 @@ if (require.main === module) {
     const slotsConfig = loadSlotsConfig();
     const css = generateMasterCss(slotsConfig);
     fs.writeFileSync(customCssPath, css, 'utf-8');
+    try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch(e) {}
     console.log(`✓ custom_theme.css 重构完成 (${(css.length / 1024 / 1024).toFixed(2)} MB)`);
     startMediaServer(wallpapersDir, DEFAULT_PORT);
     triggerLiveHotReload(css, slotsConfig, () => {
