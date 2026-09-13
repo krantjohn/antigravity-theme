@@ -410,7 +410,7 @@ function generateMasterCss(slotsConfig) {
 /* 1. Global Base & 消灭外层全局拖动条 */
 html, body {
   background-color: #0b0c14 !important;
-  color: ${font.primary} !important;
+  color: #e2e8f0 !important;
   overflow: hidden !important;
   width: 100% !important;
   height: 100% !important;
@@ -543,7 +543,7 @@ aside, nav, [class*="sidebar"], [class*="Sidebar"], [class*="navigation"], [clas
   -webkit-backdrop-filter: blur(10px) !important;
   border-right: 1px solid rgba(226, 232, 240, 0.12) !important;
   box-shadow: none !important;
-  color: ${font.primary} !important;
+  color: #f1f5f9 !important;
 }
 
 aside span, aside p, aside div, aside a, aside button,
@@ -552,13 +552,13 @@ nav span, nav p, nav div, nav a, nav button,
 [class*="file-tree"] span, [class*="file-tree"] div,
 [class*="explorer"] span, [class*="explorer"] div,
 [class*="tree-view"] span {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 aside [class*="text-muted"], nav [class*="text-muted"], [class*="sidebar"] [class*="text-muted"] {
-  color: ${font.secondary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: rgba(226, 232, 240, 0.70) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* 6. Top Header & Title Bar & Navigation Buttons */
@@ -568,13 +568,13 @@ header, [class*="header"], [class*="Header"], [class*="titlebar"], [class*="menu
   -webkit-backdrop-filter: blur(10px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: none !important;
-  color: ${font.primary} !important;
+  color: #f1f5f9 !important;
 }
 
 header span, header p, header div,
 [class*="header"] span, [class*="titlebar"] span {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 button[aria-label="Go Back"],
@@ -585,7 +585,7 @@ button[aria-label*="Back"],
 button[aria-label*="返回"],
 button[aria-label*="撤销"] {
   opacity: 1 !important;
-  color: ${font.primary} !important;
+  color: #ffffff !important;
   visibility: visible !important;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
   transition: all 0.2s ease !important;
@@ -641,25 +641,28 @@ div[class*="user-input-step"] div {
   text-shadow: ${font.shadow} !important;
 }
 
-/* 7.1 主对话区 AI 回复 Markdown 渲染与文本深度高对比度增强 */
-main,
+/* 7.1 主对话区 AI 回复正文 Markdown 渲染与文本深度高对比度增强 (严格约束至纯文本正文，不污染带背景的小部件) */
+div[role="article"] div.leading-relaxed p,
+div[role="article"] div.leading-relaxed li,
+div[role="article"] div.leading-relaxed td,
+div[role="article"] div.leading-relaxed th,
+div[role="article"] div.leading-relaxed blockquote,
+div.leading-relaxed p,
+div.leading-relaxed li,
+div.leading-relaxed td,
+div.leading-relaxed th,
+div.leading-relaxed blockquote,
+div.leading-relaxed > span:not([class*="syntax"]):not([class*="token"]):not([class*="hljs"]):not([class*="code"]):not(.line-content *):not([class*="codicon"]),
 main p,
-main span:not([class*="syntax"]):not([class*="token"]):not([class*="hljs"]),
 main li,
 main td,
-main th,
-main div.prose,
-main [class*="prose"],
-main .markdown,
-main [class*="markdown"],
-main [class*="chat-turn"],
-main [class*="message-bubble"],
-div[class*="assistant-message"],
-div[data-message-author-role="assistant"] {
+main th {
   color: ${font.primary} !important;
   text-shadow: ${font.shadow} !important;
 }
 
+div[role="article"] div.leading-relaxed [class*="text-muted"],
+div.leading-relaxed [class*="text-muted"],
 main [class*="text-muted"],
 main [class*="text-secondary"],
 main time,
@@ -669,39 +672,81 @@ main .text-sm {
   text-shadow: ${font.shadow} !important;
 }
 
+div[role="article"] div.leading-relaxed h1, div[role="article"] div.leading-relaxed h2, div[role="article"] div.leading-relaxed h3,
+div[role="article"] div.leading-relaxed h4, div[role="article"] div.leading-relaxed h5, div[role="article"] div.leading-relaxed h6,
+div.leading-relaxed h1, div.leading-relaxed h2, div.leading-relaxed h3,
+div.leading-relaxed h4, div.leading-relaxed h5, div.leading-relaxed h6,
 main h1, main h2, main h3, main h4, main h5, main h6 {
   color: ${font.primary} !important;
   text-shadow: ${font.shadow} !important;
   font-weight: 700 !important;
 }
 
+div[role="article"] div.leading-relaxed a,
+div.leading-relaxed a,
 main a {
   color: ${font.muted} !important;
   text-shadow: ${font.shadow} !important;
   text-decoration: underline !important;
 }
 
+div[role="article"] div.leading-relaxed strong, div[role="article"] div.leading-relaxed b,
+div.leading-relaxed strong, div.leading-relaxed b,
 main strong, main b {
   color: ${font.primary} !important;
   text-shadow: ${font.shadow} !important;
   font-weight: 700 !important;
 }
 
+div[role="article"] div.leading-relaxed em, div[role="article"] div.leading-relaxed i,
+div.leading-relaxed em, div.leading-relaxed i {
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
+}
+
+div[role="article"] div.leading-relaxed blockquote,
+div.leading-relaxed blockquote,
 main blockquote {
   border-left: 3px solid ${font.muted} !important;
   color: ${font.secondary} !important;
   text-shadow: ${font.shadow} !important;
 }
 
+/* 保护自带背景的小部件：思考折叠条、工具调用进度条、运行状态徽章保持原版清爽白字 */
+[data-testid="conversation-view"] button,
+[data-testid="conversation-view"] button span,
+[data-testid="conversation-view"] [class*="tabular-nums"],
+[data-testid="conversation-view"] [class*="text-secondary-foreground"],
+[data-testid="conversation-view"] [class*="badge"],
+div.user-input-buttons-container button,
+[class*="user-input-buttons-container"] button {
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* 对话顶栏与面板标题 */
+div[data-pane-id] div.flex.w-full.min-w-0 span.truncate,
+div[data-pane-id] span.cursor-pointer,
+span.truncate.inline-block {
+  color: ${font.primary} !important;
+  text-shadow: ${font.shadow} !important;
+}
+
+/* 行内代码样式 (Inline Code)：半透明胶囊卡片，拒绝突兀死黑/纯白 */
+[data-testid="conversation-view"] code:not(pre code):not([class*="code-block"] *),
+div[role="article"] code:not(pre code):not([class*="code-block"] *),
+div.leading-relaxed code:not(pre code):not([class*="code-block"] *),
 main code:not(pre code),
 p > code,
-li > code {
+li > code,
+td > code {
   color: ${font.primary} !important;
   background-color: ${font.isDarkText ? 'rgba(255, 255, 255, 0.88)' : 'rgba(10, 11, 20, 0.75)'} !important;
   border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.12)'} !important;
   text-shadow: ${font.shadow} !important;
   border-radius: 4px !important;
-  padding: 1px 4px !important;
+  padding: 1px 5px !important;
+  font-family: var(--editor-font-family, monospace) !important;
 }
 
 div.group\\/user-input-step [class*="thumbnail"],
@@ -761,8 +806,8 @@ div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border [role="option"] {
 
 div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer span,
 div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer div {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer svg {
@@ -972,22 +1017,64 @@ div.relative.flex.flex-col.gap-0.p-1 [role="button"] {
   backdrop-filter: blur(8px) !important;
   background: rgba(0, 0, 0, 0.35) !important;
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
   position: relative !important;
   z-index: 1 !important;
 }
 
-/* 9. Code Blocks */
-pre, [class*="code-block"] {
-  background-color: ${font.isDarkText ? 'rgba(248, 250, 252, 0.94)' : 'rgba(10, 11, 20, 0.88)'} !important;
-  border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.16)' : 'rgba(255, 255, 255, 0.12)'} !important;
-  border-radius: 8px !important;
-  color: ${font.primary} !important;
+/* ==========================================================================
+   9. 代码块与多行代码容器 (Sleek Frosted Glass Code Blocks)
+   杜绝生硬突兀的死白底色，全主题统一优雅暗色半透明磨砂玻璃卡片与精致微光描边
+   ========================================================================== */
+pre {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
+
+pre > div.relative,
+div.relative:has(> .code-block) {
+  background-color: rgba(14, 16, 28, 0.82) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  border: 1px solid rgba(244, 114, 182, 0.35) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55), 0 0 12px rgba(244, 114, 182, 0.15) !important;
+  overflow: hidden !important;
+}
+
+pre > div.relative > div.min-h-7,
+div.relative:has(> .code-block) > div.min-h-7 {
+  background-color: rgba(22, 26, 42, 0.90) !important;
+  border-bottom: 1px solid rgba(244, 114, 182, 0.25) !important;
+  color: #e2e8f0 !important;
+}
+
+pre > div.relative > div.min-h-7 *,
+div.relative:has(> .code-block) > div.min-h-7 * {
+  color: #e2e8f0 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+}
+
+.code-block,
+[class*="code-block"],
 pre code {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+}
+
+.code-block .line-content,
+.code-block span:not([class*="token"]):not([class*="hljs"]):not([class*="syntax"]) {
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* 10. Popovers & Dialogs 通用 */
@@ -999,11 +1086,11 @@ pre code {
 [role="menu"],
 [role="listbox"]:not([data-mention-menu]),
 [cmdk-root] {
-  background-color: ${font.isDarkText ? '#f8fafc' : '#121322'} !important;
+  background-color: #121322 !important;
   background-image: none !important;
-  border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.20)' : 'rgba(226, 232, 240, 0.38)'} !important;
+  border: 1px solid rgba(226, 232, 240, 0.35) !important;
   border-radius: 10px !important;
-  box-shadow: ${font.isDarkText ? '0 16px 48px rgba(0, 0, 0, 0.25)' : '0 16px 48px rgba(0, 0, 0, 0.90)'} !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85) !important;
   opacity: 1 !important;
   visibility: visible !important;
   z-index: 99999 !important;
@@ -1018,8 +1105,8 @@ pre code {
 [role="menuitem"],
 [cmdk-root] span,
 [cmdk-root] div {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* ==========================================================================
@@ -1154,26 +1241,26 @@ div:has(> div > div > .terminal.xterm) div.flex.items-center.justify-between.pl-
 
 div.shrink-0.flex.items-center.gap-0.5.border-b button,
 div.flex.items-center.justify-between.pl-3.pr-2.py-1 button,
-div.group\\/file-row button {
+div.group\/file-row button {
   background-color: rgba(255, 255, 255, 0.08) !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   border-radius: 6px !important;
-  color: ${font.primary} !important;
+  color: #f1f5f9 !important;
   transition: all 0.18s ease !important;
 }
 
 div.shrink-0.flex.items-center.gap-0.5.border-b button:hover,
 div.flex.items-center.justify-between.pl-3.pr-2.py-1 button:hover,
-div.group\\/file-row button:hover {
+div.group\/file-row button:hover {
   background-color: rgba(244, 63, 94, 0.30) !important;
   border-color: rgba(244, 63, 94, 0.65) !important;
   box-shadow: 0 0 10px rgba(244, 63, 94, 0.40) !important;
 }
 
 div.flex.items-center.justify-between.pl-3.pr-2.py-1 span,
-div.group\\/file-row span {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+div.group\/file-row span {
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
   font-weight: 600 !important;
 }
 
@@ -1272,9 +1359,9 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-f
 
 div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.select-none.pl-4.pr-3 span,
 div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.gap-1\\.5.select-none span {
-  color: ${font.primary} !important;
+  color: #f1f5f9 !important;
   font-weight: 600 !important;
-  text-shadow: ${font.shadow} !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.gap-1\\.5.px-2.py-1.text-sm.rounded-md,
@@ -1286,9 +1373,9 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background button {
   -webkit-backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 8px !important;
-  color: ${font.primary} !important;
+  color: #f1f5f9 !important;
   font-weight: 500 !important;
-  text-shadow: ${font.shadow} !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
   transition: all 0.2s ease !important;
 }
@@ -1381,8 +1468,8 @@ div.settings-modal-container {
   background-color: transparent !important;
   border-radius: 10px !important;
   border: 1px solid transparent !important;
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
   margin-top: 2px !important;
   margin-bottom: 2px !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -1390,15 +1477,15 @@ div.settings-modal-container {
 
 [role="dialog"] div.bg-sidebar button span,
 [role="dialog"] div.bg-sidebar button svg {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 [role="dialog"] div.bg-sidebar button:hover,
 [role="dialog"] div.bg-sidebar button[data-state="active"],
 [role="dialog"] div.bg-sidebar button[aria-selected="true"],
 [role="dialog"] div.bg-sidebar button.bg-sidebar-muted,
-[role="dialog"] div.bg-sidebar button[class*="hover\\:bg"] {
+[role="dialog"] div.bg-sidebar button[class*="hover\:bg"] {
   background: linear-gradient(
     90deg, 
     rgba(56, 189, 248, 0.32) 0%, 
@@ -1439,21 +1526,21 @@ div.settings-modal-container {
 
 [role="dialog"] h1, [role="dialog"] h2, [role="dialog"] h3,
 [role="dialog"] [class*="font-semibold"], [role="dialog"] [class*="font-medium"] {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 [role="dialog"] p, [role="dialog"] [class*="text-muted-foreground"],
 [role="dialog"] [class*="text-secondary-foreground"], [role="dialog"] span {
-  color: ${font.secondary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: rgba(226, 232, 240, 0.85) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
 [role="dialog"] [role="combobox"], [role="dialog"] select, [role="dialog"] [role="group"],
 [role="dialog"] div.inline-flex.items-center.rounded-lg.border {
   background-color: rgba(18, 22, 44, 0.88) !important;
   border: 1px solid rgba(151, 213, 255, 0.40) !important;
-  color: ${font.primary} !important;
+  color: #f1f5f9 !important;
   border-radius: 8px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
@@ -1464,8 +1551,8 @@ div.settings-modal-container {
   backdrop-filter: blur(8px) !important;
   background-color: rgba(26, 32, 60, 0.82) !important;
   border: 1px solid rgba(151, 213, 255, 0.35) !important;
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
+  color: #f1f5f9 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
   border-radius: 8px !important;
   transition: all 0.2s ease !important;
 }
@@ -1476,7 +1563,7 @@ div.settings-modal-container {
   background-color: rgba(56, 189, 248, 0.40) !important;
   border-color: rgba(151, 213, 255, 0.85) !important;
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;
-  color: ${font.primary} !important;
+  color: #ffffff !important;
 }
 
 [role="dialog"] [role="group"] button {
