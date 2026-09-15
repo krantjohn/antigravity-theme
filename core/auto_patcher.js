@@ -194,13 +194,18 @@ const themeInjectionCode = `
         }
         leftVid.dataset.currentSrc = src;
         leftVid.src = src;
+        const tryRecoverLeft = function() {
+          if (!leftVid || leftVid.readyState >= 1) return;
+          if (leftVid.error || leftVid.networkState === 3 || leftVid.readyState === 0) {
+            leftVid.src = src;
+            leftVid.load();
+            leftVid.play().catch(function(){});
+          }
+        };
         leftVid.addEventListener('error', function() {
-          setTimeout(function() {
-            if (leftVid.error) {
-              leftVid.load();
-              leftVid.play().catch(function(){});
-            }
-          }, 300);
+          setTimeout(tryRecoverLeft, 100);
+          setTimeout(tryRecoverLeft, 300);
+          setTimeout(tryRecoverLeft, 800);
         });
         (document.body || document.documentElement).prepend(leftVid);
         leftVid.play().catch(function(){});
@@ -409,6 +414,10 @@ const themeInjectionCode = `
       if (leftVid && leftVid.isConnected && leftVid.dataset.currentSrc === src) {
         if (document.body && leftVid.parentElement !== document.body) {
           document.body.prepend(leftVid);
+        }
+        if (leftVid.error || (leftVid.networkState === 3 && leftVid.readyState === 0)) {
+          leftVid.src = src;
+          leftVid.load();
         }
         if (!document.hidden && leftVid.paused && leftVid.readyState >= 1) {
           leftVid.play().catch(function(){});
@@ -633,6 +642,10 @@ const themeInjectionCode = `
 
           // Fast-path: already mounted in targetContainer with expected source
           if (vid && vid.dataset.currentSrc === src) {
+            if (vid.error || (vid.networkState === 3 && vid.readyState === 0)) {
+              vid.src = src;
+              vid.load();
+            }
             syncVideoPlaybackState(vid);
             continue;
           }

@@ -55,6 +55,127 @@ function getPresetsDir() {
   return presetsDir;
 }
 
+/**
+ * 确保 MP4 视频为 FastStart 格式（将 moov 原子前置到 ftyp 之后）
+ * 彻底消除 Chromium 播放视频时探测尾部原子的多次 HTTP 往返与卡顿延迟
+ */
+function ensureMp4Faststart(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return false;
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext !== '.mp4' && ext !== '.m4v' && ext !== '.mov') return false;
+    const stat = fs.statSync(filePath);
+    if (stat.size < 32) return false;
+    const fd = fs.openSync(filePath, 'r');
+    
+    const atoms = [];
+    let offset = 0;
+    const hdrBuf = Buffer.alloc(16);
+    
+    while (offset < stat.size) {
+      const bytesRead = fs.readSync(fd, hdrBuf, 0, 8, offset);
+      if (bytesRead < 8) break;
+      let atomSize = hdrBuf.readUInt32BE(0);
+      const atomType = hdrBuf.toString('latin1', 4, 8);
+      
+      if (atomSize === 1) {
+        fs.readSync(fd, hdrBuf, 8, 8, offset + 8);
+        atomSize = Number(hdrBuf.readBigUInt64BE(8));
+      } else if (atomSize === 0) {
+        atomSize = stat.size - offset;
+      }
+      
+      atoms.push({ type: atomType, offset, size: atomSize });
+      if (atomSize <= 0) break;
+      offset += atomSize;
+    }
+    
+    if (atoms.length >= 2 && atoms[0].type === 'ftyp' && atoms[1].type === 'moov') {
+      fs.closeSync(fd);
+      return false; // 已经为 FastStart 格式
+    }
+    
+    const moovIdx = atoms.findIndex(a => a.type === 'moov');
+    if (moovIdx === -1) {
+      fs.closeSync(fd);
+      return false;
+    }
+    
+    const moovAtom = atoms[moovIdx];
+    const moovBuf = Buffer.alloc(moovAtom.size);
+    fs.readSync(fd, moovBuf, 0, moovAtom.size, moovAtom.offset);
+    fs.closeSync(fd);
+    
+    // 偏移修正：moov 移动到前面后，内部所有 chunk offsets 需加上 shift
+    const shift = moovAtom.size;
+    let pos = 0;
+    while (pos < moovBuf.length - 8) {
+      const tag = moovBuf.toString('latin1', pos + 4, pos + 8);
+      if (tag === 'stco') {
+        const atomSize = moovBuf.readUInt32BE(pos);
+        const count = moovBuf.readUInt32BE(pos + 12);
+        for (let i = 0; i < count; i++) {
+          const entryPos = pos + 16 + i * 4;
+          if (entryPos + 4 <= moovBuf.length) {
+            const curVal = moovBuf.readUInt32BE(entryPos);
+            moovBuf.writeUInt32BE(curVal + shift, entryPos);
+          }
+        }
+        pos += atomSize;
+      } else if (tag === 'co64') {
+        const atomSize = moovBuf.readUInt32BE(pos);
+        const count = moovBuf.readUInt32BE(pos + 12);
+        for (let i = 0; i < count; i++) {
+          const entryPos = pos + 16 + i * 8;
+          if (entryPos + 8 <= moovBuf.length) {
+            const curVal = moovBuf.readBigUInt64BE(entryPos);
+            moovBuf.writeBigUInt64BE(curVal + BigInt(shift), entryPos);
+          }
+        }
+        pos += atomSize;
+      } else {
+        pos++;
+      }
+    }
+    
+    const tempOut = filePath + '.faststart_tmp';
+    const outFd = fs.openSync(tempOut, 'w');
+    const readFd = fs.openSync(filePath, 'r');
+    
+    for (const a of atoms) {
+      if (a.type === 'ftyp') {
+        const ftypBuf = Buffer.alloc(a.size);
+        fs.readSync(readFd, ftypBuf, 0, a.size, a.offset);
+        fs.writeSync(outFd, ftypBuf);
+        fs.writeSync(outFd, moovBuf);
+      } else if (a.type === 'moov') {
+        continue;
+      } else {
+        let remaining = a.size;
+        let readPos = a.offset;
+        const chunkBuf = Buffer.alloc(1024 * 1024);
+        while (remaining > 0) {
+          const toRead = Math.min(remaining, chunkBuf.length);
+          fs.readSync(readFd, chunkBuf, 0, toRead, readPos);
+          fs.writeSync(outFd, chunkBuf, 0, toRead);
+          remaining -= toRead;
+          readPos += toRead;
+        }
+      }
+    }
+    
+    fs.closeSync(readFd);
+    fs.closeSync(outFd);
+    
+    fs.unlinkSync(filePath);
+    fs.renameSync(tempOut, filePath);
+    return true;
+  } catch (e) {
+    console.warn(`[FastStart] 优化视频失败: ${filePath}`, e.message);
+    return false;
+  }
+}
+
 const VIDEO_EXTS = new Set(['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v']);
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']);
 
@@ -1194,10 +1315,10 @@ div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border [class*="hover\\:bg"]
 }
 
 /* 8.1 底部输入卡片外层容器与展开面板彻底通透化，彻底消灭一切实心黑块与黑底 */
-#antigravity\.agentSidePanelInputBox,
+[id="antigravity.agentSidePanelInputBox"],
 div[data-testid="agent-input-box"],
 div.rounded-2xl.bg-card-border:has(> div.bg-card),
-div:has(> #antigravity\.agentSidePanelInputBox) {
+div:has(> [id="antigravity.agentSidePanelInputBox"]) {
   background-color: transparent !important;
   background: transparent !important;
   border-color: transparent !important;
@@ -1228,8 +1349,8 @@ div:has(> #antigravity\.agentSidePanelInputBox) {
 }
 
 /* 8.2 底部输入卡片（仅对真正的输入容器挂载壁纸，严格排除指令菜单、下拉列表、弹窗与浮层） */
-#antigravity\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
-#antigravity\.agentSidePanelInputBox > div[class*="bg-card"]:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
+[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
+[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
 div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]) {
   position: relative !important;
   background-color: transparent !important;
@@ -1246,7 +1367,7 @@ div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([role="me
 }
 
 /* 强制输入卡片内部所有子元素（文本输入行、工具栏、附件预览栏）背景透明且无多余贴图 */
-#antigravity\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img),
+[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img),
 div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img) {
   background-image: none !important;
   background-color: transparent !important;
@@ -1259,19 +1380,19 @@ div[data-mention-menu],
 [data-mention-menu],
 [role="listbox"][data-mention-menu],
 [data-radix-popper-content-wrapper] div,
-#antigravity\.agentSidePanelInputBox [role="listbox"],
-#antigravity\.agentSidePanelInputBox [data-mention-menu],
-#antigravity\.agentSidePanelInputBox div.absolute,
-#antigravity\.agentSidePanelInputBox div[class*="bottom-full"] {
+[id="antigravity.agentSidePanelInputBox"] [role="listbox"],
+[id="antigravity.agentSidePanelInputBox"] [data-mention-menu],
+[id="antigravity.agentSidePanelInputBox"] div.absolute,
+[id="antigravity.agentSidePanelInputBox"] div[class*="bottom-full"] {
   background-image: none !important;
 }
 
 div[role="listbox"][data-mention-menu],
 div[role="listbox"][aria-label="Mentions"],
 div[data-mention-menu],
-#antigravity\.agentSidePanelInputBox div[role="listbox"],
-#antigravity\.agentSidePanelInputBox div.absolute.bottom-full.bg-card,
-#antigravity\.agentSidePanelInputBox div[class*="bottom-full"] {
+[id="antigravity.agentSidePanelInputBox"] div[role="listbox"],
+[id="antigravity.agentSidePanelInputBox"] div.absolute.bottom-full.bg-card,
+[id="antigravity.agentSidePanelInputBox"] div[class*="bottom-full"] {
   background-color: ${font.isDarkText ? 'rgba(255, 255, 255, 0.95)' : 'rgba(16, 18, 32, 0.90)'} !important;
   backdrop-filter: blur(20px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
@@ -1285,7 +1406,7 @@ div[data-mention-menu],
 
 div[role="listbox"][data-mention-menu] div[class*="overflow-y-auto"],
 [data-mention-menu] div[class*="overflow-y-auto"],
-#antigravity\.agentSidePanelInputBox div[role="listbox"] div[class*="overflow-y-auto"] {
+[id="antigravity.agentSidePanelInputBox"] div[role="listbox"] div[class*="overflow-y-auto"] {
   background-color: transparent !important;
   background-image: none !important;
 }
@@ -1296,8 +1417,8 @@ div[role="listbox"][data-mention-menu] div.cursor-pointer,
 [data-mention-menu] [role="option"],
 [data-mention-menu] div[id^="typeahead-item"],
 [data-mention-menu] div.cursor-pointer,
-#antigravity\.agentSidePanelInputBox [role="listbox"] [role="option"],
-#antigravity\.agentSidePanelInputBox [role="listbox"] div.cursor-pointer {
+[id="antigravity.agentSidePanelInputBox"] [role="listbox"] [role="option"],
+[id="antigravity.agentSidePanelInputBox"] [role="listbox"] div.cursor-pointer {
   border-radius: 10px !important;
   margin: 2px 4px !important;
   padding: 6px 10px !important;
@@ -1312,9 +1433,9 @@ div[role="listbox"][data-mention-menu] div.cursor-pointer:hover,
 [data-mention-menu] [role="option"]:hover,
 [data-mention-menu] [role="option"][aria-selected="true"],
 [data-mention-menu] div.cursor-pointer:hover,
-#antigravity\.agentSidePanelInputBox [role="listbox"] [role="option"]:hover,
-#antigravity\.agentSidePanelInputBox [role="listbox"] [role="option"][aria-selected="true"],
-#antigravity\.agentSidePanelInputBox [role="listbox"] div.cursor-pointer:hover {
+[id="antigravity.agentSidePanelInputBox"] [role="listbox"] [role="option"]:hover,
+[id="antigravity.agentSidePanelInputBox"] [role="listbox"] [role="option"][aria-selected="true"],
+[id="antigravity.agentSidePanelInputBox"] [role="listbox"] div.cursor-pointer:hover {
   background: linear-gradient(
     90deg, 
     rgba(244, 114, 182, 0.28) 0%, 
@@ -1328,15 +1449,15 @@ div[role="listbox"][data-mention-menu] span,
 div[role="listbox"][data-mention-menu] div,
 [data-mention-menu] span,
 [data-mention-menu] div,
-#antigravity\.agentSidePanelInputBox [role="listbox"] span,
-#antigravity\.agentSidePanelInputBox [role="listbox"] div {
+[id="antigravity.agentSidePanelInputBox"] [role="listbox"] span,
+[id="antigravity.agentSidePanelInputBox"] [role="listbox"] div {
   color: ${font.primary} !important;
   text-shadow: ${font.shadow} !important;
 }
 
 div[role="listbox"][data-mention-menu] svg,
 [data-mention-menu] svg,
-#antigravity\.agentSidePanelInputBox [role="listbox"] svg {
+[id="antigravity.agentSidePanelInputBox"] [role="listbox"] svg {
   color: #f472b6 !important;
   filter: drop-shadow(0 0 4px rgba(244, 114, 182, 0.6)) !important;
 }
@@ -1770,8 +1891,8 @@ div[data-aux-pane-open="true"] .py-3.flex.h-full.w-full.flex-col.gap-6.flex-grow
   z-index: 0 !important;
 }
 
-div:has(#antigravity\\\\.agentSidePanelInputBox) > div,
-div:has(#antigravity\\\\.agentSidePanelInputBox) .overflow-y-auto {
+div:has([id="antigravity.agentSidePanelInputBox"]) > div,
+div:has([id="antigravity.agentSidePanelInputBox"]) .overflow-y-auto {
   background-color: transparent !important;
   background: transparent !important;
 }
@@ -2829,6 +2950,9 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
 
   if (path.resolve(srcPath) !== path.resolve(targetPath)) {
     fs.copyFileSync(srcPath, targetPath);
+  }
+  if (isVideo) {
+    ensureMp4Faststart(targetPath);
   }
   console.log(`✓ 成功写入文件: ${targetPath}`);
 
