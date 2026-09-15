@@ -167,6 +167,35 @@ node core/theme_engine.js --font "1a1a2e"
 bin\swap_wallpaper.bat font "#00e5ff"
 ```
 
+#### 4. 壁纸预设保存、归档与一键切换 (Wallpaper Presets)
+
+你可以随时将当前 5 大槽位的壁纸、物理视频/图片文件、显示坐标、海报以及字体配色**保存为独立的预设**。预设会将所有关联素材完整归档，即使源文件被删除或移动也能永久独立一键还原！
+
+```bash
+# 保存当前壁纸全套配置与素材为新预设 (名称可为中文或英文)
+node core/theme_engine.js --save-preset "赛博朋克" "4K霓虹雨夜动态预设"
+bin\preset_manager.bat save "二次元纯白"
+
+# 查看所有已保存的预设列表与素材大小 (支持 --presets / --list-presets)
+node core/theme_engine.js --list-presets
+bin\preset_manager.bat list
+
+# 查看指定预设的详细槽位与归档素材清单 (支持预设名或序号)
+node core/theme_engine.js --show-preset 1
+node core/theme_engine.js --show-preset "赛博朋克"
+
+# 一键应用指定预设 (0.3 秒无缝热重载生效，支持序号或名称)
+node core/theme_engine.js --apply-preset 1
+node core/theme_engine.js --apply-preset "赛博朋克"
+bin\preset_manager.bat apply 1
+
+# 删除不需要的预设
+node core/theme_engine.js --delete-preset "测试预设"
+bin\preset_manager.bat del "测试预设"
+```
+
+你也可以直接运行 **`bin/preset_manager.bat`** 或在 **`bin/swap_wallpaper.bat`** 中选择 `[6] 预设管理中心` 进入全图形中文交互菜单！
+
 ---
 
 ## 🔄 遇到 Antigravity 软件官方更新怎么办？
@@ -196,7 +225,8 @@ bin\swap_wallpaper.bat font "#00e5ff"
 antigravity-theme/
 ├── bin/
 │   ├── install.bat             # 一键自动安装与底层永久固化启动器
-│   ├── swap_wallpaper.bat      # 交互式一键更换壁纸工具 (本地/工坊双支持)
+│   ├── preset_manager.bat      # 壁纸预设管理中心 (一键保存当前全套配置/归档/一键切换)
+│   ├── swap_wallpaper.bat      # 交互式一键更换壁纸工具 (本地/工坊双支持，集成预设菜单)
 │   ├── wallpaper_engine.bat    # Steam Wallpaper Engine 创意工坊壁纸专属选择器
 │   └── restore_baseline.bat    # 一键还原回初版官方基线工具
 ├── core/

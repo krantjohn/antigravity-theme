@@ -84,6 +84,26 @@ if /i "%arg1%"=="list-slots" (
     node "%~dp0..\core\theme_engine.js" --status
     exit /b %ERRORLEVEL%
 )
+if /i "%arg1%"=="preset" (
+    if "%~2"=="" (
+        goto PRESET_MENU
+    ) else (
+        node "%~dp0..\core\theme_engine.js" %*
+        exit /b %ERRORLEVEL%
+    )
+)
+if /i "%arg1%"=="presets" (
+    node "%~dp0..\core\theme_engine.js" --list-presets
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="save-preset" (
+    node "%~dp0..\core\theme_engine.js" %*
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="apply-preset" (
+    node "%~dp0..\core\theme_engine.js" %*
+    exit /b %ERRORLEVEL%
+)
 if "%arg1:~0,1%"=="-" (
     node "%~dp0..\core\theme_engine.js" %*
 ) else (
@@ -102,19 +122,21 @@ echo   [2] 浏览 Steam Wallpaper Engine 创意工坊壁纸并选择
 echo   [3] 搜索 Steam Wallpaper Engine 创意工坊壁纸 
 echo   [4] 调节各个位置壁纸的位置 (上下/左右微调与居中复位)
 echo   [5] 自定义字体颜色与预设 (解决亮/暗壁纸字体不清问题)
-echo   [6] 查看当前各个槽位与字体状态 
-echo   [7] 退出 
+echo   [6] 预设管理中心 (保存当前壁纸全套配置 / 一键切换预设)
+echo   [7] 查看当前各个槽位与字体状态 
+echo   [8] 退出 
 echo.
 set "choice="
-set /p "choice=请选择操作 (1-7) [默认 1]: "
+set /p "choice=请选择操作 (1-8) [默认 1]: "
 if not defined choice set "choice=1"
 if "%choice%"=="1" goto LOCAL_SWAP
 if "%choice%"=="2" goto WE_LIST
 if "%choice%"=="3" goto WE_SEARCH
 if "%choice%"=="4" goto POS_MENU
 if "%choice%"=="5" goto FONT_MENU
-if "%choice%"=="6" goto VIEW_STATUS
-if "%choice%"=="7" goto EXIT
+if "%choice%"=="6" goto PRESET_MENU
+if "%choice%"=="7" goto VIEW_STATUS
+if "%choice%"=="8" goto EXIT
 goto MENU
 
 :LOCAL_SWAP
@@ -291,6 +313,10 @@ echo.
 node "%~dp0..\core\theme_engine.js" --set-font-color "%fchoice%"
 echo.
 pause
+goto MENU
+
+:PRESET_MENU
+call "%~dp0preset_manager.bat"
 goto MENU
 
 :VIEW_STATUS

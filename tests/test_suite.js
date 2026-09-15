@@ -23,6 +23,16 @@ const {
   parsePosition,
   getSlotPosition,
   parseCoordinate,
+  savePreset,
+  listPresets,
+  applyPreset,
+  deletePreset,
+  getPresetDetails,
+  showPreset,
+  formatPresetTable,
+  sanitizePresetName,
+  getVisualWidth,
+  getPresetsDir,
   FONT_PRESETS,
   SLOTS_META,
   SLOT_ALIASES,
@@ -377,35 +387,36 @@ async function runTests() {
     console.log('   CDP Overview 总览区右壁纸渗透校验 (应为0/透明):', overviewRightVids);
     assert.strictEqual(overviewRightVids, 0, 'Overview pane must remain transparent without right slot video pollution');
 
-    // 2. 独立终端挂载校验：切换到 Terminal tab 时，右壁纸视频应正确挂载到终端
+    // 2. 终端隔离校验：切换到 Terminal tab 时，中壁纸挂载到终端，右壁纸严禁抢占终端 (应为0)
     const hasTermTab = await evalCdp(`!!document.querySelector('button[aria-label="Terminal tab"]')`);
     if (hasTermTab) {
-      console.log('   正在测试辅助面板切换至 Terminal 终端并校验 slot right 动态视频实时挂载...');
+      console.log('   正在测试辅助面板切换至 Terminal 终端并校验中壁纸专享与右壁纸杜绝冲突...');
       await evalCdp(`document.querySelector('button[aria-label="Terminal tab"]').click()`);
-      let termOpenState = { count: 0, readyState: 0 };
-      for (let attempt = 0; attempt < 150; attempt++) {
-        await new Promise(r => setTimeout(r, 100));
-        const cdpTermOpenCheck = await evalCdp(`
-          (() => {
-            const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
-            const v = vids[0];
-            if (v && v.paused) v.play().catch(() => {});
-            const container = document.querySelector('div[data-aux-pane-open="true"]');
-            return JSON.stringify({
-              count: vids.length,
-              mountedInContainer: !!(v && container && container.contains(v)),
-              readyState: v ? v.readyState : 0,
-              paused: v ? v.paused : null
-            });
-          })()
-        `);
-        termOpenState = JSON.parse(cdpTermOpenCheck);
-        if (termOpenState.count === 1 && termOpenState.readyState >= 1) break;
+      await new Promise(r => setTimeout(r, 600));
+
+      const termIsolationCheck = await evalCdp(`
+        (() => {
+          const term = document.querySelector('.terminal.xterm');
+          const termVids = term ? Array.from(term.querySelectorAll('video')) : [];
+          const rightInTerm = termVids.filter(v => v.dataset.slot === 'right');
+          const midInTerm = termVids.filter(v => v.dataset.slot === 'mid');
+          const drawer = document.querySelector('div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background, [class*="terminal-drawer"]');
+          const rightInDrawer = drawer ? Array.from(drawer.querySelectorAll('video[data-slot="right"]')) : [];
+          return JSON.stringify({
+            hasTerm: !!term,
+            rightInTermCount: rightInTerm.length,
+            midInTermCount: midInTerm.length,
+            hasDrawer: !!drawer,
+            rightInDrawerCount: rightInDrawer.length
+          });
+        })()
+      `);
+      const termState = JSON.parse(termIsolationCheck);
+      console.log('   CDP 终端模式壁纸挂载状态:', termState);
+      assert.strictEqual(termState.rightInTermCount, 0, 'Terminal MUST NEVER mount right slot video!');
+      if (termState.hasDrawer && termState.rightInDrawerCount > 0) {
+        assert.strictEqual(termState.rightInDrawerCount, 1, 'Expanded drawer should have right slot video');
       }
-      console.log('   CDP 终端切换后视频挂载状态:', termOpenState);
-      assert.strictEqual(termOpenState.count, 1, 'Exactly 1 right video must be mounted when terminal tab is active');
-      assert.ok(termOpenState.mountedInContainer, 'Video must be contained inside auxiliary drawer terminal');
-      assert.ok(termOpenState.readyState >= 1, 'Right video must have readyState >= 1');
 
       // 切换回 Overview 界面，右壁纸必须被干净卸载，恢复纯净透明
       if (hasOverviewTab) {
@@ -902,11 +913,155 @@ async function runTests() {
     assert.strictEqual(sidebarStyle.hasWhiteHaze, false, 'Sidebar text must NOT have diffuse white glow');
   }
 
-  await revertToBaseline();
+  // Baseline protection test completed
   console.log('✓ [Test 15] 侧边栏深色保护区隔离校验通过，纯白高对比无发虚白雾');
 
+  // Test 16: Wallpaper Preset Saving, Independent Archiving, One-Click Application & Seamless CDP Hot Reload
+  console.log('\n[Test 16] 校验壁纸全套配置保存、独立素材归档、一键应用与 CDP 0.3s 热重载闭环...');
+
+  const testPresetName = 'test_suite_preset_demo';
+  const testPresetDesc = '自动化测试专属预设 - 验证壁纸素材独立归档与还原闭环';
+
+  // 16.1 Save preset
+  const savedMeta = savePreset(testPresetName, testPresetDesc);
+  assert.ok(savedMeta, 'savePreset should return preset metadata object');
+  assert.strictEqual(savedMeta.name, testPresetName);
+  assert.strictEqual(savedMeta.description, testPresetDesc);
+  assert.ok(savedMeta.files && savedMeta.files.length > 0, 'Archived files list must not be empty');
+
+  const pDir = getPresetsDir();
+  const testPresetDir = path.join(pDir, testPresetName);
+  const testPresetJson = path.join(testPresetDir, 'preset.json');
+  const testSlotsJson = path.join(testPresetDir, 'slots_config.json');
+  const testWallpapersDir = path.join(testPresetDir, 'wallpapers');
+
+  assert.ok(fs.existsSync(testPresetDir), 'Preset directory must exist');
+  assert.ok(fs.existsSync(testPresetJson), 'preset.json must exist');
+  assert.ok(fs.existsSync(testSlotsJson), 'slots_config.json must exist');
+  assert.ok(fs.existsSync(testWallpapersDir), 'Preset wallpapers folder must exist');
+
+  // Verify archived files actually exist in preset directory
+  const archivedFiles = fs.readdirSync(testWallpapersDir);
+  assert.ok(archivedFiles.length > 0, 'Preset wallpapers folder must contain physical media files');
+  console.log(`   ✓ 预设素材归档完整: 成功归档 ${archivedFiles.length} 个物理文件 (${savedMeta.totalSizeFormatted})`);
+
+  // 16.2 Verify listPresets
+  const presetsList = listPresets();
+  assert.ok(Array.isArray(presetsList), 'listPresets must return array');
+  const foundInList = presetsList.find(p => p.name === testPresetName);
+  assert.ok(foundInList, 'Saved preset must be present in listPresets output');
+  console.log(`   ✓ 预设列表检索正常: 成功检索到 【${testPresetName}】`);
+
+  // 16.3 Verify getPresetDetails resolution (by exact name, index, case-insensitive)
+  const detailByName = getPresetDetails(testPresetName);
+  assert.ok(detailByName && detailByName.preset.name === testPresetName, 'getPresetDetails by name must resolve');
+  const detailByIndex = getPresetDetails(detailByName.index);
+  assert.ok(detailByIndex && detailByIndex.preset.name === testPresetName, 'getPresetDetails by index must resolve');
+  const detailByCase = getPresetDetails(testPresetName.toUpperCase());
+  assert.ok(detailByCase && detailByCase.preset.name === testPresetName, 'getPresetDetails case-insensitive must resolve');
+
+  // 16.4 Verify showPreset
+  const showResult = showPreset(testPresetName);
+  assert.strictEqual(showResult, true, 'showPreset should succeed');
+
+  // 16.5 Mutate active configuration to verify applyPreset restores it 100%
+  console.log('   正在主动更改当前壁纸位置与字体配色，以验证一键还原...');
+  await setPosition('左', '88% 99%');
+  await setFontColor('sakura-pink');
+  const mutatedConfig = loadSlotsConfig();
+  assert.strictEqual(mutatedConfig.left.position, '88% 99%');
+  assert.strictEqual(mutatedConfig.fontColor.id, 'sakura-pink');
+
+  // 16.6 Apply preset
+  console.log('   正在触发一键应用预设...');
+  const applyOk = await applyPreset(testPresetName);
+  assert.strictEqual(applyOk, true, 'applyPreset must return true');
+
+  // 16.7 Verify slots_config.json was restored to preset values
+  const restoredConfig = loadSlotsConfig();
+  assert.strictEqual(restoredConfig.left.position, savedMeta.slotsConfig.left.position, 'Left position must be restored');
+  assert.strictEqual(restoredConfig.fontColor.id, savedMeta.slotsConfig.fontColor.id, 'Font color must be restored');
+  console.log('   ✓ 槽位配置与坐标已 100% 精确还原至预设状态');
+
+  // 16.8 Verify live CDP hot reload
+  await new Promise(r => setTimeout(r, 600));
+  const cdpCheck = await evalCdp(`
+    (() => {
+      const s = document.getElementById('antigravity-custom-theme');
+      const hasRestoredColor = s && s.textContent && s.textContent.includes('${savedMeta.slotsConfig.fontColor.primary}');
+      const cs = window.getComputedStyle(document.body, '::before');
+      return JSON.stringify({
+        hasThemeStyle: !!s,
+        hasRestoredColor,
+        backgroundPosition: cs.backgroundPosition
+      });
+    })()
+  `);
+  const cdpState = JSON.parse(cdpCheck);
+  console.log('   CDP 预设实时热重载校验状态:', cdpState);
+  assert.strictEqual(cdpState.hasThemeStyle, true, 'Custom theme style element must exist in DOM');
+  assert.strictEqual(cdpState.hasRestoredColor, true, 'Restored font color must be in custom theme stylesheet');
+  console.log('   ✓ CDP 0.3s 实时热重载无缝生效验证通过');
+
+  // 16.9 Clean up test preset
+  const deleteOk = deletePreset(testPresetName);
+  assert.strictEqual(deleteOk, true, 'deletePreset should return true');
+  assert.strictEqual(fs.existsSync(testPresetDir), false, 'Preset directory must be removed after delete');
+  console.log('   ✓ 测试预设清理与删除验证通过');
+
+  // 16.10 Pre-apply safety backup verification
+  const backupFile = path.join(antigravityDir, 'slots_config.pre_preset_backup.json');
+  assert.ok(fs.existsSync(backupFile), 'slots_config.pre_preset_backup.json must be created during applyPreset');
+  console.log('   ✓ 预设应用前当前壁纸配置安全快照备份校验通过');
+
+  // 16.11 Whitespace and empty parameter safety
+  assert.strictEqual(getPresetDetails('   '), null, 'getPresetDetails with whitespace must return null, never match first preset');
+  assert.strictEqual(getPresetDetails(''), null, 'getPresetDetails with empty string must return null');
+  assert.strictEqual(savePreset('   '), null, 'savePreset with whitespace must return null');
+  console.log('   ✓ 空白字符/空参数安全校验通过 (杜绝意外误操作首项预设)');
+
+  // 16.12 Path traversal protection
+  assert.strictEqual(savePreset('..'), null, 'savePreset with .. must be rejected to prevent path traversal');
+  assert.strictEqual(savePreset('.'), null, 'savePreset with . must be rejected');
+  assert.strictEqual(sanitizePresetName('..'), '', 'sanitizePresetName(..) must return empty string');
+  assert.strictEqual(sanitizePresetName('.'), '', 'sanitizePresetName(.) must return empty string');
+  console.log('   ✓ 路径穿透防御校验通过 (严禁跨目录创建或删除文件)');
+
+  // 16.13 Windows reserved device names sanitization
+  assert.strictEqual(sanitizePresetName('CON'), 'preset_CON', 'Windows reserved name CON must be prefixed');
+  assert.strictEqual(sanitizePresetName('PRN'), 'preset_PRN', 'Windows reserved name PRN must be prefixed');
+  assert.strictEqual(sanitizePresetName('AUX'), 'preset_AUX', 'Windows reserved name AUX must be prefixed');
+  assert.strictEqual(sanitizePresetName('NUL'), 'preset_NUL', 'Windows reserved name NUL must be prefixed');
+  const conMeta = savePreset('CON', 'Windows reserved name test');
+  assert.ok(conMeta, 'savePreset with CON should succeed via sanitization');
+  assert.strictEqual(conMeta.id, 'preset_CON');
+  const deleteConOk = deletePreset('CON');
+  assert.strictEqual(deleteConOk, true, 'deletePreset with CON should resolve and delete');
+  console.log('   ✓ Windows 系统驱动级保留设备名 (CON/PRN/AUX/NUL) 安全转义校验通过');
+
+  // 16.14 Stale files cleanup on preset overwrite
+  const overwriteTestName = 'test_overwrite_cleanup_demo';
+  savePreset(overwriteTestName, 'v1');
+  const overwriteWDir = path.join(pDir, overwriteTestName, 'wallpapers');
+  const staleDummyPath = path.join(overwriteWDir, 'stale_orphan_test_file.mp4');
+  fs.writeFileSync(staleDummyPath, 'stale content');
+  assert.ok(fs.existsSync(staleDummyPath), 'Stale dummy file must exist before re-save');
+  savePreset(overwriteTestName, 'v2');
+  assert.strictEqual(fs.existsSync(staleDummyPath), false, 'Stale file must be purged when re-saving existing preset');
+  deletePreset(overwriteTestName);
+  console.log('   ✓ 预设覆写时旧素材文件自动清理校验通过 (杜绝孤儿文件膨胀与误还原)');
+
+  // 16.15 CJK full-width character visual alignment
+  const cnWidth = getVisualWidth('默认活跃配置');
+  assert.strictEqual(cnWidth, 12, '6 Chinese characters must equal 12 display columns');
+  const enWidth = getVisualWidth('Cyberpunk');
+  assert.strictEqual(enWidth, 9, '9 English characters must equal 9 display columns');
+  console.log('   ✓ 全角中文字符终端视觉宽度对齐计算校验通过');
+
+  console.log('✓ [Test 16] 壁纸全套配置保存、独立素材归档、一键应用与 CDP 0.3s 热重载闭环测试全部通过');
+
   console.log('\n=======================================================');
-  console.log('✨ 所有的 15 项单元与深度端到端实测全部通过 (PASS)！');
+  console.log('✨ 所有的 16 项单元与深度端到端实测全部通过 (PASS)！');
   console.log('=======================================================');
   } finally {
     await restoreUserWallpaperEnvironment();

@@ -35,6 +35,9 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
   let cachedSlotsMtime = 0;
   let cachedSlotsEtag = '';
 
+  const statCache = new Map();
+  const filePathCache = new Map();
+
   const server = http.createServer((req, res) => {
     // Enable CORS for Chromium / Electron renderer
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -148,36 +151,77 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         return;
       }
 
-      // Candidate search locations for files
-      const candidatePaths = [
-        path.join(wallpapersDir, safeName),
-        path.join(path.dirname(wallpapersDir), safeName),
-        path.join(path.dirname(wallpapersDir), 'wallpapers', safeName),
-        path.join(__dirname, '..', 'wallpapers', safeName)
-      ];
+      // Candidate search locations for files (with memory path cache to eliminate redundant sync I/O)
+      let filePath = filePathCache.get(safeName);
+      if (!filePath || !fs.existsSync(filePath)) {
+        const candidatePaths = [
+          path.join(wallpapersDir, safeName),
+          path.join(path.dirname(wallpapersDir), safeName),
+          path.join(path.dirname(wallpapersDir), 'wallpapers', safeName),
+          path.join(__dirname, '..', 'wallpapers', safeName)
+        ];
+        filePath = candidatePaths.find(p => {
+          try {
+            return fs.existsSync(p) && fs.statSync(p).isFile();
+          } catch(e) {
+            return false;
+          }
+        });
+        if (filePath) {
+          if (filePathCache.size > 200) {
+            const firstKey = filePathCache.keys().next().value;
+            filePathCache.delete(firstKey);
+          }
+          filePathCache.set(safeName, filePath);
+        }
+      }
 
-      let filePath = candidatePaths.find(p => fs.existsSync(p) && fs.statSync(p).isFile());
       if (!filePath) {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('Not Found: ' + safeName);
         return;
       }
 
-      const stat = fs.statSync(filePath);
+      // Stat cache with 3s TTL to avoid repeated sync disk IO during intense streaming seeks
+      let stat;
+      const now = Date.now();
+      const cachedStat = statCache.get(filePath);
+      if (cachedStat && (now - cachedStat.time < 3000)) {
+        stat = cachedStat.stat;
+      } else {
+        try {
+          stat = fs.statSync(filePath);
+          if (statCache.size > 200) {
+            const firstKey = statCache.keys().next().value;
+            statCache.delete(firstKey);
+          }
+          statCache.set(filePath, { stat, time: now });
+        } catch(e) {
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          res.end('Not Found: ' + safeName);
+          return;
+        }
+      }
+
       const fileSize = stat.size;
       const ext = path.extname(filePath).toLowerCase();
       const contentType = MIME_TYPES[ext] || 'application/octet-stream';
       const etag = `W/"${fileSize.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+      const lastModified = stat.mtime.toUTCString();
 
       // 304 Not Modified validation for smooth looping and browser media caching
-      if (req.headers['if-none-match'] === etag) {
+      if (req.headers['if-none-match'] === etag || 
+          (req.headers['if-modified-since'] && new Date(req.headers['if-modified-since']) >= stat.mtime)) {
         res.writeHead(304);
         res.end();
         return;
       }
 
       const isMedia = ext === '.mp4' || ext === '.webm' || ext === '.ogg' || ext === '.jpg' || ext === '.png' || ext === '.gif' || ext === '.webp';
-      const cacheHeader = isMedia ? 'public, max-age=86400, stale-while-revalidate=604800' : 'no-cache';
+      const hasVersion = urlObj.searchParams.has('v');
+      const cacheHeader = isMedia 
+        ? (hasVersion ? 'public, max-age=31536000, immutable' : 'public, max-age=86400, stale-while-revalidate=604800') 
+        : 'no-cache';
 
       if (req.method === 'HEAD') {
         res.writeHead(200, {
@@ -185,6 +229,7 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
           'Content-Type': contentType,
           'Accept-Ranges': 'bytes',
           'ETag': etag,
+          'Last-Modified': lastModified,
           'Cache-Control': cacheHeader
         });
         res.end();
@@ -195,15 +240,35 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
       const range = req.headers.range;
       if (range) {
         const parts = range.replace(/bytes=/, '').split('-');
-        let start = parseInt(parts[0], 10);
-        let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        let start = 0;
+        let end = fileSize - 1;
 
-        if (isNaN(start)) {
-          start = fileSize - end;
+        if (parts[0] === '' && parts[1] !== '') {
+          // Suffix byte range: bytes=-500 (last 500 bytes)
+          const suffix = parseInt(parts[1], 10);
+          if (isNaN(suffix) || suffix <= 0) {
+            res.writeHead(416, { 'Content-Range': `bytes */${fileSize}` });
+            res.end();
+            return;
+          }
+          start = Math.max(0, fileSize - suffix);
           end = fileSize - 1;
+        } else if (parts[0] !== '' && parts[1] === '') {
+          // Open-ended range: bytes=500-
+          start = parseInt(parts[0], 10);
+          end = fileSize - 1;
+        } else if (parts[0] !== '' && parts[1] !== '') {
+          // Explicit range: bytes=500-999
+          start = parseInt(parts[0], 10);
+          end = parseInt(parts[1], 10);
+        } else {
+          // Invalid range header
+          res.writeHead(416, { 'Content-Range': `bytes */${fileSize}` });
+          res.end();
+          return;
         }
 
-        if (start < 0 || start >= fileSize || end >= fileSize || start > end) {
+        if (isNaN(start) || isNaN(end) || start < 0 || start >= fileSize || end >= fileSize || start > end) {
           res.writeHead(416, {
             'Content-Range': `bytes */${fileSize}`
           });
@@ -212,43 +277,53 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         }
 
         const chunkSize = (end - start) + 1;
-        // Optimal 256KB buffer highWaterMark for smooth, low-CPU video streaming
-        const stream = fs.createReadStream(filePath, { start, end, highWaterMark: 256 * 1024 });
+        // Dynamic adaptive buffer: bounded between 64KB and 512KB to minimize memory allocation while maximizing 60FPS throughput
+        const bufferSize = Math.min(512 * 1024, Math.max(64 * 1024, chunkSize));
+        const stream = fs.createReadStream(filePath, { start, end, highWaterMark: bufferSize });
         res.writeHead(206, {
           'Content-Range': `bytes ${start}-${end}/${fileSize}`,
           'Accept-Ranges': 'bytes',
           'Content-Length': chunkSize,
           'Content-Type': contentType,
           'ETag': etag,
+          'Last-Modified': lastModified,
           'Cache-Control': cacheHeader,
           'Connection': 'keep-alive',
           'Keep-Alive': 'timeout=60'
         });
         stream.pipe(res);
+        const cleanup = () => {
+          stream.destroy();
+        };
         stream.on('error', () => {
           res.destroy();
         });
-        res.on('close', () => {
-          stream.destroy();
-        });
+        res.on('error', cleanup);
+        res.on('close', cleanup);
+        res.on('finish', cleanup);
       } else {
+        const bufferSize = Math.min(512 * 1024, Math.max(64 * 1024, fileSize));
         res.writeHead(200, {
           'Content-Length': fileSize,
           'Content-Type': contentType,
           'Accept-Ranges': 'bytes',
           'ETag': etag,
+          'Last-Modified': lastModified,
           'Cache-Control': cacheHeader,
           'Connection': 'keep-alive',
           'Keep-Alive': 'timeout=60'
         });
-        const stream = fs.createReadStream(filePath, { highWaterMark: 256 * 1024 });
+        const stream = fs.createReadStream(filePath, { highWaterMark: bufferSize });
         stream.pipe(res);
+        const cleanup = () => {
+          stream.destroy();
+        };
         stream.on('error', () => {
           res.destroy();
         });
-        res.on('close', () => {
-          stream.destroy();
-        });
+        res.on('error', cleanup);
+        res.on('close', cleanup);
+        res.on('finish', cleanup);
       }
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -256,6 +331,8 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
     }
   });
 
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
   server.on('error', (err) => {
     if (err.code !== 'EADDRINUSE') {
       console.warn('[MediaServer] Server warning:', err.message);

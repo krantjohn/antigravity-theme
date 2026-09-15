@@ -34,8 +34,26 @@ if (fs.existsSync(repoMediaServerPath)) {
     fs.copyFileSync(repoMediaServerPath, localMediaServerPath);
   } catch(e) {}
 }
+const localThemeEnginePath = path.join(antigravityDir, 'theme_engine.js');
+const repoThemeEnginePath = path.join(__dirname, 'theme_engine.js');
+if (fs.existsSync(repoThemeEnginePath)) {
+  try {
+    fs.copyFileSync(repoThemeEnginePath, localThemeEnginePath);
+  } catch(e) {}
+}
 const baselineDir = path.join(antigravityDir, 'backups', 'baseline_v1_初版');
 const slotsConfigPath = path.join(antigravityDir, 'slots_config.json');
+const presetsDir = path.join(antigravityDir, 'presets');
+if (!fs.existsSync(presetsDir)) {
+  try { fs.mkdirSync(presetsDir, { recursive: true }); } catch (e) {}
+}
+
+function getPresetsDir() {
+  if (!fs.existsSync(presetsDir)) {
+    try { fs.mkdirSync(presetsDir, { recursive: true }); } catch (e) {}
+  }
+  return presetsDir;
+}
 
 const VIDEO_EXTS = new Set(['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v']);
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']);
@@ -462,26 +480,45 @@ function saveSlotsConfig(config) {
 
 function getBase64(filename) {
   if (!filename) return '';
-  let filePath = path.join(wallpapersDir, filename);
+  let resolvedName = filename;
+  const ext = path.extname(filename).toLowerCase();
+  if (ext === '.gif') {
+    const base = filename.slice(0, -ext.length);
+    for (const altExt of ['.jpg', '.jpeg', '.png', '.webp']) {
+      const altFile = base + altExt;
+      if (fs.existsSync(path.join(wallpapersDir, altFile)) || fs.existsSync(path.join(repoWallpapersDir, altFile))) {
+        resolvedName = altFile;
+        break;
+      }
+    }
+  }
+  let filePath = path.join(wallpapersDir, resolvedName);
   if (!fs.existsSync(filePath)) {
-    const fallbackPath = path.join(repoWallpapersDir, filename);
+    const fallbackPath = path.join(repoWallpapersDir, resolvedName);
     if (fs.existsSync(fallbackPath)) {
       filePath = fallbackPath;
     } else {
-      console.warn(`Warning: ${filename} not found in wallpapers directory.`);
-      return '';
+      filePath = path.join(wallpapersDir, filename);
+      if (!fs.existsSync(filePath)) {
+        const fb = path.join(repoWallpapersDir, filename);
+        if (fs.existsSync(fb)) filePath = fb;
+        else {
+          console.warn(`Warning: ${filename} not found in wallpapers directory.`);
+          return '';
+        }
+      }
     }
   }
   const buf = fs.readFileSync(filePath);
-  const ext = path.extname(filename).toLowerCase();
+  const actualExt = path.extname(filePath).toLowerCase();
   let mime = 'image/jpeg';
   if (buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
     mime = 'image/png';
   } else if (buf.length >= 3 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) {
     mime = 'image/gif';
-  } else if (ext === '.webp') {
+  } else if (actualExt === '.webp') {
     mime = 'image/webp';
-  } else if (ext === '.svg') {
+  } else if (actualExt === '.svg') {
     mime = 'image/svg+xml';
   }
   return `data:${mime};base64,` + buf.toString('base64');
@@ -729,7 +766,7 @@ body::before {
   z-index: 0 !important;
   transform: translate3d(0, 0, 0) !important;
   backface-visibility: hidden !important;
-  contain: strict !important;
+  contain: layout paint !important;
   will-change: transform !important;
 }
 
@@ -888,6 +925,29 @@ button[aria-label*="Undo"]:hover {
   color: #38bdf8 !important;
   background-color: rgba(56, 189, 248, 0.22) !important;
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.45) !important;
+}
+
+/* 6.1 顶部标题栏与窗口原生控制按钮防碰撞防御 (Windows Electron Native Window Controls Collision Prevention) */
+/* 右侧边栏展开/收起按钮紧靠 Windows 原生控制按钮左侧 (~138px) 并保留自然间距 */
+div.absolute.top-0.right-0.z-50.flex.items-center.shrink-0,
+div.absolute.top-0:has(> div > [data-testid="toggle-aux-sidebar"]),
+div.absolute.top-0:has(> [data-testid="toggle-aux-sidebar"]),
+div:has(> div > [data-testid="toggle-aux-sidebar"]):not([class*="group"]):not([class*="pane"]) {
+  right: max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) !important;
+}
+
+/* 辅助面板展开时顶栏标签页与加号按钮右侧内边距，确保不被最大化/侧边栏切换按钮遮挡 (64px按钮组 + 8px自然间距 = 72px) */
+div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),
+div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]) {
+  padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 72px) !important;
+}
+
+/* 当辅助面板收起时，主对话顶栏更多操作容器紧邻侧边栏切换按钮，严格限定于父级容器，杜绝子元素重复嵌套叠加 padding (32px单按钮 + 10px自然间距 = 42px) */
+div.h-screen.w-screen:not(:has(div[data-aux-pane-open="true"])) div.flex.items-center.justify-end.shrink-0:has([data-testid="titlebar-more-actions"]) {
+  padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 42px) !important;
+}
+div.h-screen.w-screen:not(:has(div[data-aux-pane-open="true"])) div.flex.items-center.justify-end.shrink-0:has([data-testid="titlebar-more-actions"]) > div {
+  padding-right: 0px !important;
 }
 
 /* ==========================================================================
@@ -1655,22 +1715,20 @@ div[data-aux-pane-open="true"] {
 div[data-aux-pane-open="true"],
 [aria-label="Auxiliary Pane"],
 div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
-div[data-aux-pane-open="true"] > div,
+div[data-aux-pane-open="true"] > div:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]),
 div[data-aux-pane-open="true"] .shrink-0,
 div[data-aux-pane-open="true"] .flex-grow,
 div[data-aux-pane-open="true"] .border-b,
 div[data-aux-pane-open="true"] .border-border,
-div[data-aux-pane-open="true"] .bg-background,
-[class*="terminal-drawer"] {
+div[data-aux-pane-open="true"] .bg-background:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]) {
   background-color: transparent !important;
   background-image: none !important;
   background: transparent !important;
 }
 
-/* 12.2 【右】仅在右侧独立终端或特定侧栏抽屉展示右壁纸 */
-div[data-aux-pane-open="true"] .terminal.xterm,
-div[data-aux-pane-open="true"] [data-panel="terminal"],
-[class*="terminal-drawer"] {
+/* 12.2 【右】仅在展开的右侧独立会话抽屉展示右壁纸 (彻底移除终端选择器，杜绝与中壁纸争抢冲突) */
+div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
+div[data-aux-pane-open="true"] [class*="terminal-drawer"] {
   position: relative !important;
   background-color: transparent !important;
   background-image: 
@@ -1687,14 +1745,13 @@ div[data-aux-pane-open="true"] [data-panel="terminal"],
 
 /* 严禁右壁纸污染整个辅助面板、Overview总览、任务时间线、Artifact工件预览或Review审查区！ */
 [aria-label="Auxiliary Pane"],
-[aria-label="Auxiliary Pane"] > div,
+[aria-label="Auxiliary Pane"] > div:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]),
 [aria-label="Overview"],
 [aria-label="Overview"] *,
 [aria-label="Review"],
 [aria-label="Review"] *,
 div[role="region"][aria-label="Overview"],
 div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
-div[data-aux-pane-open="true"]:not(:has(.terminal.xterm)):not(:has([data-panel="terminal"])) [aria-label="Auxiliary Pane"],
 div[data-aux-pane-open="true"] .py-3.flex.h-full.w-full.flex-col.gap-6.flex-grow.min-h-0.overflow-y-auto {
   background-image: none !important;
   background-color: transparent !important;
@@ -1972,7 +2029,7 @@ div.settings-modal-container {
   -webkit-user-select: none !important;
   transform: translate3d(0, 0, 0) !important;
   backface-visibility: hidden !important;
-  contain: strict !important;
+  contain: layout paint !important;
   will-change: transform !important;
 }
 `;
@@ -1999,16 +2056,158 @@ function getClientVideoScript(config) {
     };
 
     function checkAndShowVideo(v) {
-      if (!v || v.error) {
-        if (v) v.style.display = 'none';
-        return;
-      }
-      const decoded = (typeof v.webkitDecodedFrameCount === 'number') ? v.webkitDecodedFrameCount : 0;
-      const hasTimeProgress = v.currentTime > 0.05;
-      const isReadyToPaint = v.readyState >= 2 && !v.paused && (decoded > 0 || hasTimeProgress);
-      if (isReadyToPaint && v.style.display !== 'block') {
+      if (!v) return;
+      if (v.style.display !== 'block') {
         v.style.display = 'block';
       }
+    }
+
+    // 智能可视性判定引擎：精确感知抽屉折叠、终端收缩、设置弹窗关闭、祖先隐藏及视口相交
+    function isVideoVisible(v) {
+      if (!v || !v.isConnected) return false;
+      if (v.id === 'antigravity-video-left') return !document.hidden;
+      if (document.hidden) return false;
+      const rect = v.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      if (v.closest('[hidden], [aria-hidden="true"], [data-state="closed"]')) return false;
+      const style = window.getComputedStyle(v);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      if (v.parentElement) {
+        const pStyle = window.getComputedStyle(v.parentElement);
+        if (pStyle.display === 'none' || pStyle.visibility === 'hidden' || pStyle.opacity === '0') return false;
+      }
+      return (
+        rect.bottom > 0 &&
+        rect.right > 0 &&
+        rect.top < (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.left < (window.innerWidth || document.documentElement.clientWidth)
+      );
+    }
+
+    // 同步视频解码与渲染能耗状态：可见即播，隐藏立停 (杜绝后台无效解码与显存浪费)
+    function syncVideoPlaybackState(v) {
+      if (!v) return;
+      if (isVideoVisible(v)) {
+        if (v.paused && v.readyState >= 1) {
+          v.play().catch(function() {});
+        }
+        checkAndShowVideo(v);
+      } else {
+        if (!v.paused) {
+          v.pause();
+        }
+      }
+    }
+
+    // Tick 0 极速挂载底图壁纸 (0ms 显示海报图并立即预载视频流，绝无开机黑屏与卡顿延迟)
+    function mountTickZeroBase() {
+      try {
+        const left = config.left;
+        if (!left || left.type !== 'video' || !left.file) return;
+        const vParam = (left && left.version) ? ('?v=' + left.version) : ('?v=' + Date.now());
+        const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
+        const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
+        const posLeft = '${posLeft}';
+        let leftVid = document.getElementById('antigravity-video-left');
+        if (!leftVid) {
+          leftVid = document.createElement('video');
+          leftVid.id = 'antigravity-video-left';
+          leftVid.className = 'antigravity-slot-video';
+          leftVid.setAttribute('data-slot', 'left');
+          leftVid.muted = true;
+          leftVid.defaultMuted = true;
+          leftVid.setAttribute('muted', '');
+          leftVid.autoplay = true;
+          leftVid.loop = true;
+          leftVid.playsInline = true;
+          leftVid.setAttribute('playsinline', '');
+          leftVid.setAttribute('autoplay', '');
+          leftVid.setAttribute('loop', '');
+          leftVid.preload = 'auto';
+          leftVid.setAttribute('preload', 'auto');
+          leftVid.crossOrigin = 'anonymous';
+          leftVid.setAttribute('crossorigin', 'anonymous');
+          leftVid.disablePictureInPicture = true;
+          leftVid.setAttribute('disablepictureinpicture', '');
+          leftVid.disableRemotePlayback = true;
+          leftVid.setAttribute('disableremoteplayback', '');
+          leftVid.style.position = 'fixed';
+          leftVid.style.top = '0';
+          leftVid.style.left = '0';
+          leftVid.style.width = '100vw';
+          leftVid.style.height = '100vh';
+          leftVid.style.objectFit = 'cover';
+          leftVid.style.objectPosition = posLeft;
+          leftVid.style.zIndex = '0';
+          leftVid.style.pointerEvents = 'none';
+          leftVid.style.transform = 'translate3d(0, 0, 0)';
+          leftVid.style.contain = 'layout paint';
+          leftVid.style.willChange = 'transform';
+          leftVid.style.display = 'block';
+          if (posterSrc) {
+            leftVid.poster = posterSrc;
+            leftVid.setAttribute('poster', posterSrc);
+            leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
+            leftVid.style.backgroundSize = 'cover';
+            leftVid.style.backgroundPosition = posLeft;
+          }
+          leftVid.dataset.currentSrc = src;
+          leftVid.src = src;
+          leftVid.addEventListener('error', function() {
+            setTimeout(function() {
+              if (leftVid.error) {
+                leftVid.load();
+                if (!document.hidden) leftVid.play().catch(function(){});
+              }
+            }, 300);
+          });
+          (document.body || document.documentElement).prepend(leftVid);
+          if (!document.hidden) leftVid.play().catch(function(){});
+        } else if (document.body && leftVid.parentElement !== document.body) {
+          document.body.prepend(leftVid);
+        }
+      } catch(e) {}
+    }
+    mountTickZeroBase();
+
+    // 全局硬件视频能效与可视性监听引擎 (杜绝后台与折叠面板无效硬解导致的掉帧卡顿)
+    if (window.__antigravityVideoVisibilityObserver) {
+      try { window.__antigravityVideoVisibilityObserver.disconnect(); } catch(e) {}
+      window.__antigravityVideoVisibilityObserver = null;
+    }
+    if (typeof IntersectionObserver !== 'undefined') {
+      window.__antigravityVideoVisibilityObserver = new IntersectionObserver(function(entries) {
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
+          const v = entry.target;
+          if (v.id === 'antigravity-video-left') continue;
+          if (entry.isIntersecting && entry.intersectionRatio > 0.01 && isVideoVisible(v)) {
+            if (v.paused && v.readyState >= 1) {
+              v.play().catch(function() {});
+            }
+          } else {
+            if (!v.paused) {
+              v.pause();
+            }
+          }
+        }
+      }, { threshold: [0, 0.01] });
+    }
+
+    if (!window.__antigravityDocVisibilityListener) {
+      window.__antigravityDocVisibilityListener = true;
+      document.addEventListener('visibilitychange', function() {
+        const allVids = document.querySelectorAll('.antigravity-slot-video');
+        if (document.hidden) {
+          for (let i = 0; i < allVids.length; i++) {
+            if (!allVids[i].paused) allVids[i].pause();
+          }
+        } else {
+          for (let i = 0; i < allVids.length; i++) {
+            syncVideoPlaybackState(allVids[i]);
+          }
+        }
+      });
     }
 
     function applyVideos() {
@@ -2020,7 +2219,10 @@ function getClientVideoScript(config) {
         const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
         let leftVid = document.getElementById('antigravity-video-left');
         if (leftVid && leftVid.isConnected && leftVid.dataset.currentSrc === src) {
-          if (leftVid.paused && leftVid.readyState >= 1) {
+          if (document.body && leftVid.parentElement !== document.body) {
+            document.body.prepend(leftVid);
+          }
+          if (!document.hidden && leftVid.paused && leftVid.readyState >= 1) {
             leftVid.play().catch(function() {});
           }
           checkAndShowVideo(leftVid);
@@ -2051,59 +2253,64 @@ function getClientVideoScript(config) {
             leftVid.setAttribute('preload', 'auto');
             leftVid.crossOrigin = 'anonymous';
             leftVid.setAttribute('crossorigin', 'anonymous');
+            leftVid.disablePictureInPicture = true;
+            leftVid.setAttribute('disablepictureinpicture', '');
+            leftVid.disableRemotePlayback = true;
+            leftVid.setAttribute('disableremoteplayback', '');
+            leftVid.style.position = 'fixed';
+            leftVid.style.top = '0';
+            leftVid.style.left = '0';
+            leftVid.style.width = '100vw';
+            leftVid.style.height = '100vh';
+            leftVid.style.objectFit = 'cover';
             leftVid.style.objectPosition = '${posLeft}';
+            leftVid.style.zIndex = '0';
+            leftVid.style.pointerEvents = 'none';
             leftVid.style.transform = 'translate3d(0, 0, 0)';
-            leftVid.style.contain = 'strict';
+            leftVid.style.contain = 'layout paint';
             leftVid.style.willChange = 'transform';
-            leftVid.style.display = 'none';
+            leftVid.style.display = 'block';
             if (posterSrc) {
               leftVid.poster = posterSrc;
               leftVid.setAttribute('poster', posterSrc);
+              leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
+              leftVid.style.backgroundSize = 'cover';
+              leftVid.style.backgroundPosition = '${posLeft}';
             }
             leftVid.addEventListener('playing', function() {
-              setTimeout(function() { checkAndShowVideo(leftVid); }, 50);
-            });
-            leftVid.addEventListener('timeupdate', function() {
               checkAndShowVideo(leftVid);
             });
             leftVid.addEventListener('canplay', function() {
-              if (leftVid.paused) leftVid.play().catch(function() {});
+              if (!document.hidden && leftVid.paused) leftVid.play().catch(function() {});
             });
             leftVid.addEventListener('error', function() {
-              leftVid.style.display = 'none';
-            });
-            leftVid.addEventListener('stalled', function() {
-              if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
-                leftVid.style.display = 'none';
-              }
-            });
-            leftVid.addEventListener('waiting', function() {
-              if ((leftVid.webkitDecodedFrameCount || 0) === 0 && (leftVid.currentTime || 0) === 0) {
-                leftVid.style.display = 'none';
-              }
+              setTimeout(function() {
+                if (leftVid.error) {
+                  leftVid.load();
+                  if (!document.hidden) leftVid.play().catch(function(){});
+                }
+              }, 300);
             });
             (document.body || document.documentElement).prepend(leftVid);
+          }
+          if (document.body && leftVid.parentElement !== document.body) {
+            document.body.prepend(leftVid);
           }
           if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
             leftVid.poster = posterSrc;
             leftVid.setAttribute('poster', posterSrc);
+            leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
+            leftVid.style.backgroundSize = 'cover';
+            leftVid.style.backgroundPosition = '${posLeft}';
           }
           if (leftVid.dataset.currentSrc !== src) {
             leftVid.dataset.currentSrc = src;
-            leftVid.style.display = 'none';
             leftVid.src = src;
             leftVid.load();
-            leftVid.play().catch(function() {});
-            const token = Date.now();
-            leftVid.dataset.loadToken = String(token);
-            setTimeout(function() {
-              if (leftVid.dataset.loadToken === String(token)) {
-                checkAndShowVideo(leftVid);
-              }
-            }, 1500);
+            if (!document.hidden) leftVid.play().catch(function() {});
           }
           leftVid.style.objectPosition = '${posLeft}';
-          if (leftVid.paused && leftVid.readyState >= 1) {
+          if (!document.hidden && leftVid.paused && leftVid.readyState >= 1) {
             leftVid.play().catch(function() {});
           }
           checkAndShowVideo(leftVid);
@@ -2126,16 +2333,15 @@ function getClientVideoScript(config) {
           '[data-panel="terminal"]'
         ],
         'right': [
-          'div[data-aux-pane-open="true"] .terminal.xterm',
-          'div[data-aux-pane-open="true"] div.terminal-wrapper',
-          'div[data-aux-pane-open="true"] [data-panel="terminal"]',
-          '[class*="terminal-drawer"]',
-          'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background'
+          'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background',
+          'div[data-aux-pane-open="true"] [class*="terminal-drawer"]'
         ],
         'bottom': [
-          '#antigravity\\\\.agentSidePanelInputBox > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
-          '#antigravity\\\\.agentSidePanelInputBox > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
-          'div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])'
+          '[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+          '[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+          'div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+          'div.rounded-2xl.bg-card-border > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+          'div[data-testid="running-items-panel"] + div > div.bg-card'
         ],
         'settings': [
           '[role="dialog"]',
@@ -2161,28 +2367,39 @@ function getClientVideoScript(config) {
             oldVids[i].remove();
           }
         } else {
-          // 1. Locate current valid targetContainer
           let targetContainer = null;
           for (let i = 0; i < selectors.length; i++) {
             try {
               const el = document.querySelector(selectors[i]);
               if (el && el !== document.body && el !== document.documentElement) {
-                if (slotKey === 'right') {
-                  if (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\\\.agentSidePanelInputBox')) {
+                if (slotKey === 'mid') {
+                  if (!el.classList.contains('terminal') && !el.classList.contains('xterm') && !el.querySelector('.terminal, .xterm')) {
                     continue;
                   }
-                  // 防右壁纸污染：整个辅助大容器（Overview总览/时间线/工件预览/代码审查等）必须完全透明，绝不可被右壁纸覆盖！
-                  const isTerm = el.classList.contains('xterm') || el.classList.contains('terminal') || !!el.querySelector('.terminal, .xterm, [data-panel="terminal"]');
-                  if (!isTerm) {
-                    if (el.getAttribute('aria-label') === 'Auxiliary Pane' || 
-                        el.getAttribute('aria-label') === 'Overview' ||
-                        el.getAttribute('aria-label') === 'Review' ||
-                        el.closest('[aria-label="Overview"]') ||
-                        el.closest('[aria-label="Review"]') ||
-                        el.querySelector('[aria-label="Overview"]') ||
-                        el.querySelector('[aria-label="Review"]')) {
-                      continue;
-                    }
+                  if (el.closest('[class*="terminal-drawer"]') || 
+                      (el.classList.contains('overflow-y-auto') && el.classList.contains('bg-background')) ||
+                      el.closest('div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background')) {
+                    continue;
+                  }
+                }
+                if (slotKey === 'right') {
+                  if (el.classList.contains('terminal') || el.classList.contains('xterm') || el.querySelector('.terminal, .xterm')) {
+                    continue;
+                  }
+                  if (el.offsetWidth < 50) {
+                    continue;
+                  }
+                  if (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\.agentSidePanelInputBox')) {
+                    continue;
+                  }
+                  if (el.getAttribute('aria-label') === 'Auxiliary Pane' || 
+                      el.getAttribute('aria-label') === 'Overview' ||
+                      el.getAttribute('aria-label') === 'Review' ||
+                      el.closest('[aria-label="Overview"]') ||
+                      el.closest('[aria-label="Review"]') ||
+                      el.querySelector('[aria-label="Overview"]') ||
+                      el.querySelector('[aria-label="Review"]')) {
+                    continue;
                   }
                 }
                 targetContainer = el;
@@ -2191,7 +2408,6 @@ function getClientVideoScript(config) {
             } catch (e) {}
           }
 
-          // 2. Clean up any video instances that are NOT inside the active targetContainer
           const existingVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
           for (let i = 0; i < existingVids.length; i++) {
             if (!targetContainer || existingVids[i].parentElement !== targetContainer) {
@@ -2202,7 +2418,6 @@ function getClientVideoScript(config) {
             }
           }
 
-          // 3. If targetContainer exists, manage the single slot video
           if (targetContainer) {
             const allSlotVidsInContainer = targetContainer.querySelectorAll(':scope > .antigravity-slot-video[data-slot="' + slotKey + '"]');
             for (let i = 1; i < allSlotVidsInContainer.length; i++) {
@@ -2212,13 +2427,8 @@ function getClientVideoScript(config) {
               allSlotVidsInContainer[i].remove();
             }
             let vid = allSlotVidsInContainer[0];
-
-            // Fast-path: already mounted in targetContainer with expected source
             if (vid && vid.dataset.currentSrc === src) {
-              if (vid.paused && vid.readyState >= 1) {
-                vid.play().catch(function() {});
-              }
-              checkAndShowVideo(vid);
+              syncVideoPlaybackState(vid);
               continue;
             }
 
@@ -2239,68 +2449,71 @@ function getClientVideoScript(config) {
               vid.setAttribute('preload', 'auto');
               vid.crossOrigin = 'anonymous';
               vid.setAttribute('crossorigin', 'anonymous');
+              vid.disablePictureInPicture = true;
+              vid.setAttribute('disablepictureinpicture', '');
+              vid.disableRemotePlayback = true;
+              vid.setAttribute('disableremoteplayback', '');
+              vid.style.position = 'absolute';
+              vid.style.top = '0';
+              vid.style.left = '0';
+              vid.style.width = '100%';
+              vid.style.height = '100%';
+              vid.style.objectFit = 'cover';
               vid.style.objectPosition = slotPositions[slotKey] || 'center center';
+              vid.style.pointerEvents = 'none';
+              vid.style.zIndex = '0';
               vid.style.transform = 'translate3d(0, 0, 0)';
-              vid.style.contain = 'strict';
+              vid.style.contain = 'layout paint';
               vid.style.willChange = 'transform';
-              vid.style.display = 'none';
+              vid.style.display = 'block';
               if (posterSrc) {
                 vid.poster = posterSrc;
                 vid.setAttribute('poster', posterSrc);
+                vid.style.backgroundImage = 'url("' + posterSrc + '")';
+                vid.style.backgroundSize = 'cover';
+                vid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
               }
               vid.addEventListener('playing', function() {
-                setTimeout(function() { checkAndShowVideo(vid); }, 50);
-              });
-              vid.addEventListener('timeupdate', function() {
                 checkAndShowVideo(vid);
               });
               vid.addEventListener('canplay', function() {
-                if (vid.paused) vid.play().catch(function() {});
+                if (isVideoVisible(vid) && vid.paused) vid.play().catch(function() {});
               });
               vid.addEventListener('error', function() {
-                vid.style.display = 'none';
-              });
-              vid.addEventListener('stalled', function() {
-                if ((vid.webkitDecodedFrameCount || 0) === 0 && (vid.currentTime || 0) === 0) {
-                  vid.style.display = 'none';
-                }
-              });
-              vid.addEventListener('waiting', function() {
-                if ((vid.webkitDecodedFrameCount || 0) === 0 && (vid.currentTime || 0) === 0) {
-                  vid.style.display = 'none';
-                }
+                setTimeout(function() {
+                  if (vid.error) {
+                    vid.load();
+                    if (isVideoVisible(vid)) vid.play().catch(function(){});
+                  }
+                }, 300);
               });
               if (!targetContainer.dataset.agPositioned) {
                 targetContainer.dataset.agPositioned = 'true';
                 if (!targetContainer.style.position || targetContainer.style.position === 'static') {
                   targetContainer.style.position = 'relative';
                 }
+                targetContainer.style.overflow = 'hidden';
               }
               targetContainer.prepend(vid);
             }
             if (posterSrc && vid.getAttribute('poster') !== posterSrc) {
               vid.poster = posterSrc;
               vid.setAttribute('poster', posterSrc);
+              vid.style.backgroundImage = 'url("' + posterSrc + '")';
+              vid.style.backgroundSize = 'cover';
+              vid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
             }
             if (vid.dataset.currentSrc !== src) {
               vid.dataset.currentSrc = src;
-              vid.style.display = 'none';
               vid.src = src;
               vid.load();
-              vid.play().catch(function() {});
-              const token = Date.now();
-              vid.dataset.loadToken = String(token);
-              setTimeout(function() {
-                if (vid.dataset.loadToken === String(token)) {
-                  checkAndShowVideo(vid);
-                }
-              }, 1500);
+              if (isVideoVisible(vid)) vid.play().catch(function() {});
             }
             vid.style.objectPosition = slotPositions[slotKey] || 'center center';
-            if (vid.paused && vid.readyState >= 1) {
-              vid.play().catch(function() {});
+            syncVideoPlaybackState(vid);
+            if (window.__antigravityVideoVisibilityObserver) {
+              window.__antigravityVideoVisibilityObserver.observe(vid);
             }
-            checkAndShowVideo(vid);
           }
         }
       }
@@ -2309,6 +2522,11 @@ function getClientVideoScript(config) {
     window.__antigravityActiveConfig = config;
     window.__antigravityApplyVideos = applyVideos;
     applyVideos();
+
+    // Fast startup retry ladder
+    [50, 150, 300, 600, 1200, 2500, 5000].forEach(function(delay) {
+      setTimeout(applyVideos, delay);
+    });
 
     if (window.__antigravityVideoObserver) {
       try { window.__antigravityVideoObserver.disconnect(); } catch(e) {}
@@ -2321,16 +2539,31 @@ function getClientVideoScript(config) {
         let isRelevant = false;
         for (let i = 0; i < mutations.length; i++) {
           const m = mutations[i];
+          const target = m.target;
+          if (!target || target.nodeType === 3) continue;
+          if (target.closest && (target.closest('.xterm') || target.closest('.terminal') || target.closest('pre') || target.closest('.code-block') || target.closest('[data-testid*="message"]'))) {
+            continue;
+          }
           if (m.type === 'attributes') {
-            isRelevant = true;
-            break;
+            const attr = m.attributeName;
+            if (attr === 'data-aux-pane-open' || attr === 'data-state' || attr === 'aria-expanded' || attr === 'hidden') {
+              isRelevant = true;
+              break;
+            }
           } else if (m.type === 'childList') {
             for (let j = 0; j < m.addedNodes.length; j++) {
               const node = m.addedNodes[j];
               if (node.nodeType === 1) {
                 const role = node.getAttribute ? node.getAttribute('role') : null;
                 const ds = node.getAttribute ? node.getAttribute('data-state') : null;
-                if (role === 'dialog' || ds === 'open' || node.id === 'antigravity.agentSidePanelInputBox' || (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm')))) {
+                if (role === 'dialog' || ds === 'open' || 
+                  node.id === 'antigravity.agentSidePanelInputBox' || 
+                  (node.id && node.id.includes('agentSidePanelInputBox')) ||
+                  (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm') ||
+                   node.classList.contains('overflow-y-auto') || node.classList.contains('bg-background') ||
+                   node.classList.contains('bg-card') || node.classList.contains('bg-card-border'))) ||
+                  (node.className && typeof node.className === 'string' && (node.className.includes('terminal') || node.className.includes('drawer') || node.className.includes('bg-card') || node.className.includes('agentSidePanelInputBox') || (node.className.includes('overflow-y-auto') && node.className.includes('bg-background')))) ||
+                  (node.querySelector && node.querySelector('.terminal, .xterm, [class*="terminal-drawer"], [id*="agentSidePanelInputBox"], div.bg-card, div.rounded-2xl.bg-card-border, div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background'))) {
                   isRelevant = true;
                   break;
                 }
@@ -2340,7 +2573,7 @@ function getClientVideoScript(config) {
             for (let j = 0; j < m.removedNodes.length; j++) {
               const node = m.removedNodes[j];
               if (node.nodeType === 1) {
-                if (node.id === 'antigravity-video-left' || (node.classList && node.classList.contains('antigravity-slot-video')) || (node.getAttribute && node.getAttribute('role') === 'dialog')) {
+                if (node.id === 'antigravity-video-left' || (node.classList && (node.classList.contains('antigravity-slot-video') || node.classList.contains('terminal') || node.classList.contains('xterm') || node.classList.contains('overflow-y-auto') || node.classList.contains('bg-card'))) || (node.getAttribute && node.getAttribute('role') === 'dialog')) {
                   isRelevant = true;
                   break;
                 }
@@ -2352,13 +2585,13 @@ function getClientVideoScript(config) {
         if (!isRelevant) return;
       }
 
-      if (debounceTimer) return;
+      if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(function() {
         debounceTimer = null;
         if (window.__antigravityApplyVideos) {
           window.__antigravityApplyVideos();
         }
-      }, 100);
+      }, 150);
     };
 
     window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
@@ -2369,14 +2602,20 @@ function getClientVideoScript(config) {
       attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
     });
 
+    if (window.__antigravitySyncInterval) {
+      clearInterval(window.__antigravitySyncInterval);
+    }
+    if (window.__antigravityPreloadInterval) {
+      clearInterval(window.__antigravityPreloadInterval);
+    }
     if (window.__antigravityInterval) {
       clearInterval(window.__antigravityInterval);
     }
-    window.__antigravityInterval = setInterval(function() {
+    window.__antigravitySyncInterval = setInterval(function() {
       if (window.__antigravityApplyVideos) {
         window.__antigravityApplyVideos();
       }
-    }, 10000);
+    }, 8000);
   })();
   `;
 }
@@ -2406,6 +2645,30 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
                 const videoScript = getClientVideoScript(activeConfig);
                 const applyCode = `
                   (function() {
+                    let titlebarFix = document.getElementById('antigravity-titlebar-fix');
+                    if (titlebarFix) {
+                      titlebarFix.textContent = [
+                        '/* 6.1 顶部标题栏与窗口原生控制按钮防碰撞防御 (Windows Electron Native Window Controls Collision Prevention) */',
+                        'div.absolute.top-0.right-0.z-50.flex.items-center.shrink-0,',
+                        'div.absolute.top-0:has(> div > [data-testid="toggle-aux-sidebar"]),',
+                        'div.absolute.top-0:has(> [data-testid="toggle-aux-sidebar"]),',
+                        'div:has(> div > [data-testid="toggle-aux-sidebar"]):not([class*="group"]):not([class*="pane"]) {',
+                        '  right: max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) !important;',
+                        '}',
+                        '/* 辅助面板展开时顶栏标签页与加号按钮右侧内边距，确保不被最大化/侧边栏切换按钮遮挡 (64px按钮组 + 8px自然间距 = 72px) */',
+                        'div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),',
+                        'div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]) {',
+                        '  padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 72px) !important;',
+                        '}',
+                        '/* 当辅助面板收起时，主对话顶栏更多操作容器紧邻侧边栏切换按钮，严格限定于父级容器，杜绝子元素重复嵌套叠加 padding (32px单按钮 + 10px自然间距 = 42px) */',
+                        'div.h-screen.w-screen:not(:has(div[data-aux-pane-open="true"])) div.flex.items-center.justify-end.shrink-0:has([data-testid="titlebar-more-actions"]) {',
+                        '  padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 42px) !important;',
+                        '}',
+                        'div.h-screen.w-screen:not(:has(div[data-aux-pane-open="true"])) div.flex.items-center.justify-end.shrink-0:has([data-testid="titlebar-more-actions"]) > div {',
+                        '  padding-right: 0px !important;',
+                        '}'
+                      ].join('\\n');
+                    }
                     let s = document.getElementById('antigravity-custom-theme');
                     if (!s) {
                       s = document.createElement('style');
@@ -2832,6 +3095,9 @@ function listSlotsStatus() {
     console.log(`   文件: ${item.file} (${size})`);
     console.log('');
   }
+  console.log('💡 预设管理: 可使用 node core/theme_engine.js --save-preset <名称> [描述] 保存当前完整配置为独立预设，');
+  console.log('            使用 node core/theme_engine.js --list-presets 查看已保存预设列表，');
+  console.log('            使用 node core/theme_engine.js --apply-preset <名称/序号> 一键恢复并实时生效。');
 }
 
 async function swapWallpaperFromWE(idOrIndex, slotInput) {
@@ -2862,9 +3128,713 @@ function listWallpaperEngineWallpapers(search = '', limit = 50) {
   return list;
 }
 
+/**
+ * Visual width helpers for console table alignment with CJK/full-width characters.
+ */
+function getVisualWidth(str) {
+  if (!str) return 0;
+  let width = 0;
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (
+      (code >= 0x1100 && code <= 0x115f) ||
+      (code >= 0x2e80 && code <= 0xa4cf) ||
+      (code >= 0xac00 && code <= 0xd7a3) ||
+      (code >= 0xf900 && code <= 0xfaff) ||
+      (code >= 0xfe10 && code <= 0xfe19) ||
+      (code >= 0xfe30 && code <= 0xfe6f) ||
+      (code >= 0xff00 && code <= 0xff60) ||
+      (code >= 0xffe0 && code <= 0xffe6)
+    ) {
+      width += 2;
+    } else {
+      width += 1;
+    }
+  }
+  return width;
+}
+
+function padEndVisual(str, targetWidth) {
+  const currentWidth = getVisualWidth(str);
+  if (currentWidth >= targetWidth) return str;
+  return str + ' '.repeat(targetWidth - currentWidth);
+}
+
+function truncateVisual(str, maxWidth) {
+  if (getVisualWidth(str) <= maxWidth) return str;
+  let res = '';
+  let w = 0;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    const cw = getVisualWidth(ch);
+    if (w + cw + 1 > maxWidth) {
+      return res + '…';
+    }
+    res += ch;
+    w += cw;
+  }
+  return res;
+}
+
+/**
+ * Sanitizes preset name for safe folder and file naming across Windows and POSIX.
+ * Strictly prevents path traversal ('..', '.'), trailing dots/spaces, and Windows reserved names.
+ */
+function sanitizePresetName(name) {
+  if (!name || typeof name !== 'string') return '';
+  let clean = name.trim().replace(/^["']+|["']+$/g, '').trim();
+  clean = clean.replace(/[\\/:*?"<>|]/g, '_');
+  clean = clean.replace(/^[. ]+|[. ]+$/g, '');
+  if (!clean || clean === '..' || clean === '.') {
+    return '';
+  }
+  const reserved = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+  if (reserved.test(clean)) {
+    clean = `preset_${clean}`;
+  }
+  return clean;
+}
+
+/**
+ * Saves current wallpaper configuration, slot positions, font settings,
+ * and archives all physical media files (videos, images, posters) into a self-contained preset directory.
+ */
+function savePreset(presetName, description, options = {}) {
+  if (!presetName || typeof presetName !== 'string' || !presetName.trim()) {
+    console.error('❌ 请提供有效的预设名称！用法: node core/theme_engine.js --save-preset <预设名称> [描述]');
+    return null;
+  }
+  const cleanName = presetName.trim().replace(/^["']+|["']+$/g, '').trim();
+  const folderName = sanitizePresetName(cleanName);
+  if (!folderName) {
+    console.error('❌ 预设名称无效（包含非法字符、路径穿透或全为空白）！');
+    return null;
+  }
+
+  const pDir = getPresetsDir();
+  const targetDir = path.join(pDir, folderName);
+  const presetWallpapersDir = path.join(targetDir, 'wallpapers');
+
+  if (!fs.existsSync(presetWallpapersDir)) {
+    fs.mkdirSync(presetWallpapersDir, { recursive: true });
+  }
+
+  console.log('=======================================================');
+  console.log(`   💾 正在保存当前壁纸全套配置为独立预设: 【${cleanName}】`);
+  console.log('=======================================================');
+
+  const currentConfig = loadSlotsConfig();
+  const archivedConfig = JSON.parse(JSON.stringify(currentConfig));
+
+  // 1. Collect all media files to archive
+  const filesToArchive = new Map(); // targetFileName -> sourceAbsolutePath
+  const fileRoles = {};
+
+  for (const [key, slot] of Object.entries(archivedConfig)) {
+    if (key === 'fontColor' || !slot || typeof slot !== 'object') continue;
+    if (slot.file) {
+      let absPath = slot.file;
+      if (!path.isAbsolute(absPath)) {
+        absPath = path.join(wallpapersDir, slot.file);
+        if (!fs.existsSync(absPath)) {
+          const repoPath = path.join(repoWallpapersDir, slot.file);
+          if (fs.existsSync(repoPath)) absPath = repoPath;
+        }
+      }
+      let baseName = path.basename(slot.file);
+      if (filesToArchive.has(baseName) && filesToArchive.get(baseName) !== absPath) {
+        baseName = `${key}_${baseName}`;
+      }
+      if (fs.existsSync(absPath)) {
+        filesToArchive.set(baseName, absPath);
+        fileRoles[baseName] = `${key} 槽位主壁纸`;
+        slot.file = baseName;
+      }
+    }
+    if (slot.poster) {
+      let absPath = slot.poster;
+      if (!path.isAbsolute(absPath)) {
+        absPath = path.join(wallpapersDir, slot.poster);
+        if (!fs.existsSync(absPath)) {
+          const repoPath = path.join(repoWallpapersDir, slot.poster);
+          if (fs.existsSync(repoPath)) absPath = repoPath;
+        }
+      }
+      let baseName = path.basename(slot.poster);
+      if (filesToArchive.has(baseName) && filesToArchive.get(baseName) !== absPath) {
+        baseName = `${key}_${baseName}`;
+      }
+      if (fs.existsSync(absPath)) {
+        filesToArchive.set(baseName, absPath);
+        fileRoles[baseName] = `${key} 槽位海报`;
+        slot.poster = baseName;
+      }
+    } else if (slot.type === 'video') {
+      const activeFile = filesToArchive.get(slot.file);
+      if (activeFile) {
+        const companion = findCompanionPoster(activeFile);
+        if (companion && fs.existsSync(companion)) {
+          let baseName = path.basename(companion);
+          if (filesToArchive.has(baseName) && filesToArchive.get(baseName) !== companion) {
+            baseName = `${key}_${baseName}`;
+          }
+          filesToArchive.set(baseName, companion);
+          fileRoles[baseName] = `${key} 伴生海报`;
+          slot.poster = baseName;
+        }
+      }
+    }
+
+    // Default static fallback image if present
+    const defaultFile = SLOTS_META[key]?.defaultFile;
+    if (defaultFile && !filesToArchive.has(defaultFile)) {
+      const defaultPath = path.join(wallpapersDir, defaultFile);
+      const repoDefault = path.join(repoWallpapersDir, defaultFile);
+      if (fs.existsSync(defaultPath)) {
+        filesToArchive.set(defaultFile, defaultPath);
+        fileRoles[defaultFile] = `${key} 默认保底壁纸`;
+      } else if (fs.existsSync(repoDefault)) {
+        filesToArchive.set(defaultFile, repoDefault);
+        fileRoles[defaultFile] = `${key} 默认保底壁纸`;
+      }
+    }
+  }
+
+  // 2. Clean up any stale files in presetWallpapersDir when overwriting an existing preset
+  if (fs.existsSync(presetWallpapersDir)) {
+    const existingFiles = fs.readdirSync(presetWallpapersDir);
+    for (const ef of existingFiles) {
+      if (!filesToArchive.has(ef)) {
+        try { fs.unlinkSync(path.join(presetWallpapersDir, ef)); } catch (e) {}
+      }
+    }
+  }
+
+  // 3. Safely copy media files into preset's wallpapers folder
+  const archivedManifest = [];
+  let totalBytes = 0;
+
+  for (const [filename, srcPath] of filesToArchive.entries()) {
+    const destPath = path.join(presetWallpapersDir, filename);
+    try {
+      if (fs.existsSync(destPath)) {
+        try { fs.chmodSync(destPath, 0o666); } catch (e) {}
+      }
+      if (path.resolve(srcPath) !== path.resolve(destPath)) {
+        fs.copyFileSync(srcPath, destPath);
+      }
+      const stat = fs.statSync(destPath);
+      totalBytes += stat.size;
+      archivedManifest.push({
+        filename,
+        size: stat.size,
+        sizeFormatted: (stat.size / 1024 / 1024).toFixed(2) + ' MB',
+        role: fileRoles[filename] || '素材文件'
+      });
+    } catch (e) {
+      console.warn(`   ⚠️ 归档文件 ${filename} 出现警告: ${e.message}`);
+    }
+  }
+
+  // 4. Write metadata and configuration files
+  const now = new Date();
+  const timeStr = now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + ' ' +
+    String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0') + ':' +
+    String(now.getSeconds()).padStart(2, '0');
+
+  const presetMeta = {
+    name: cleanName,
+    id: folderName,
+    createdAt: Date.now(),
+    createdAtFormatted: timeStr,
+    updatedAt: Date.now(),
+    description: description ? description.trim() : `于 ${timeStr} 保存的完整壁纸与槽位配置`,
+    slotsConfig: archivedConfig,
+    files: archivedManifest,
+    totalSize: totalBytes,
+    totalSizeFormatted: (totalBytes / 1024 / 1024).toFixed(2) + ' MB'
+  };
+
+  fs.writeFileSync(path.join(targetDir, 'preset.json'), JSON.stringify(presetMeta, null, 2), 'utf8');
+  fs.writeFileSync(path.join(targetDir, 'slots_config.json'), JSON.stringify(archivedConfig, null, 2), 'utf8');
+
+  console.log(`✓ 预设【${cleanName}】已安全归档并保存成功！`);
+  console.log(`   📁 存放目录: ${targetDir}`);
+  console.log(`   📦 归档素材: ${archivedManifest.length} 个文件 (共 ${presetMeta.totalSizeFormatted})`);
+  console.log(`   🎨 字体配色: ${archivedConfig.fontColor?.name || archivedConfig.fontColor?.id || '默认'}`);
+  console.log('   🎯 槽位布局:');
+  for (const [key, slot] of Object.entries(archivedConfig)) {
+    if (key === 'fontColor' || !slot || typeof slot !== 'object') continue;
+    const meta = SLOTS_META[key] || { desc: key };
+    console.log(`      [${meta.desc} (${key})]: ${slot.file} (${slot.type || 'image'}, 位置: ${slot.position || '默认'})`);
+  }
+  console.log('=======================================================');
+  return presetMeta;
+}
+
+/**
+ * Internal helper to read all valid presets from the presets directory.
+ */
+function listPresetsInternal() {
+  const pDir = getPresetsDir();
+  if (!fs.existsSync(pDir)) return [];
+  const entries = fs.readdirSync(pDir, { withFileTypes: true });
+  const presets = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const presetFolder = path.join(pDir, entry.name);
+    const presetJsonPath = path.join(presetFolder, 'preset.json');
+    const slotsJsonPath = path.join(presetFolder, 'slots_config.json');
+
+    let preset = null;
+    if (fs.existsSync(presetJsonPath)) {
+      try {
+        preset = JSON.parse(fs.readFileSync(presetJsonPath, 'utf8'));
+      } catch (e) {}
+    }
+
+    if (!preset && fs.existsSync(slotsJsonPath)) {
+      try {
+        const slotsConfig = JSON.parse(fs.readFileSync(slotsJsonPath, 'utf8'));
+        const stat = fs.statSync(slotsJsonPath);
+        preset = {
+          name: entry.name,
+          id: entry.name,
+          createdAt: stat.birthtimeMs || stat.mtimeMs,
+          slotsConfig
+        };
+      } catch (e) {}
+    }
+
+    if (preset && preset.slotsConfig) {
+      if (!preset.id) preset.id = entry.name;
+      if (!preset.name) preset.name = entry.name;
+      const pwDir = path.join(presetFolder, 'wallpapers');
+      if (fs.existsSync(pwDir)) {
+        const files = fs.readdirSync(pwDir);
+        preset.fileCount = files.length;
+        if (!preset.totalSize) {
+          let sz = 0;
+          for (const f of files) {
+            try { sz += fs.statSync(path.join(pwDir, f)).size; } catch (e) {}
+          }
+          preset.totalSize = sz;
+          preset.totalSizeFormatted = (sz / 1024 / 1024).toFixed(2) + ' MB';
+        }
+      }
+      presets.push(preset);
+    }
+  }
+
+  presets.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  return presets;
+}
+
+/**
+ * Formats presets into a human-readable table string with CJK-aware visual column alignment.
+ */
+function formatPresetTable(presets) {
+  if (!presets || presets.length === 0) {
+    return [
+      '================================================================================',
+      '  📦 Antigravity 已保存壁纸预设列表 (0 个预设)',
+      '================================================================================',
+      'ℹ️ 当前暂无已保存的壁纸预设。',
+      '',
+      '💡 快捷提示:',
+      '   • 保存当前配置为新预设: node core/theme_engine.js --save-preset <预设名称> [描述]',
+      '   • 或运行: bin\\preset_manager.bat / bin\\swap_wallpaper.bat 进入交互菜单',
+      '================================================================================'
+    ].join('\n');
+  }
+
+  const lines = [
+    '========================================================================================================================',
+    `  📦 Antigravity 已保存壁纸预设列表 (共 ${presets.length} 个预设)`,
+    '========================================================================================================================',
+    '序号  预设名称             保存时间             素材大小   字体配色            各槽位配置摘要',
+    '------------------------------------------------------------------------------------------------------------------------'
+  ];
+
+  presets.forEach((p, idx) => {
+    const num = padEndVisual(`[${idx + 1}]`, 6);
+    const name = padEndVisual(truncateVisual(p.name, 18), 20);
+    const time = padEndVisual(p.createdAtFormatted || '未知时间', 21);
+    const size = padEndVisual(p.totalSizeFormatted || (p.totalSize ? (p.totalSize / 1024 / 1024).toFixed(1) + ' MB' : '-'), 11);
+    const font = padEndVisual(truncateVisual(p.slotsConfig?.fontColor?.name || p.slotsConfig?.fontColor?.id || '默认', 18), 20);
+
+    const slotSummaries = [];
+    for (const [key, slot] of Object.entries(p.slotsConfig || {})) {
+      if (key === 'fontColor' || !slot || typeof slot !== 'object') continue;
+      const typeStr = slot.type === 'video' ? '视频' : '图';
+      const posStr = slot.position ? `, ${slot.position}` : '';
+      slotSummaries.push(`${key}(${typeStr}${posStr})`);
+    }
+    const summaryStr = slotSummaries.join(', ');
+
+    lines.push(`${num} ${name} ${time} ${size} ${font} ${summaryStr}`);
+  });
+
+  lines.push('------------------------------------------------------------------------------------------------------------------------');
+  lines.push('💡 快速操作指南:');
+  lines.push('   • 一键应用预设: node core/theme_engine.js --apply-preset <名称或序号>  (例如: --apply-preset 1)');
+  lines.push('   • 查看预设详情: node core/theme_engine.js --show-preset <名称或序号>');
+  lines.push('   • 删除已有预设: node core/theme_engine.js --delete-preset <名称或序号>');
+  lines.push('========================================================================================================================');
+
+  return lines.join('\n');
+}
+
+/**
+ * Lists all saved presets with summary table.
+ */
+function listPresets() {
+  const presets = listPresetsInternal();
+  console.log(formatPresetTable(presets));
+  return presets;
+}
+
+/**
+ * Resolves a preset by 1-based index number, exact id/name, case-insensitive match, or substring.
+ * Safely rejects empty/whitespace strings.
+ */
+function getPresetDetails(nameOrIndex) {
+  const presets = listPresetsInternal();
+  if (!presets || presets.length === 0) return null;
+  if (nameOrIndex === undefined || nameOrIndex === null) return null;
+
+  const str = String(nameOrIndex).trim().replace(/^["']+|["']+$/g, '').trim();
+  if (!str) return null;
+
+  // 1. Exact match on id or name
+  let found = presets.find(p => p.id === str || p.name === str);
+  if (found) {
+    return {
+      preset: found,
+      index: presets.indexOf(found) + 1,
+      presetDir: path.join(getPresetsDir(), found.id)
+    };
+  }
+
+  // 2. 1-based index
+  const idx = parseInt(str, 10);
+  if (!isNaN(idx) && String(idx) === str && idx >= 1 && idx <= presets.length) {
+    const preset = presets[idx - 1];
+    return {
+      preset,
+      index: idx,
+      presetDir: path.join(getPresetsDir(), preset.id)
+    };
+  }
+
+  // 3. Case-insensitive match
+  const lower = str.toLowerCase();
+  found = presets.find(p => p.id.toLowerCase() === lower || p.name.toLowerCase() === lower);
+  if (found) {
+    return {
+      preset: found,
+      index: presets.indexOf(found) + 1,
+      presetDir: path.join(getPresetsDir(), found.id)
+    };
+  }
+
+  // 4. Substring match (only for non-empty search of >= 2 chars)
+  if (str.length >= 2) {
+    found = presets.find(p => p.name.toLowerCase().includes(lower) || p.id.toLowerCase().includes(lower));
+    if (found) {
+      return {
+        preset: found,
+        index: presets.indexOf(found) + 1,
+        presetDir: path.join(getPresetsDir(), found.id)
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Shows comprehensive details of a specific preset.
+ */
+function showPreset(nameOrIndex) {
+  const details = getPresetDetails(nameOrIndex);
+  if (!details) {
+    console.error(`❌ 未找到预设: "${nameOrIndex}"`);
+    console.error('');
+    listPresets();
+    return false;
+  }
+  const { preset, presetDir, index } = details;
+  console.log('=======================================================');
+  console.log(`   📦 预设详情: [${index}] ${preset.name}`);
+  console.log('=======================================================');
+  console.log(`   ID: ${preset.id}`);
+  console.log(`   保存时间: ${preset.createdAtFormatted || new Date(preset.createdAt).toLocaleString()}`);
+  console.log(`   描述: ${preset.description || '(无)'}`);
+  console.log(`   素材总大小: ${preset.totalSizeFormatted || '未知'}`);
+  console.log(`   目录路径: ${presetDir}`);
+  console.log('');
+  const font = preset.slotsConfig?.fontColor;
+  console.log(`   🎨 字体配色: ${font?.name || font?.id || '默认'}`);
+  if (font?.primary) console.log(`      主字色: ${font.primary} | 终端字色: ${font.terminal || font.primary}`);
+  console.log('');
+  console.log('   🎯 各槽位配置:');
+  for (const [key, slot] of Object.entries(preset.slotsConfig || {})) {
+    if (key === 'fontColor' || !slot || typeof slot !== 'object') continue;
+    const meta = SLOTS_META[key] || { desc: key };
+    console.log(`      【${meta.desc} (${key})】`);
+    console.log(`         文件: ${slot.file} (${slot.type || 'image'})`);
+    console.log(`         位置: ${slot.position || '默认'}`);
+    if (slot.poster) console.log(`         海报: ${slot.poster}`);
+  }
+  if (preset.files && preset.files.length > 0) {
+    console.log('');
+    console.log(`   📦 归档素材清单 (${preset.files.length} 个文件):`);
+    preset.files.forEach(f => {
+      console.log(`      • ${f.filename.padEnd(28)} ${(f.sizeFormatted || (f.size + ' B')).padEnd(10)} [${f.role}]`);
+    });
+  }
+  console.log('=======================================================');
+  return true;
+}
+
+/**
+ * Applies a saved preset:
+ * 1. Safely backs up active configuration to slots_config.pre_preset_backup.json
+ * 2. Restores all physical media files to wallpapers directory (skipping identical files)
+ * 3. Updates slots_config.json with fresh cache-busting tokens
+ * 4. Re-compiles custom_theme.css
+ * 5. Ensures media server is online
+ * 6. Triggers live 0.3s seamless hot-reload via CDP (8314)
+ */
+async function applyPreset(nameOrIndex) {
+  const details = getPresetDetails(nameOrIndex);
+  if (!details) {
+    console.error(`❌ 未找到预设: "${nameOrIndex}"`);
+    console.error('');
+    listPresets();
+    return false;
+  }
+
+  const { preset, presetDir } = details;
+  console.log('=======================================================');
+  console.log(`   🚀 正在一键应用壁纸预设: 【${preset.name}】`);
+  console.log('=======================================================');
+  if (preset.description) {
+    console.log(`   📝 描述: ${preset.description}`);
+  }
+  console.log(`   📅 保存时间: ${preset.createdAtFormatted || new Date(preset.createdAt).toLocaleString()}`);
+  console.log('');
+
+  // 0. Safety backup of active configuration before applying preset
+  try {
+    const currentActiveConfig = loadSlotsConfig();
+    const backupPath = path.join(antigravityDir, 'slots_config.pre_preset_backup.json');
+    fs.writeFileSync(backupPath, JSON.stringify(currentActiveConfig, null, 2), 'utf8');
+  } catch (e) {}
+
+  // 1. Restore archived files into active wallpapersDir
+  console.log(`[1/4] 正在从预设归档还原素材文件到运行目录...`);
+  const presetWallpapersDir = path.join(presetDir, 'wallpapers');
+  let restoredCount = 0;
+  let restoredBytes = 0;
+
+  if (fs.existsSync(presetWallpapersDir)) {
+    const files = fs.readdirSync(presetWallpapersDir);
+    for (const file of files) {
+      const src = path.join(presetWallpapersDir, file);
+      const dst = path.join(wallpapersDir, file);
+      try {
+        const stat = fs.statSync(src);
+        if (stat.isFile()) {
+          if (fs.existsSync(dst)) {
+            const dstStat = fs.statSync(dst);
+            // If identical file already in place, avoid unnecessary rewriting to prevent playback locks
+            if (dstStat.size === stat.size && Math.abs(dstStat.mtimeMs - stat.mtimeMs) < 1000) {
+              restoredCount++;
+              restoredBytes += stat.size;
+              continue;
+            }
+            try { fs.chmodSync(dst, 0o666); } catch (e) {}
+          }
+          if (path.resolve(src) !== path.resolve(dst)) {
+            fs.copyFileSync(src, dst);
+          }
+          restoredCount++;
+          restoredBytes += stat.size;
+        }
+      } catch (e) {
+        console.warn(`   ⚠️ 还原文件 ${file} 时出现警告: ${e.message}`);
+      }
+    }
+  }
+  console.log(`✓ 已成功还原 ${restoredCount} 个素材文件 (${(restoredBytes / 1024 / 1024).toFixed(2)} MB)`);
+
+  // 2. Update slots_config.json
+  console.log(`[2/4] 更新槽位配置与位置...`);
+  const targetConfig = JSON.parse(JSON.stringify(preset.slotsConfig));
+  const newVersion = Date.now();
+  for (const [key, slot] of Object.entries(targetConfig)) {
+    if (key !== 'fontColor' && slot && typeof slot === 'object') {
+      slot.key = slot.key || key;
+      slot.version = newVersion;
+    }
+  }
+  if (!targetConfig.fontColor) {
+    const current = loadSlotsConfig();
+    if (current && current.fontColor) {
+      targetConfig.fontColor = current.fontColor;
+    }
+  }
+  saveSlotsConfig(targetConfig);
+  console.log(`✓ slots_config.json 已更新为预设配置`);
+
+  // 3. Recompile custom_theme.css
+  console.log(`[3/4] 重新编译 custom_theme.css 并确保流媒体服务就绪...`);
+  const css = generateMasterCss(targetConfig);
+  fs.writeFileSync(customCssPath, css, 'utf-8');
+  try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch (e) {}
+  console.log(`✓ custom_theme.css 编译完成 (${(css.length / 1024 / 1024).toFixed(2)} MB)`);
+
+  await ensureMediaServer(wallpapersDir, DEFAULT_PORT);
+
+  // 4. Seamless hot reload via CDP
+  console.log(`[4/4] 触发界面 0.3 秒无缝热重载 (CDP 8314)...`);
+  const reloadPromise = await triggerLiveHotReload(css, targetConfig);
+
+  console.log('');
+  console.log(`✨ 预设【${preset.name}】已成功应用并实时生效！`);
+  console.log('');
+  return reloadPromise;
+}
+
+/**
+ * Deletes a saved preset directory.
+ */
+function deletePreset(nameOrIndex) {
+  const details = getPresetDetails(nameOrIndex);
+  if (!details) {
+    console.error(`❌ 未找到要删除的预设: "${nameOrIndex}"`);
+    return false;
+  }
+  const { preset, presetDir } = details;
+  try {
+    fs.rmSync(presetDir, { recursive: true, force: true });
+    console.log(`✓ 预设【${preset.name}】已成功删除。`);
+    return true;
+  } catch (e) {
+    console.error(`❌ 删除预设失败: ${e.message}`);
+    return false;
+  }
+}
+
+/**
+ * Prints comprehensive help message for theme engine CLI.
+ */
+function printHelp() {
+  console.log(`
+================================================================================
+  🚀 Antigravity Theme Engine —— 壁纸、位置微调与预设管理引擎
+================================================================================
+
+【壁纸预设管理 (Wallpaper Presets)】:
+  node core/theme_engine.js --save-preset <预设名称> [描述]
+      保存当前壁纸全套配置(包括视频/图片素材、槽位坐标及字体配色)为独立预设
+  node core/theme_engine.js --apply-preset <预设名称或序号>
+      一键切换并激活指定预设 (素材自动恢复，并通过 CDP 端口 8314 触发 0.3s 无缝热重载)
+  node core/theme_engine.js --list-presets
+      查看所有已保存预设的详细列表与元信息
+  node core/theme_engine.js --show-preset <预设名称或序号>
+      查看指定预设的详细配置与素材文件清单
+  node core/theme_engine.js --delete-preset <预设名称或序号>
+      删除指定已保存的预设
+
+【槽位壁纸更换 (Wallpaper Slots)】:
+  node core/theme_engine.js --swap <槽位> <文件路径>
+      更换指定槽位壁纸 (槽位: 左/中/右/下/设置)
+  node core/theme_engine.js --swap-we <壁纸序号/创意工坊ID> <槽位>
+      从 Steam Wallpaper Engine 创意工坊选择壁纸应用至指定槽位
+  node core/theme_engine.js --list-we [搜索词]
+      列出已安装的 Steam Wallpaper Engine 创意工坊壁纸
+
+【位置微调与字体颜色 (Position & Font)】:
+  node core/theme_engine.js --set-pos <槽位> <X坐标> [Y坐标]
+  node core/theme_engine.js --adj-pos <槽位> <方向(up/down/left/right)> [步长%]
+  node core/theme_engine.js --set-font <预设名/序号/Hex>
+  node core/theme_engine.js --list-fonts
+  node core/theme_engine.js --status
+================================================================================
+`);
+}
+
 if (require.main === module) {
   const args = process.argv.slice(2);
-  if (args[0] === '--swap' && args[1] && args[2]) {
+  if (args[0] === '--help' || args[0] === '-h' || args[0] === 'help') {
+    printHelp();
+  } else if (
+    args[0] === '--save-preset' || args[0] === '--save' || args[0] === 'save-preset' ||
+    args[0] === 'save'
+  ) {
+    if (!args[1]) {
+      console.error('❌ 请提供要保存的预设名称。');
+      console.error('   用法: node core/theme_engine.js --save-preset <预设名称> [描述]');
+      console.error('   示例: node core/theme_engine.js --save-preset 赛博朋克 "霓虹雨夜动态预设"');
+      process.exit(1);
+    }
+    const name = args[1];
+    const desc = args.slice(2).join(' ');
+    const res = savePreset(name, desc);
+    if (!res) process.exit(1);
+  } else if (
+    args[0] === '--apply-preset' || args[0] === '--apply' || args[0] === '--load-preset' ||
+    args[0] === '--preset' || args[0] === 'apply-preset' || args[0] === 'apply' ||
+    args[0] === 'load' || (args[0] === 'preset' && args[1])
+  ) {
+    if (!args[1]) {
+      console.error('❌ 请提供要应用的预设名称或序号。');
+      console.error('   用法: node core/theme_engine.js --apply-preset <预设名称/序号>');
+      console.error('   提示: 可使用 node core/theme_engine.js --list-presets 查看已保存预设列表。');
+      process.exit(1);
+    }
+    applyPreset(args[1]).then(ok => {
+      if (!ok) process.exit(1);
+    }).catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
+  } else if (
+    args[0] === '--list-presets' || args[0] === '--presets' || args[0] === '--list-preset' ||
+    args[0] === 'list-presets' || args[0] === 'presets' || (args[0] === 'preset' && !args[1])
+  ) {
+    listPresets();
+  } else if (
+    args[0] === '--show-preset' || args[0] === '--info-preset' || args[0] === '--show' ||
+    args[0] === '--info' || args[0] === 'show-preset' || args[0] === 'info-preset' ||
+    args[0] === 'show' || args[0] === 'info'
+  ) {
+    if (!args[1]) {
+      console.error('❌ 请提供要查看详情的预设名称或序号。用法: node core/theme_engine.js --show-preset <预设名称/序号>');
+      process.exit(1);
+    }
+    const ok = showPreset(args[1]);
+    if (!ok) process.exit(1);
+  } else if (
+    args[0] === '--delete-preset' || args[0] === '--remove-preset' || args[0] === '--del-preset' ||
+    args[0] === '--delete' || args[0] === '--del' || args[0] === 'delete-preset' ||
+    args[0] === 'del-preset' || args[0] === 'delete' || args[0] === 'del' ||
+    args[0] === 'remove-preset' || args[0] === 'remove'
+  ) {
+    if (!args[1]) {
+      console.error('❌ 请提供要删除的预设名称或序号。用法: node core/theme_engine.js --delete-preset <预设名称/序号>');
+      process.exit(1);
+    }
+    const ok = deletePreset(args[1]);
+    if (!ok) process.exit(1);
+  } else if (args[0] === '--swap' && args[1] && args[2]) {
     swapWallpaper(args[1], args[2]).then(ok => {
       if (!ok) process.exit(1);
     }).catch(err => {
@@ -3059,6 +4029,19 @@ module.exports = {
   parsePosition,
   getSlotPosition,
   parseCoordinate,
+  savePreset,
+  listPresets,
+  applyPreset,
+  deletePreset,
+  getPresetDetails,
+  showPreset,
+  formatPresetTable,
+  sanitizePresetName,
+  getPresetsDir,
+  getVisualWidth,
+  padEndVisual,
+  truncateVisual,
+  printHelp,
   FONT_PRESETS,
   SLOTS,
   SLOTS_META,

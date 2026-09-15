@@ -45,7 +45,7 @@ async function runTests() {
     }).on('error', reject);
   });
 
-  // Test 3: Range request
+  // Test 3: Range request (explicit closed range)
   await new Promise((resolve, reject) => {
     const options = {
       hostname: '127.0.0.1',
@@ -57,6 +57,54 @@ async function runTests() {
       assert.strictEqual(res.statusCode, 206);
       assert.strictEqual(res.headers['content-range'], `bytes 0-99/${res.headers['content-range'].split('/')[1]}`);
       assert.strictEqual(res.headers['content-length'], '100');
+      resolve();
+    }).on('error', reject);
+  });
+
+  // Test 3b: Range request (open-ended range)
+  await new Promise((resolve, reject) => {
+    const options = {
+      hostname: '127.0.0.1',
+      port: TEST_PORT,
+      path: '/left_wallpaper.jpg',
+      headers: { Range: 'bytes=100-' }
+    };
+    http.get(options, (res) => {
+      assert.strictEqual(res.statusCode, 206);
+      const total = parseInt(res.headers['content-range'].split('/')[1], 10);
+      assert.strictEqual(res.headers['content-range'], `bytes 100-${total - 1}/${total}`);
+      assert.strictEqual(parseInt(res.headers['content-length'], 10), total - 100);
+      resolve();
+    }).on('error', reject);
+  });
+
+  // Test 3c: Range request (suffix range bytes=-50)
+  await new Promise((resolve, reject) => {
+    const options = {
+      hostname: '127.0.0.1',
+      port: TEST_PORT,
+      path: '/left_wallpaper.jpg',
+      headers: { Range: 'bytes=-50' }
+    };
+    http.get(options, (res) => {
+      assert.strictEqual(res.statusCode, 206);
+      const total = parseInt(res.headers['content-range'].split('/')[1], 10);
+      assert.strictEqual(res.headers['content-range'], `bytes ${total - 50}-${total - 1}/${total}`);
+      assert.strictEqual(parseInt(res.headers['content-length'], 10), 50);
+      resolve();
+    }).on('error', reject);
+  });
+
+  // Test 3d: Out of bounds range request (416 Range Not Satisfiable)
+  await new Promise((resolve, reject) => {
+    const options = {
+      hostname: '127.0.0.1',
+      port: TEST_PORT,
+      path: '/left_wallpaper.jpg',
+      headers: { Range: 'bytes=99999999-99999999' }
+    };
+    http.get(options, (res) => {
+      assert.strictEqual(res.statusCode, 416);
       resolve();
     }).on('error', reject);
   });
