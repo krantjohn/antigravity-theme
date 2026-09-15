@@ -9,3 +9,59 @@ app.asar.patched
 app.asar.new
 resources/app/
 backups/
+
+# User media and wallpapers
+*.mp4
+*.webm
+*.ogg
+*.mov
+*.mkv
+wallpapers/input_poster.*
+wallpapers/left_poster.*
+wallpapers/mid_poster.*
+wallpapers/right_poster.*
+wallpapers/*.mp4
+wallpapers/*.webm
+wallpapers/*.bak
+wallpapers/slots_config*.json
+
+# Presets and user configs
+presets/
+slots_config*.json
+*.bak
+
+# Test artifacts and screenshots
+tests/*.png
+tests/*.jpg
+tests/*.jpeg
+tests/*.gif
+tests/*.json
+tests/crop_*.png
+tests/inspect_*.png
+tests/dump_*.json
+
+# Scratch and temporary scripts
+scratch/
+
+# Temp app dumps and debug scripts
+main.js
+package.json
+tests/cdp_query.js
+tests/check_live_dom.js
+tests/check_styles.js
+tests/dump_buttons.js
+tests/find_list_icon.js
+tests/find_matching_rules.js
+tests/inspect_*.js
+tests/probe_*.js
+tests/sample_videos.js
+tests/test_fix_verification.js
+tests/test_injected.js
+tests/test_left_live.js
+tests/test_mount_live.js
+tests/test_play.js
+tests/test_sidebar_closed.js
+tests/test_stream_speed.js
+tests/test_terminal_tab.js
+tests/test_video_events.js
+tests/verify_*.js
