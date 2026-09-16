@@ -190,7 +190,6 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
         leftVid.style.pointerEvents = 'none';
         leftVid.style.transform = 'translate3d(0, 0, 0)';
         leftVid.style.contain = 'layout paint';
-        leftVid.style.willChange = 'transform';
         leftVid.style.display = 'block';
         if (posterSrc) {
           leftVid.poster = posterSrc;
@@ -259,11 +258,11 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
           'div.absolute.top-full:has(button),',
           'div.absolute.top-full.border.shadow-lg {',
           '  background: rgba(22, 24, 34, 0.94) !important;',
-          '  backdrop-filter: blur(20px) saturate(180%) !important;',
-          '  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;',
+          '  backdrop-filter: blur(6px) !important;',
+          '  -webkit-backdrop-filter: blur(6px) !important;',
           '  border: 1px solid rgba(255, 255, 255, 0.12) !important;',
           '  border-radius: 8px !important;',
-          '  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4) !important;',
+          '  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5) !important;',
           '  z-index: 10000 !important;',
           '  overflow: hidden !important;',
           '}',
@@ -329,26 +328,19 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
     }
   }
 
-  // 智能可视性判定引擎：精确感知抽屉折叠、终端收缩、设置弹窗关闭、祖先隐藏及视口相交
+  // 智能可视性判定引擎：无重排轻量检测，精确感知折叠、弹窗关闭、祖先隐藏与视口相交
   function isVideoVisible(v) {
     if (!v || !v.isConnected) return false;
-    if (v.id === 'antigravity-video-left') return !document.hidden;
     if (document.hidden) return false;
-    const rect = v.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
-    if (v.closest('[hidden], [aria-hidden="true"], [data-state="closed"]')) return false;
-    const style = window.getComputedStyle(v);
-    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-    if (v.parentElement) {
-      const pStyle = window.getComputedStyle(v.parentElement);
-      if (pStyle.display === 'none' || pStyle.visibility === 'hidden' || pStyle.opacity === '0') return false;
-    }
-    return (
-      rect.bottom > 0 &&
-      rect.right > 0 &&
-      rect.top < (window.innerHeight || document.documentElement.clientHeight) &&
-      rect.left < (window.innerWidth || document.documentElement.clientWidth)
-    );
+    if (v.id === 'antigravity-video-left') return true;
+    if (v._isIntersecting === false) return false;
+    if (v.style.display === 'none' || v.style.visibility === 'hidden') return false;
+    const p = v.parentElement;
+    if (!p) return false;
+    if (p.offsetWidth === 0 && p.offsetHeight === 0) return false;
+    if (p.style && (p.style.display === 'none' || p.style.visibility === 'hidden')) return false;
+    if (p.closest && p.closest('[hidden], [aria-hidden="true"], [data-state="closed"]')) return false;
+    return true;
   }
 
   // 同步视频解码与渲染能耗状态：可见即播，隐藏立停 (杜绝后台无效解码与显存浪费)
@@ -377,7 +369,8 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
         const entry = entries[i];
         const v = entry.target;
         if (v.id === 'antigravity-video-left') continue;
-        if (entry.isIntersecting && entry.intersectionRatio > 0.01 && isVideoVisible(v)) {
+        v._isIntersecting = entry.isIntersecting && entry.intersectionRatio > 0.01;
+        if (v._isIntersecting && isVideoVisible(v)) {
           if (v.paused && v.readyState >= 1) {
             v.play().catch(function() {});
           }
@@ -472,7 +465,6 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
           leftVid.style.pointerEvents = 'none';
           leftVid.style.transform = 'translate3d(0, 0, 0)';
           leftVid.style.contain = 'layout paint';
-          leftVid.style.willChange = 'transform';
           leftVid.style.display = 'block';
           if (posterSrc) {
             leftVid.poster = posterSrc;
@@ -689,7 +681,6 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
             vid.style.zIndex = '0';
             vid.style.transform = 'translate3d(0, 0, 0)';
             vid.style.contain = 'layout paint';
-            vid.style.willChange = 'transform';
             vid.style.display = 'block';
             if (posterSrc) {
               vid.poster = posterSrc;
@@ -780,7 +771,9 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
           const m = mutations[i];
           const target = m.target;
           if (!target || target.nodeType === 3) continue;
-          if (target.closest && (target.closest('.xterm') || target.closest('.terminal') || target.closest('pre') || target.closest('.code-block') || target.closest('[data-testid*="message"]'))) {
+          const tag = target.nodeName ? target.nodeName.toLowerCase() : '';
+          if (tag === 'span' || tag === 'code' || tag === 'p' || tag === 'pre' || tag === 'a') continue;
+          if (target.closest && (target.closest('.xterm') || target.closest('.terminal') || target.closest('.monaco-editor') || target.closest('pre') || target.closest('.code-block') || target.closest('[data-testid*="message"]'))) {
             continue;
           }
           if (m.type === 'attributes') {
@@ -828,7 +821,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
       debounceTimer = setTimeout(function() {
         debounceTimer = null;
         applyVideos();
-      }, 150);
+      }, 200);
     };
 
     window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
@@ -839,7 +832,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
       attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
     });
 
-    // 定期与流媒体配置对齐同步 (从 2 秒降至 8 秒，仅对比 1KB JSON，零冗余开销)
+    // 定期与流媒体配置对齐同步 (从 2 秒降至 10 秒，仅对比 1KB JSON，零冗余开销)
     if (window.__antigravitySyncInterval) {
       clearInterval(window.__antigravitySyncInterval);
     }
@@ -849,7 +842,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
     if (window.__antigravityInterval) {
       clearInterval(window.__antigravityInterval);
     }
-    window.__antigravitySyncInterval = setInterval(syncAndApply, 8000);
+    window.__antigravitySyncInterval = setInterval(syncAndApply, 10000);
   };
 
   if (document.readyState === 'loading') {

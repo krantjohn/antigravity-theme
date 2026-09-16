@@ -603,11 +603,11 @@ function getBase64(filename) {
   if (!filename) return '';
   let resolvedName = filename;
   const ext = path.extname(filename).toLowerCase();
-  if (ext === '.gif') {
+  if (ext === '.gif' || ext === '.png') {
     const base = filename.slice(0, -ext.length);
-    for (const altExt of ['.jpg', '.jpeg', '.png', '.webp']) {
+    for (const altExt of ['.jpg', '.jpeg', '.webp', '.png']) {
       const altFile = base + altExt;
-      if (fs.existsSync(path.join(wallpapersDir, altFile)) || fs.existsSync(path.join(repoWallpapersDir, altFile))) {
+      if (altFile !== filename && (fs.existsSync(path.join(wallpapersDir, altFile)) || fs.existsSync(path.join(repoWallpapersDir, altFile)))) {
         resolvedName = altFile;
         break;
       }
@@ -801,11 +801,12 @@ function generateMasterCss(slotsConfig) {
   const bottomImg = isBottomVideo ? (slotsConfig.bottom.poster || 'input_wallpaper.jpg') : (slotsConfig.bottom?.file || 'input_wallpaper.jpg');
   const settingsImg = isSettingsVideo ? (slotsConfig.settings.poster || 'settings_wallpaper.png') : (slotsConfig.settings?.file || 'settings_wallpaper.png');
 
-  const b64Left = getBase64(leftImg) || getBase64('left_wallpaper.jpg');
-  const b64Mid = getBase64(midImg) || getBase64('mid_wallpaper.jpg');
-  const b64Right = getBase64(rightImg) || getBase64('right_wallpaper.jpg');
-  const b64Bottom = getBase64(bottomImg) || getBase64('input_wallpaper.jpg');
-  const b64Settings = getBase64(settingsImg) || getBase64('settings_wallpaper.png');
+  const serverBase = `http://127.0.0.1:${DEFAULT_PORT || 8315}`;
+  const b64Left = leftImg ? `${serverBase}/${encodeURIComponent(leftImg)}` : '';
+  const b64Mid = midImg ? `${serverBase}/${encodeURIComponent(midImg)}` : '';
+  const b64Right = rightImg ? `${serverBase}/${encodeURIComponent(rightImg)}` : '';
+  const b64Bottom = bottomImg ? `${serverBase}/${encodeURIComponent(bottomImg)}` : '';
+  const b64Settings = settingsImg ? `${serverBase}/${encodeURIComponent(settingsImg)}` : '';
 
   const posLeft = getSlotPosition(slotsConfig, 'left');
   const posMid = getSlotPosition(slotsConfig, 'mid');
@@ -870,7 +871,6 @@ body::before {
   z-index: 0 !important;
   transform: translate3d(0, 0, 0) !important;
   backface-visibility: hidden !important;
-  will-change: transform !important;
 }
 
 #antigravity-video-left {
@@ -888,7 +888,6 @@ body::before {
   transform: translate3d(0, 0, 0) !important;
   backface-visibility: hidden !important;
   contain: layout paint !important;
-  will-change: transform !important;
 }
 
 /* 3. Global Transparent Layout */
@@ -953,11 +952,12 @@ div[class*="inset-x-4"][class*="pointer-events-none"][class*="bottom-0"] {
 aside, nav, [role="navigation"], [class*="sidebar"], [class*="Sidebar"], [class*="navigation"], [class*="Navigation"],
 div.bg-sidebar, [data-panel="conversations"], [data-testid*="sidebar"], [data-testid*="conversation-list"] {
   background-color: rgba(14, 15, 26, 0.35) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   border-right: 1px solid rgba(226, 232, 240, 0.12) !important;
   box-shadow: none !important;
   color: #f1f5f9 !important;
+  contain: paint !important;
 }
 
 /* 5.1 强制保护侧边栏、对话历史列表与文件树所有文本元素：统一轻阴影纯净白字，严禁继承主对话区任何自定义暗黑字体或白辉光描边 */
@@ -1013,11 +1013,12 @@ div.bg-sidebar [class*="text-muted"], div.bg-sidebar [class*="text-secondary"],
 /* 6. Top Header & Title Bar & Navigation Buttons */
 header, [class*="header"], [class*="Header"], [class*="titlebar"], [class*="menubar"] {
   background-color: rgba(14, 15, 26, 0.35) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: none !important;
   color: #f1f5f9 !important;
+  contain: paint !important;
 }
 
 header span, header p, header div,
@@ -1083,14 +1084,17 @@ div.group\\/user-input-step div.relative.p-px.rounded-xl {
     rgba(251, 207, 232, 0.08) 50%,
     rgba(147, 197, 253, 0.10) 100%
   ) !important;
-  backdrop-filter: blur(12px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   border: 1px solid rgba(244, 114, 182, 0.38) !important;
   border-radius: 14px !important;
-  box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.25),
-    inset 0 1px 1px rgba(255, 255, 255, 0.40),
-    0 0 10px rgba(244, 114, 182, 0.16) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  contain: layout paint !important;
+}
+
+div.group\\/user-input-step {
+  content-visibility: auto !important;
+  contain-intrinsic-size: 0 80px !important;
 }
 
 div.relative.flex.flex-row.items-end.gap-2.p-1\\.5.bg-card:has([class*="user"]),
@@ -1340,12 +1344,13 @@ div:has(> [id="antigravity.agentSidePanelInputBox"]) {
 [data-testid="running-items-panel"] > div > div,
 [data-testid="running-items-panel"] div[class*="rounded-t-2xl"] {
   background-color: rgba(14, 16, 28, 0.60) !important;
-  backdrop-filter: blur(14px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   border: 1px solid rgba(244, 114, 182, 0.35) !important;
   border-bottom: none !important;
   border-radius: 14px 14px 0 0 !important;
   margin-bottom: 2px !important;
+  contain: paint !important;
 }
 
 /* 8.2 底部输入卡片（仅对真正的输入容器挂载壁纸，严格排除指令菜单、下拉列表、弹窗与浮层） */
@@ -1394,11 +1399,11 @@ div[data-mention-menu],
 [id="antigravity.agentSidePanelInputBox"] div.absolute.bottom-full.bg-card,
 [id="antigravity.agentSidePanelInputBox"] div[class*="bottom-full"] {
   background-color: ${font.isDarkText ? 'rgba(255, 255, 255, 0.95)' : 'rgba(16, 18, 32, 0.90)'} !important;
-  backdrop-filter: blur(20px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
   border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.20)' : 'rgba(244, 114, 182, 0.40)'} !important;
   border-radius: 16px !important;
-  box-shadow: ${font.isDarkText ? '0 16px 48px rgba(0, 0, 0, 0.25), 0 0 15px rgba(255, 255, 255, 0.6)' : '0 16px 48px rgba(0, 0, 0, 0.85), 0 0 20px rgba(244, 114, 182, 0.20)'} !important;
+  box-shadow: ${font.isDarkText ? '0 8px 24px rgba(0, 0, 0, 0.25)' : '0 8px 24px rgba(0, 0, 0, 0.65)'} !important;
   background-image: none !important;
   overflow: hidden !important;
   z-index: 50 !important;
@@ -1523,11 +1528,12 @@ pre {
 pre > div.relative,
 div.relative:has(> .code-block) {
   background-color: rgba(15, 18, 30, 0.92) !important;
-  backdrop-filter: blur(8px) saturate(130%) !important;
-  -webkit-backdrop-filter: blur(8px) saturate(130%) !important;
+  backdrop-filter: blur(2px) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
   border: 1px solid rgba(244, 114, 182, 0.35) !important;
   border-radius: 12px !important;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 12px rgba(244, 114, 182, 0.15) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+  contain: paint !important;
   overflow: hidden !important;
 }
 
@@ -1585,10 +1591,13 @@ pre [class*="min-h-7"] button svg {
 }
 
 /* Code text and content: 彻底杜绝文字阴影发虚/重影/黑白雾气光晕 */
-pre, pre *,
-.code-block, .code-block *,
-.code-line, .code-line *,
-.line-content, .line-content * {
+pre,
+.code-block,
+.line-content,
+pre code,
+pre span,
+.code-line,
+.code-line span {
   text-shadow: none !important;
 }
 
@@ -1758,16 +1767,16 @@ div.shrink-0.flex.items-center.gap-0.5.border-b.pl-1.5.pr-9,
 div:has(> div > div > .terminal.xterm) div.shrink-0.flex.items-center.gap-0.5.border-b,
 header div.shrink-0.flex.items-center.gap-0.5.border-b {
   background-color: rgba(14, 16, 28, 0.22) !important;
-  backdrop-filter: blur(14px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
 }
 
 div.flex.items-center.justify-between.pl-3.pr-2.py-1,
 div:has(> div > div > .terminal.xterm) div.flex.items-center.justify-between.pl-3.pr-2.py-1 {
   background-color: rgba(11, 12, 20, 0.18) !important;
-  backdrop-filter: blur(14px) saturate(140%) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -1868,9 +1877,7 @@ div[data-aux-pane-open="true"] [class*="terminal-drawer"] {
 [aria-label="Auxiliary Pane"],
 [aria-label="Auxiliary Pane"] > div:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]),
 [aria-label="Overview"],
-[aria-label="Overview"] *,
 [aria-label="Review"],
-[aria-label="Review"] *,
 div[role="region"][aria-label="Overview"],
 div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
 div[data-aux-pane-open="true"] .py-3.flex.h-full.w-full.flex-col.gap-6.flex-grow.min-h-0.overflow-y-auto {
@@ -1951,8 +1958,8 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div:not([cla
    ========================================================================== */
 [data-radix-dialog-overlay] {
   background-color: rgba(5, 7, 16, 0.72) !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   z-index: 998 !important;
 }
 
@@ -2009,10 +2016,11 @@ div.settings-modal-container {
 [role="dialog"] [class*="bg-sidebar"],
 [role="dialog"] div.flex:has(> div.h-full.w-full.flex.flex-col.bg-sidebar) {
   background-color: rgba(9, 12, 24, 0.60) !important;
-  backdrop-filter: blur(24px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.30) !important;
+  contain: paint !important;
 }
 
 [role="dialog"] div.bg-sidebar button {
@@ -2060,14 +2068,12 @@ div.settings-modal-container {
 [role="dialog"] div[class*="rounded-xl"][class*="border"],
 [role="dialog"] div[class*="divide-y"] {
   background-color: rgba(12, 16, 32, 0.58) !important;
-  backdrop-filter: blur(20px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 14px !important;
-  box-shadow: 
-    0 8px 30px rgba(0, 0, 0, 0.35),
-    inset 0 1px 1px rgba(255, 255, 255, 0.20),
-    0 0 16px rgba(151, 213, 255, 0.10) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+  contain: paint !important;
 }
 
 [role="dialog"] div.divide-y > *,
@@ -2151,7 +2157,6 @@ div.settings-modal-container {
   transform: translate3d(0, 0, 0) !important;
   backface-visibility: hidden !important;
   contain: layout paint !important;
-  will-change: transform !important;
 }
 `;
 }
@@ -2183,26 +2188,19 @@ function getClientVideoScript(config) {
       }
     }
 
-    // 智能可视性判定引擎：精确感知抽屉折叠、终端收缩、设置弹窗关闭、祖先隐藏及视口相交
+    // 智能可视性判定引擎：无重排轻量检测，精确感知折叠、弹窗关闭、祖先隐藏与视口相交
     function isVideoVisible(v) {
       if (!v || !v.isConnected) return false;
-      if (v.id === 'antigravity-video-left') return !document.hidden;
       if (document.hidden) return false;
-      const rect = v.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return false;
-      if (v.closest('[hidden], [aria-hidden="true"], [data-state="closed"]')) return false;
-      const style = window.getComputedStyle(v);
-      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-      if (v.parentElement) {
-        const pStyle = window.getComputedStyle(v.parentElement);
-        if (pStyle.display === 'none' || pStyle.visibility === 'hidden' || pStyle.opacity === '0') return false;
-      }
-      return (
-        rect.bottom > 0 &&
-        rect.right > 0 &&
-        rect.top < (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.left < (window.innerWidth || document.documentElement.clientWidth)
-      );
+      if (v.id === 'antigravity-video-left') return true;
+      if (v._isIntersecting === false) return false;
+      if (v.style.display === 'none' || v.style.visibility === 'hidden') return false;
+      const p = v.parentElement;
+      if (!p) return false;
+      if (p.offsetWidth === 0 && p.offsetHeight === 0) return false;
+      if (p.style && (p.style.display === 'none' || p.style.visibility === 'hidden')) return false;
+      if (p.closest && p.closest('[hidden], [aria-hidden="true"], [data-state="closed"]')) return false;
+      return true;
     }
 
     // 同步视频解码与渲染能耗状态：可见即播，隐藏立停 (杜绝后台无效解码与显存浪费)
@@ -2263,7 +2261,6 @@ function getClientVideoScript(config) {
           leftVid.style.pointerEvents = 'none';
           leftVid.style.transform = 'translate3d(0, 0, 0)';
           leftVid.style.contain = 'layout paint';
-          leftVid.style.willChange = 'transform';
           leftVid.style.display = 'block';
           if (posterSrc) {
             leftVid.poster = posterSrc;
@@ -2302,7 +2299,8 @@ function getClientVideoScript(config) {
           const entry = entries[i];
           const v = entry.target;
           if (v.id === 'antigravity-video-left') continue;
-          if (entry.isIntersecting && entry.intersectionRatio > 0.01 && isVideoVisible(v)) {
+          v._isIntersecting = entry.isIntersecting && entry.intersectionRatio > 0.01;
+          if (v._isIntersecting && isVideoVisible(v)) {
             if (v.paused && v.readyState >= 1) {
               v.play().catch(function() {});
             }
@@ -2389,7 +2387,6 @@ function getClientVideoScript(config) {
             leftVid.style.pointerEvents = 'none';
             leftVid.style.transform = 'translate3d(0, 0, 0)';
             leftVid.style.contain = 'layout paint';
-            leftVid.style.willChange = 'transform';
             leftVid.style.display = 'block';
             if (posterSrc) {
               leftVid.poster = posterSrc;
@@ -2585,7 +2582,6 @@ function getClientVideoScript(config) {
               vid.style.zIndex = '0';
               vid.style.transform = 'translate3d(0, 0, 0)';
               vid.style.contain = 'layout paint';
-              vid.style.willChange = 'transform';
               vid.style.display = 'block';
               if (posterSrc) {
                 vid.poster = posterSrc;
@@ -2662,7 +2658,9 @@ function getClientVideoScript(config) {
           const m = mutations[i];
           const target = m.target;
           if (!target || target.nodeType === 3) continue;
-          if (target.closest && (target.closest('.xterm') || target.closest('.terminal') || target.closest('pre') || target.closest('.code-block') || target.closest('[data-testid*="message"]'))) {
+          const tag = target.nodeName ? target.nodeName.toLowerCase() : '';
+          if (tag === 'span' || tag === 'code' || tag === 'p' || tag === 'pre' || tag === 'a') continue;
+          if (target.closest && (target.closest('.xterm') || target.closest('.terminal') || target.closest('.monaco-editor') || target.closest('pre') || target.closest('.code-block') || target.closest('[data-testid*="message"]'))) {
             continue;
           }
           if (m.type === 'attributes') {
@@ -2712,7 +2710,7 @@ function getClientVideoScript(config) {
         if (window.__antigravityApplyVideos) {
           window.__antigravityApplyVideos();
         }
-      }, 150);
+      }, 200);
     };
 
     window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
@@ -2736,7 +2734,7 @@ function getClientVideoScript(config) {
       if (window.__antigravityApplyVideos) {
         window.__antigravityApplyVideos();
       }
-    }, 8000);
+    }, 10000);
   })();
   `;
 }
@@ -2797,11 +2795,11 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
                         'div.absolute.top-full:has(button),',
                         'div.absolute.top-full.border.shadow-lg {',
                         '  background: rgba(22, 24, 34, 0.94) !important;',
-                        '  backdrop-filter: blur(20px) saturate(180%) !important;',
-                        '  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;',
+                        '  backdrop-filter: blur(6px) !important;',
+                        '  -webkit-backdrop-filter: blur(6px) !important;',
                         '  border: 1px solid rgba(255, 255, 255, 0.12) !important;',
                         '  border-radius: 8px !important;',
-                        '  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4) !important;',
+                        '  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5) !important;',
                         '  z-index: 10000 !important;',
                         '  overflow: hidden !important;',
                         '}',
