@@ -843,6 +843,191 @@ const themeInjectionCode = `
       clearInterval(window.__antigravityInterval);
     }
     window.__antigravitySyncInterval = setInterval(syncAndApply, 8000);
+
+    // ================= Update Notification & Instant Toast =================
+    window.showThemeToast = function(msg, duration = 3000) {
+      try {
+        let toast = document.getElementById('antigravity-theme-toast');
+        if (!toast) {
+          toast = document.createElement('div');
+          toast.id = 'antigravity-theme-toast';
+          toast.style.cssText = 'position: fixed; top: 48px; right: 24px; z-index: 999999; background: rgba(15, 23, 42, 0.92); color: #ffffff; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; letter-spacing: 0.2px; box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 0 1px rgba(255,255,255,0.3); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.18); transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); opacity: 0; transform: translateY(-8px) scale(0.96); pointer-events: none; display: flex; align-items: center; gap: 8px;';
+          document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0) scale(1)';
+        clearTimeout(toast._timer);
+        if (duration > 0) {
+          toast._timer = setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-8px) scale(0.96)';
+          }, duration);
+        }
+      } catch(e) {}
+    };
+
+    // ================= Update Modal & Notification =================
+    window.showThemeUpdateModal = function(version = '2.14.0') {
+      try {
+        const existing = document.getElementById('antigravity-update-modal');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'antigravity-update-modal';
+        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 9999999; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);';
+
+        const box = document.createElement('div');
+        box.style.cssText = 'background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.25); border-radius: 20px; padding: 28px 32px; max-width: 480px; width: 90%; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; transform: scale(0.92) translateY(8px); transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1); box-sizing: border-box; user-select: none;';
+
+        box.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px;">' +
+          '<div style="display: flex; align-items: center; gap: 12px;">' +
+            '<div style="font-size: 26px; filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.6));">🚀</div>' +
+            '<div>' +
+              '<div style="font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: 0.2px;">Google Antigravity 检查更新</div>' +
+              '<div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">' +
+                '<span style="font-size: 11.5px; padding: 2px 9px; border-radius: 9999px; background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 600;">发现官方新版本 v' + version + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<button id="ag-modal-close-x" style="background: rgba(255, 255, 255, 0.08); border: none; color: #94a3b8; font-size: 15px; cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.15s;" onmouseover="this.style.color=\\'#fff\\'; this.style.background=\\'rgba(255,255,255,0.16)\\'" onmouseout="this.style.color=\\'#94a3b8\\'; this.style.background=\\'rgba(255,255,255,0.08)\\'">✕</button>' +
+        '</div>' +
+        '<div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;">' +
+          '<div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">' +
+            '<span style="color: #94a3b8;">当前运行版本</span>' +
+            '<span style="color: #e2e8f0; font-weight: 500;">v2.13.1</span>' +
+          '</div>' +
+          '<div style="display: flex; justify-content: space-between; font-size: 13px;">' +
+            '<span style="color: #94a3b8;">官方最新版本</span>' +
+            '<span style="color: #38bdf8; font-weight: 700;">v' + version + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size: 12.5px; line-height: 1.6; color: #cbd5e1; margin-bottom: 22px; padding: 12px 14px; background: rgba(245, 158, 11, 0.12); border-left: 3.5px solid #f59e0b; border-radius: 8px;">' +
+          '<div style="font-weight: 600; color: #fbbf24; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">' +
+            '<span>🌸</span><span>二次元主题美化环境保护</span>' +
+          '</div>' +
+          '当前客户端已应用壁纸与个性化增强补丁。直接覆盖升级将需要重新安装补丁。建议您先在工具中保存壁纸预设，或按需前往官网下载新版。' +
+        '</div>' +
+        '<div style="display: flex; flex-direction: column; gap: 10px;">' +
+          '<button id="ag-modal-btn-download" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; border: none; border-radius: 10px; padding: 11px 18px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4); transition: all 0.15s;" onmouseover="this.style.filter=\\'brightness(1.1)\\'; this.style.transform=\\'translateY(-1px)\\'" onmouseout="this.style.filter=\\'none\\'; this.style.transform=\\'none\\'">' +
+            '<span>前往官网下载安装包</span>' +
+            '<span style="font-weight: bold;">→</span>' +
+          '</button>' +
+          '<div style="display: flex; gap: 10px;">' +
+            '<button id="ag-modal-btn-changelog" style="flex: 1; background: rgba(255, 255, 255, 0.08); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 9px 14px; font-size: 12.5px; font-weight: 500; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background=\\'rgba(255,255,255,0.14)\\'" onmouseout="this.style.background=\\'rgba(255,255,255,0.08)\\'">查看更新日志</button>' +
+            '<button id="ag-modal-btn-dismiss" style="flex: 1; background: transparent; color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 9px 14px; font-size: 12.5px; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background=\\'rgba(255,255,255,0.06)\\'; this.style.color=\\'#cbd5e1\\'" onmouseout="this.style.background=\\'transparent\\'; this.style.color=\\'#94a3b8\\'">稍后提醒</button>' +
+          '</div>' +
+        '</div>';
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        const closeModal = () => {
+          overlay.style.opacity = '0';
+          box.style.transform = 'scale(0.92) translateY(8px)';
+          setTimeout(() => {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          }, 220);
+        };
+
+        requestAnimationFrame(() => {
+          overlay.style.opacity = '1';
+          box.style.transform = 'scale(1) translateY(0)';
+        });
+
+        overlay.querySelector('#ag-modal-close-x').onclick = closeModal;
+        overlay.querySelector('#ag-modal-btn-dismiss').onclick = closeModal;
+        overlay.onclick = (e) => {
+          if (e.target === overlay) closeModal();
+        };
+
+        overlay.querySelector('#ag-modal-btn-download').onclick = () => {
+          closeModal();
+          if (window.electronNative && window.electronNative.openExternal) {
+            window.electronNative.openExternal('https://antigravity.google');
+          } else {
+            window.open('https://antigravity.google', '_blank');
+          }
+          if (window.showThemeToast) {
+            window.showThemeToast('✨ 正在打开 Antigravity 官方下载页面...', 3000);
+          }
+        };
+
+        overlay.querySelector('#ag-modal-btn-changelog').onclick = () => {
+          closeModal();
+          if (window.electronNative && window.electronNative.openExternal) {
+            window.electronNative.openExternal('https://antigravity.google/docs/changelog');
+          } else {
+            window.open('https://antigravity.google/docs/changelog', '_blank');
+          }
+        };
+
+        const onKeyDown = (e) => {
+          if (e.key === 'Escape') {
+            closeModal();
+            document.removeEventListener('keydown', onKeyDown);
+          }
+        };
+        document.addEventListener('keydown', onKeyDown);
+      } catch(e) {}
+    };
+
+    if (window.electronUpdater && typeof window.electronUpdater.onStateChanged === 'function' && !window.__updaterHooked) {
+      window.__updaterHooked = true;
+      window.electronUpdater.onStateChanged((state) => {
+        if (!state) return;
+        if (state.type === 'checking for updates') {
+          window.showThemeToast('🔍 正在检查更新...', 2500);
+        } else if (state.type === 'available for download') {
+          const ver = (state.update && state.update.version) ? state.update.version : '2.14.0';
+          window.showThemeToast('✨ 发现新版本 v' + ver + '，点击标题栏更新按钮查看详情', 5000);
+        } else if (state.type === 'idle') {
+          if (window.__userJustCheckedUpdates) {
+            window.__userJustCheckedUpdates = false;
+            window.showThemeToast('✓ 当前已是最新版本', 3000);
+          }
+        }
+      });
+    }
+
+    if (!window.__updateClickHooked) {
+      window.__updateClickHooked = true;
+      document.addEventListener('click', async (e) => {
+        try {
+          const target = e.target;
+          if (!target) return;
+
+          // Check for menu "Check for Updates"
+          if (target.textContent && target.textContent.trim() === 'Check for Updates') {
+            window.__userJustCheckedUpdates = true;
+            window.showThemeToast('🔍 正在检查更新...', 3000);
+            return;
+          }
+
+          // Check for titlebar "Update Available →" button
+          const updateBtn = (target.closest && target.closest('[data-testid="app-update-button"]')) ||
+            (target.textContent && target.textContent.includes('Update Available') && (target.closest('button, [role="button"]') || target.tagName === 'SPAN' || target.tagName === 'DIV') ? (target.closest('[data-testid="app-update-button"]') || target) : null);
+
+          if (updateBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            let ver = '2.14.0';
+            try {
+              if (window.electronUpdater && window.electronUpdater.getState) {
+                const state = await window.electronUpdater.getState();
+                if (state && state.update && state.update.version) {
+                  ver = state.update.version;
+                }
+              }
+            } catch(err) {}
+
+            window.showThemeUpdateModal(ver);
+          }
+        } catch(e) {}
+      }, true);
+    }
   };
 
   if (document.readyState === 'loading') {
@@ -924,16 +1109,81 @@ if (fs.existsSync(kbPath)) {
   }
 }
 
-// 5.5 Patch updater.js (防止静默自动更新再次覆盖主题补丁)
+// 5.5 Patch updater.js (防止静默自动更新再次覆盖主题补丁 & 完善中文弹窗反馈)
 const updaterPath = path.join(appDist, 'updater.js');
 if (fs.existsSync(updaterPath)) {
   let updaterContent = fs.readFileSync(updaterPath, 'utf8');
   if (updaterContent.includes('autoUpdater.autoDownload = true')) {
     updaterContent = updaterContent.replace('autoUpdater.autoDownload = true;', 'autoUpdater.autoDownload = false; // Theme patch: prevent silent overwrite');
     updaterContent = updaterContent.replace('autoUpdater.autoInstallOnAppQuit = electron_1.app.isPackaged;', 'autoUpdater.autoInstallOnAppQuit = false; // Theme patch: prevent silent overwrite');
-    fs.writeFileSync(updaterPath, updaterContent, 'utf8');
-    console.log('✓ updater.js 静默后台下载已拦截保护 (防止自动覆盖主题补丁)');
   }
+
+  // Inject update-available dialog
+  if (!updaterContent.includes('Antigravity 检查更新') && updaterContent.includes("console.log(`[AutoUpdater] Update available: ${info.version}`);")) {
+    updaterContent = updaterContent.replace(
+      /updateMenuState\(MenuUpdateStep\.DownloadingUpdate\);[\s\S]*?isManualCheck = false;/m,
+      `updateMenuState(MenuUpdateStep.CheckForUpdates);
+        if (isManualCheck && !isHeadless) {
+            const win = electron_1.BrowserWindow.getFocusedWindow();
+            const currentVer = electron_1.app.getVersion();
+            const options = {
+                type: 'info',
+                title: 'Antigravity 检查更新',
+                message: \`发现新版本 v\${info.version} (当前版本: v\${currentVer})\`,
+                detail: \`Google Antigravity 官方已发布更新版本 v\${info.version}。\\n\\n提示：当前客户端已安装「二次元主题美化与动态壁纸增强补丁」，直接覆盖升级将需要重新安装补丁。\\n\\n是否前往官网下载最新安装包？\`,
+                buttons: ['前往官网下载', '查看更新日志', '暂不更新'],
+                defaultId: 0,
+                cancelId: 2,
+                noLink: true
+            };
+            const showPromise = win ? electron_1.dialog.showMessageBox(win, options) : electron_1.dialog.showMessageBox(options);
+            showPromise.then((res) => {
+                if (res.response === 0) {
+                    electron_1.shell.openExternal('https://antigravity.google');
+                } else if (res.response === 1) {
+                    electron_1.shell.openExternal('https://antigravity.google/docs/changelog');
+                }
+            }).catch(() => {});
+        }
+        isManualCheck = false;`
+    );
+
+    // Inject update-not-available Chinese dialog
+    updaterContent = updaterContent.replace(
+      /message: 'No updates available',[\s\S]*?buttons: \['OK'\],/m,
+      `message: '当前已是最新版本',\n                detail: \`当前版本 v\${currentVer}，暂无可用更新。\`,\n                buttons: ['确定'],`
+    );
+
+    // Inject error dialog
+    updaterContent = updaterContent.replace(
+      /electron_updater_1\.autoUpdater\.on\('error', \(err\) => \{[\s\S]*?updateMenuState\(MenuUpdateStep\.CheckForUpdates\);[\s\S]*?isManualCheck = false;\s*\}\);/m,
+      `electron_updater_1.autoUpdater.on('error', (err) => {
+        console.error('[AutoUpdater] Error:', err.message);
+        broadcastState({ type: types_1.UpdateState.Idle });
+        updateMenuState(MenuUpdateStep.CheckForUpdates);
+        if (isManualCheck && !isHeadless) {
+            const win = electron_1.BrowserWindow.getFocusedWindow();
+            const options = {
+                type: 'warning',
+                title: 'Antigravity 检查更新',
+                message: '检查更新失败',
+                detail: \`无法连接到更新服务器，请检查网络连接或代理设置。\\n\\n详细信息: \${err.message || err}\`,
+                buttons: ['确定'],
+            };
+            if (win) {
+                electron_1.dialog.showMessageBox(win, options);
+            }
+            else {
+                electron_1.dialog.showMessageBox(options);
+            }
+        }
+        isManualCheck = false;
+    });`
+    );
+  }
+
+  fs.writeFileSync(updaterPath, updaterContent, 'utf8');
+  console.log('✓ updater.js 静默后台下载已拦截保护 & 中文交互弹窗已植入完成');
 }
 
 // 6. 打包生成 app.asar.patched

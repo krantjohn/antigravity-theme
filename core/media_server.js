@@ -65,6 +65,93 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         return;
       }
 
+      // API endpoint for auto-updater manifest / noop-update proxy
+      if (pathname.startsWith('/noop-update/') || pathname.endsWith('.yml') || pathname.endsWith('.yaml')) {
+        const safeManifestName = path.basename(pathname) || 'latest-x64-win.yml';
+        const antigravityDir = path.dirname(wallpapersDir);
+        const localManifest = path.join(antigravityDir, safeManifestName);
+
+        if (pathname.endsWith('.exe')) {
+          res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end('Auto-download disabled by Antigravity Theme Customizer to preserve custom themes.');
+          return;
+        }
+
+        // Check if fresh cache exists (< 15 minutes)
+        try {
+          if (fs.existsSync(localManifest)) {
+            const stat = fs.statSync(localManifest);
+            if (Date.now() - stat.mtimeMs < 15 * 60 * 1000) {
+              const cached = fs.readFileSync(localManifest, 'utf8');
+              res.writeHead(200, {
+                'Content-Type': 'text/yaml; charset=utf-8',
+                'Cache-Control': 'no-cache',
+                'Content-Length': Buffer.byteLength(cached, 'utf8')
+              });
+              res.end(cached);
+              return;
+            }
+          }
+        } catch (e) {}
+
+        // Fetch official update manifest from Google
+        const officialUrl = `https://antigravity-hub-auto-updater-974169037036.us-central1.run.app/manifest/${safeManifestName}`;
+        const https = require('https');
+        let responded = false;
+        const reqOfficial = https.get(officialUrl, { timeout: 3500 }, (officialRes) => {
+          if (responded) return;
+          if (officialRes.statusCode === 200) {
+            let body = '';
+            officialRes.setEncoding('utf8');
+            officialRes.on('data', chunk => body += chunk);
+            officialRes.on('end', () => {
+              if (responded) return;
+              responded = true;
+              // Ensure stagingPercentage doesn't block manual updates
+              body = body.replace(/stagingPercentage:\s*\d+/g, 'stagingPercentage: 100');
+              try {
+                fs.writeFileSync(localManifest, body, 'utf8');
+              } catch (e) {}
+              res.writeHead(200, {
+                'Content-Type': 'text/yaml; charset=utf-8',
+                'Cache-Control': 'no-cache',
+                'Content-Length': Buffer.byteLength(body, 'utf8')
+              });
+              res.end(body);
+            });
+          } else {
+            sendFallback();
+          }
+        });
+
+        reqOfficial.on('error', sendFallback);
+        reqOfficial.on('timeout', () => {
+          reqOfficial.destroy();
+          sendFallback();
+        });
+
+        function sendFallback() {
+          if (responded) return;
+          responded = true;
+          let fallback = null;
+          try {
+            if (fs.existsSync(localManifest)) {
+              fallback = fs.readFileSync(localManifest, 'utf8');
+            }
+          } catch (e) {}
+          if (!fallback) {
+            fallback = 'version: 2.13.0\nfiles:\n- url: Antigravity-2.13.0-win.exe\npath: Antigravity-2.13.0-win.exe\n';
+          }
+          res.writeHead(200, {
+            'Content-Type': 'text/yaml; charset=utf-8',
+            'Cache-Control': 'no-cache',
+            'Content-Length': Buffer.byteLength(fallback, 'utf8')
+          });
+          res.end(fallback);
+        }
+        return;
+      }
+
       // API endpoint for slots config
       if (pathname === '/api/slots' || pathname === '/slots_config.json') {
         const configPath1 = path.join(wallpapersDir, 'slots_config.json');
