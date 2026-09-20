@@ -197,6 +197,15 @@ node core/theme_engine.js --apply-preset "赛博朋克风"
 node core/theme_engine.js --delete-preset "旧配置"
 ```
 
+#### 5. 一键恢复官方原版纯净模式 (Restore Official Vanilla)
+```bash
+# 一键恢复官方原生模式 (自动安全快照备份当前个性化配置，彻底卸载视频解码器并清空自定义样式)
+node core/theme_engine.js --restore-original
+
+# 快捷脚本：直接双击运行 bin/restore_original.bat 或 bin/一键恢复官方原版.bat
+# 随时无损切回壁纸：node core/theme_engine.js --apply-preset "恢复原版前的个性化配置"
+```
+
 ---
 
 ## ⚙️ 核心架构与技术实现 (Architecture Deep Dive)
@@ -249,10 +258,12 @@ node core/theme_engine.js --delete-preset "旧配置"
 antigravity-theme/
 ├── bin/
 │   ├── install.bat             # 一键自动安装与底层永久固化引导程序
-│   ├── preset_manager.bat      # 预设管理中心 (一键保存当前全套配置/归档/秒切预设)
+│   ├── preset_manager.bat      # 预设管理中心 (一键保存当前全套配置/归档/秒切预设/恢复原版)
 │   ├── swap_wallpaper.bat      # 综合壁纸与字体交互式管理控制台
 │   ├── wallpaper_engine.bat    # Steam Wallpaper Engine 专属工坊壁纸提取选择器
-│   └── restore_baseline.bat    # 一键还原为官方原版未修改状态
+│   ├── restore_baseline.bat    # 一键还原为初始静态二次元基线
+│   ├── restore_original.bat    # 🛡️ 一键恢复为官方原版纯净模式 (零壁纸/零解码/自动安全快照)
+│   └── 一键恢复官方原版.bat    # 中文命名快捷入口脚本
 ├── core/
 │   ├── theme_engine.js         # 核心主题编译器：CSS 生成、5 槽位控制、CDP 0.3s 热重载
 │   ├── wallpaper_engine_bridge.js # Steam 跨盘符库自动发现与创意工坊 VDF/JSON 资产解析
@@ -260,7 +271,7 @@ antigravity-theme/
 │   └── auto_patcher.js         # 核心补丁引擎：自动化解包 asar、注入主进程/渲染进程、固化
 ├── wallpapers/                 # 默认预设壁纸素材 (未花、普拉娜、妃咲等高颜值原画)
 ├── assets/                     # 文档图文与演示预览素材
-├── tests/                      # 端到端自动化测试套件 (流媒体性能、CDP 热重载、预设一致性测试)
+├── tests/                      # 端到端自动化测试套件 (流媒体性能、CDP 热重载、预设与原版还原测试)
 ├── LICENSE                     # MIT 开源授权协议
 └── README.md                   # 项目官方使用手册
 ```
@@ -282,12 +293,12 @@ antigravity-theme/
 
 <details>
 <summary><b>Q3: 更换了很亮的纯白壁纸，界面文字看不太清怎么办？</b></summary>
-运行 <code>bin/swap_wallpaper.bat</code> 选择 <code>[4] 字体管理</code>，选择 <code>[2] 暗夜曜黑 (obsidian-black)</code> 预设，或在终端输入 <code>node core/theme_engine.js --font obsidian-black</code>。文字将自动切换为高对比深色并附带柔和白辉光微轮廓，即使在超亮纯白背景上依然清晰锐利。
+运行 <code>bin/swap_wallpaper.bat</code> 选择 <code>[5] 自定义字体颜色</code>，选择 <code>[2] 暗夜曜黑 (obsidian-black)</code> 预设，或在终端输入 <code>node core/theme_engine.js --font obsidian-black</code>。文字将自动切换为高对比深色并附带柔和白辉光微轮廓，即使在超亮纯白背景上依然清晰锐利。
 </details>
 
 <details>
-<summary><b>Q4: 如何彻底卸载并恢复为官方原版？</b></summary>
-双击运行 <code>bin/restore_baseline.bat</code>，或者在官方网站重新下载覆盖安装 Antigravity，即可瞬间完整恢复为初始纯净官方状态，无任何残留。
+<summary><b>Q4: 如何一键恢复为官方原版或彻底卸载？</b></summary>
+直接双击运行 <code>bin/restore_original.bat</code>（或 <code>bin/一键恢复官方原版.bat</code>），系统会自动为当前的个性化配置建立安全快照预设，并在 0.3 秒内清空所有自定义样式与视频解码器，恢复纯正官方深色原生外观与极致流畅性能；随时可一键恢复个性化壁纸。
 </details>
 
 ---

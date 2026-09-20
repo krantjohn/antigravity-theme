@@ -16,10 +16,12 @@ backups/
 *.ogg
 *.mov
 *.mkv
+wallpapers/*_poster.*
 wallpapers/input_poster.*
 wallpapers/left_poster.*
 wallpapers/mid_poster.*
 wallpapers/right_poster.*
+wallpapers/settings_wallpaper.jpg
 wallpapers/*.mp4
 wallpapers/*.webm
 wallpapers/*.bak

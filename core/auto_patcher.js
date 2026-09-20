@@ -141,11 +141,21 @@ const themeInjectionCode = `
   function mountTickZeroBase() {
     try {
       const cfg = cachedConfig;
-      if (!cfg || !cfg.left || cfg.left.type !== 'video' || !cfg.left.file) return;
+      if (!cfg || cfg.isOriginal || !cfg.left || cfg.left.type !== 'video' || !cfg.left.file) return;
       const left = cfg.left;
       const vParam = (left && left.version) ? ('?v=' + left.version) : '';
       const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
-      const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
+      let posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
+      try {
+        if (left && left.poster) {
+          const posterPath = _path.join(process.env.ANTIGRAVITY_CONFIG_DIR || _path.join(_os.homedir(), '.gemini', 'antigravity'), 'wallpapers', left.poster);
+          if (_fs.existsSync(posterPath)) {
+            const ext = _path.extname(posterPath).toLowerCase();
+            const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
+            posterSrc = 'data:' + mime + ';base64,' + _fs.readFileSync(posterPath).toString('base64');
+          }
+        }
+      } catch(e) {}
       const posLeft = (left && left.position) || '0% 45%';
       let leftVid = document.getElementById('antigravity-video-left');
       if (!leftVid) {
@@ -221,6 +231,25 @@ const themeInjectionCode = `
         titlebarFix = document.createElement('style');
         titlebarFix.id = 'antigravity-titlebar-fix';
         titlebarFix.textContent = [
+          '/* 6.3 顶部更新按钮与操作按钮高优先级点击保证 (Titlebar Buttons & Update Button Responsiveness) */',
+          '[data-testid*="update"],',
+          '[data-testid="app-update-button"],',
+          '[aria-label*="update" i],',
+          '[aria-label*="Update" i],',
+          'header button,',
+          'header [role="button"],',
+          'header a,',
+          '[class*="titlebar"] button,',
+          '[class*="titlebar"] [role="button"],',
+          '[class*="titlebar"] a,',
+          'div.absolute.top-0 button,',
+          'div.absolute.top-0 [role="button"],',
+          '.titlebar-button,',
+          '#antigravity-update-modal button {',
+          '  -webkit-app-region: no-drag !important;',
+          '  pointer-events: auto !important;',
+          '  cursor: pointer !important;',
+          '}',
           '/* 6.1 顶部标题栏与窗口原生控制按钮防碰撞防御 (Windows Electron Native Window Controls Collision Prevention) */',
           'div.absolute.top-0.right-0.z-50.flex.items-center.shrink-0,',
           'div.absolute.top-0:has(> div > [data-testid="toggle-aux-sidebar"]),',
@@ -230,7 +259,9 @@ const themeInjectionCode = `
           '}',
           '/* 辅助面板展开时顶栏标签页与加号按钮右侧内边距，确保不被最大化/侧边栏切换按钮遮挡 (64px按钮组 + 8px自然间距 = 72px) */',
           'div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),',
-          'div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]) {',
+          '[aria-label="Auxiliary Pane"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),',
+          'div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]),',
+          '[aria-label="Auxiliary Pane"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]) {',
           '  padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 72px) !important;',
           '}',
           '/* 当辅助面板收起时，主对话顶栏更多操作容器紧邻侧边栏切换按钮，严格限定于父级容器，杜绝子元素重复嵌套叠加 padding (32px单按钮 + 10px自然间距 = 42px) */',
@@ -248,9 +279,7 @@ const themeInjectionCode = `
           '}',
           'div.absolute.top-full:has(button),',
           'div.absolute.top-full.border.shadow-lg {',
-          '  background: rgba(22, 24, 34, 0.94) !important;',
-          '  backdrop-filter: blur(6px) !important;',
-          '  -webkit-backdrop-filter: blur(6px) !important;',
+          '  background: rgba(22, 24, 34, 0.96) !important;',
           '  border: 1px solid rgba(255, 255, 255, 0.12) !important;',
           '  border-radius: 8px !important;',
           '  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5) !important;',
@@ -328,8 +357,8 @@ const themeInjectionCode = `
     if (v.style.display === 'none' || v.style.visibility === 'hidden') return false;
     const p = v.parentElement;
     if (!p) return false;
-    if (p.offsetWidth === 0 && p.offsetHeight === 0) return false;
     if (p.style && (p.style.display === 'none' || p.style.visibility === 'hidden')) return false;
+    if (p.hasAttribute && p.hasAttribute('hidden')) return false;
     if (p.closest && p.closest('[hidden], [aria-hidden="true"], [data-state="closed"]')) return false;
     return true;
   }
@@ -394,6 +423,16 @@ const themeInjectionCode = `
   function applyVideos() {
     const config = cachedConfig;
     if (!config) return;
+    if (config.isOriginal) {
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
+      for (let i = 0; i < allVids.length; i++) {
+        allVids[i].pause();
+        allVids[i].removeAttribute('src');
+        allVids[i].load();
+        allVids[i].remove();
+      }
+      return;
+    }
 
     // [左] 全局底图
     const left = config.left;
@@ -403,6 +442,9 @@ const themeInjectionCode = `
       const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
       let leftVid = document.getElementById('antigravity-video-left');
       if (leftVid && leftVid.isConnected && leftVid.dataset.currentSrc === src) {
+        leftVid.style.transform = 'translateZ(0)';
+        leftVid.style.contain = 'strict';
+        leftVid.style.backfaceVisibility = 'hidden';
         if (document.body && leftVid.parentElement !== document.body) {
           document.body.prepend(leftVid);
         }
@@ -454,8 +496,9 @@ const themeInjectionCode = `
           leftVid.style.objectPosition = (config.left && config.left.position) || '0% 45%';
           leftVid.style.zIndex = '0';
           leftVid.style.pointerEvents = 'none';
-          leftVid.style.transform = 'translate3d(0, 0, 0)';
-          leftVid.style.contain = 'layout paint';
+          leftVid.style.transform = 'translateZ(0)';
+          leftVid.style.contain = 'strict';
+          leftVid.style.backfaceVisibility = 'hidden';
           leftVid.style.display = 'block';
           if (posterSrc) {
             leftVid.poster = posterSrc;
@@ -520,8 +563,10 @@ const themeInjectionCode = `
         '[data-panel="terminal"]'
       ],
       'right': [
-        'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background',
-        'div[data-aux-pane-open="true"] [class*="terminal-drawer"]'
+        '[aria-label="Auxiliary Pane"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full',
+        'div[role="region"][aria-label="Terminal"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full',
+        'div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background',
+        '[class*="terminal-drawer"]'
       ],
       'bottom': [
         '[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
@@ -550,7 +595,17 @@ const themeInjectionCode = `
       const isVideo = slotData && slotData.type === 'video' && slotData.file;
       const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : '';
       const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
-      const posterSrc = (isVideo && slotData.poster) ? (SERVER_URL + '/' + encodeURIComponent(slotData.poster) + vParam) : '';
+      let posterSrc = (isVideo && slotData.poster) ? (SERVER_URL + '/' + encodeURIComponent(slotData.poster) + vParam) : '';
+      try {
+        if (isVideo && slotData.poster) {
+          const pPath = _path.join(process.env.ANTIGRAVITY_CONFIG_DIR || _path.join(_os.homedir(), '.gemini', 'antigravity'), 'wallpapers', slotData.poster);
+          if (_fs.existsSync(pPath)) {
+            const ext = _path.extname(pPath).toLowerCase();
+            const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
+            posterSrc = 'data:' + mime + ';base64,' + _fs.readFileSync(pPath).toString('base64');
+          }
+        }
+      } catch(e) {}
       const selectors = slotSelectors[slotKey];
 
       if (!isVideo) {
@@ -584,8 +639,8 @@ const themeInjectionCode = `
                 if (el.classList.contains('terminal') || el.classList.contains('xterm') || el.querySelector('.terminal, .xterm')) {
                   continue;
                 }
-                // 要求抽屉已展开可见，避免在抽屉收起（宽度 0px）时无效挂载
-                if (el.offsetWidth < 50) {
+                // 要求抽屉已展开可见，避免在抽屉收起时无效挂载
+                if (el.style.display === 'none' || el.style.visibility === 'hidden' || el.hasAttribute('hidden') || (el.closest && el.closest('[data-aux-pane-open="false"], [data-state="closed"]'))) {
                   continue;
                 }
                 if (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\.agentSidePanelInputBox')) {
@@ -632,6 +687,9 @@ const themeInjectionCode = `
 
           // Fast-path: already mounted in targetContainer with expected source
           if (vid && vid.dataset.currentSrc === src) {
+            vid.style.transform = 'translateZ(0)';
+            vid.style.contain = 'strict';
+            vid.style.backfaceVisibility = 'hidden';
             if (vid.error || (vid.networkState === 3 && vid.readyState === 0)) {
               vid.src = src;
               vid.load();
@@ -670,8 +728,9 @@ const themeInjectionCode = `
             vid.style.objectPosition = slotPositions[slotKey] || 'center center';
             vid.style.pointerEvents = 'none';
             vid.style.zIndex = '0';
-            vid.style.transform = 'translate3d(0, 0, 0)';
-            vid.style.contain = 'layout paint';
+            vid.style.transform = 'translateZ(0)';
+            vid.style.contain = 'strict';
+            vid.style.backfaceVisibility = 'hidden';
             vid.style.display = 'block';
             if (posterSrc) {
               vid.poster = posterSrc;
@@ -700,6 +759,8 @@ const themeInjectionCode = `
                 targetContainer.style.position = 'relative';
               }
               targetContainer.style.overflow = 'hidden';
+              targetContainer.style.contain = 'paint';
+              targetContainer.style.willChange = 'transform';
             }
             targetContainer.prepend(vid);
           }
@@ -762,9 +823,7 @@ const themeInjectionCode = `
           const m = mutations[i];
           const target = m.target;
           if (!target || target.nodeType === 3) continue;
-          const tag = target.nodeName ? target.nodeName.toLowerCase() : '';
-          if (tag === 'span' || tag === 'code' || tag === 'p' || tag === 'pre' || tag === 'a') continue;
-          if (target.closest && (target.closest('.xterm') || target.closest('.terminal') || target.closest('.monaco-editor') || target.closest('pre') || target.closest('.code-block') || target.closest('[data-testid*="message"]'))) {
+          if (target.closest && target.closest('.markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"]')) {
             continue;
           }
           if (m.type === 'attributes') {
@@ -784,9 +843,7 @@ const themeInjectionCode = `
                   (node.id && node.id.includes('agentSidePanelInputBox')) ||
                   (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm') ||
                    node.classList.contains('overflow-y-auto') || node.classList.contains('bg-background') ||
-                   node.classList.contains('bg-card') || node.classList.contains('bg-card-border'))) ||
-                  (node.className && typeof node.className === 'string' && (node.className.includes('terminal') || node.className.includes('drawer') || node.className.includes('bg-card') || node.className.includes('agentSidePanelInputBox') || (node.className.includes('overflow-y-auto') && node.className.includes('bg-background')))) ||
-                  (node.querySelector && node.querySelector('.terminal, .xterm, [class*="terminal-drawer"], [id*="agentSidePanelInputBox"], div.bg-card, div.rounded-2xl.bg-card-border, div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background'))) {
+                   node.classList.contains('bg-card') || node.classList.contains('bg-card-border')))) {
                   isRelevant = true;
                   break;
                 }
@@ -808,11 +865,13 @@ const themeInjectionCode = `
         if (!isRelevant) return;
       }
 
-      if (debounceTimer) clearTimeout(debounceTimer);
+      if (window.__isDraggingSplit || (document.body && document.body.classList.contains('is-resizing'))) {
+        return;
+      }
       debounceTimer = setTimeout(function() {
         debounceTimer = null;
         applyVideos();
-      }, 200);
+      }, 300);
     };
 
     window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
@@ -822,6 +881,55 @@ const themeInjectionCode = `
       attributes: true,
       attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
     });
+
+    // 拖拽与窗口缩放 60FPS 性能优化：监听分栏拖拽与窗口尺寸变动
+    let resizeThrottleTimer = null;
+    const onDragStart = function(e) {
+      const target = e.target;
+      if (!target) return;
+      let isHandle = false;
+      if (target.classList && (target.classList.contains('cursor-col-resize') || target.classList.contains('cursor-row-resize'))) {
+        isHandle = true;
+      } else if (target.style && target.style.cursor && target.style.cursor.includes('resize')) {
+        isHandle = true;
+      }
+      if (isHandle) {
+        window.__isDraggingSplit = true;
+        if (document.body) document.body.classList.add('is-resizing');
+      }
+    };
+    const onDragEnd = function() {
+      if (window.__isDraggingSplit) {
+        window.__isDraggingSplit = false;
+        if (document.body) document.body.classList.remove('is-resizing');
+        applyVideos();
+      }
+    };
+    const onWindowResize = function() {
+      if (document.body) document.body.classList.add('is-resizing');
+      if (resizeThrottleTimer) clearTimeout(resizeThrottleTimer);
+      resizeThrottleTimer = setTimeout(function() {
+        resizeThrottleTimer = null;
+        if (document.body) document.body.classList.remove('is-resizing');
+        applyVideos();
+      }, 150);
+    };
+
+    try {
+      if (window.__antigravityDragStartHandler) {
+        window.removeEventListener('pointerdown', window.__antigravityDragStartHandler, true);
+        window.removeEventListener('pointerup', window.__antigravityDragEndHandler, true);
+        window.removeEventListener('pointercancel', window.__antigravityDragEndHandler, true);
+        window.removeEventListener('resize', window.__antigravityResizeHandler);
+      }
+      window.__antigravityDragStartHandler = onDragStart;
+      window.__antigravityDragEndHandler = onDragEnd;
+      window.__antigravityResizeHandler = onWindowResize;
+      window.addEventListener('pointerdown', onDragStart, true);
+      window.addEventListener('pointerup', onDragEnd, true);
+      window.addEventListener('pointercancel', onDragEnd, true);
+      window.addEventListener('resize', onWindowResize);
+    } catch(e) {}
 
     // 定期与流媒体配置对齐同步 (从 2 秒降至 10 秒，仅对比 1KB JSON，零冗余开销)
     if (window.__antigravitySyncInterval) {
@@ -859,14 +967,14 @@ const themeInjectionCode = `
     };
 
     // ================= Update Modal & Notification =================
-    window.showThemeUpdateModal = function(version = '2.14.0') {
+    window.showThemeUpdateModal = function(version = '2.15.0') {
       try {
         const existing = document.getElementById('antigravity-update-modal');
         if (existing) existing.remove();
 
         const overlay = document.createElement('div');
         overlay.id = 'antigravity-update-modal';
-        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 9999999; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);';
+        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); z-index: 9999999; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);';
 
         const box = document.createElement('div');
         box.style.cssText = 'background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.25); border-radius: 20px; padding: 28px 32px; max-width: 480px; width: 90%; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; transform: scale(0.92) translateY(8px); transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1); box-sizing: border-box; user-select: none;';
@@ -886,7 +994,7 @@ const themeInjectionCode = `
         '<div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;">' +
           '<div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">' +
             '<span style="color: #94a3b8;">当前运行版本</span>' +
-            '<span style="color: #e2e8f0; font-weight: 500;">v2.13.1</span>' +
+            '<span style="color: #e2e8f0; font-weight: 500;">v2.14.0</span>' +
           '</div>' +
           '<div style="display: flex; justify-content: space-between; font-size: 13px;">' +
             '<span style="color: #94a3b8;">官方最新版本</span>' +
@@ -897,7 +1005,7 @@ const themeInjectionCode = `
           '<div style="font-weight: 600; color: #fbbf24; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">' +
             '<span>🌸</span><span>二次元主题美化环境保护</span>' +
           '</div>' +
-          '当前客户端已应用壁纸与个性化增强补丁。直接覆盖升级将需要重新安装补丁。建议您先在工具中保存壁纸预设，或按需前往官网下载新版。' +
+          '当前客户端已安装专属壁纸与美化补丁。直接覆盖升级将需要重新安装补丁。建议您先在工具中保存壁纸预设，或按需前往官网下载新版。' +
         '</div>' +
         '<div style="display: flex; flex-direction: column; gap: 10px;">' +
           '<button id="ag-modal-btn-download" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; border: none; border-radius: 10px; padding: 11px 18px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4); transition: all 0.15s;" onmouseover="this.style.filter=\\'brightness(1.1)\\'; this.style.transform=\\'translateY(-1px)\\'" onmouseout="this.style.filter=\\'none\\'; this.style.transform=\\'none\\'">' +
@@ -906,7 +1014,7 @@ const themeInjectionCode = `
           '</button>' +
           '<div style="display: flex; gap: 10px;">' +
             '<button id="ag-modal-btn-changelog" style="flex: 1; background: rgba(255, 255, 255, 0.08); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 9px 14px; font-size: 12.5px; font-weight: 500; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background=\\'rgba(255,255,255,0.14)\\'" onmouseout="this.style.background=\\'rgba(255,255,255,0.08)\\'">查看更新日志</button>' +
-            '<button id="ag-modal-btn-dismiss" style="flex: 1; background: transparent; color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 9px 14px; font-size: 12.5px; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background=\\'rgba(255,255,255,0.06)\\'; this.style.color=\\'#cbd5e1\\'" onmouseout="this.style.background=\\'transparent\\'; this.style.color=\\'#94a3b8\\'">稍后提醒</button>' +
+            '<button id="ag-modal-btn-dismiss" style="flex: 1; background: transparent; color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 9px 14px; font-size: 12.5px; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background=\\'rgba(255,255,255,0.06)\\'; this.style.color=\\'#cbd5e1\\'" onmouseout="this.style.background=\\'transparent\\'; this.style.color=\\'#94a3b8\\'">稍后提醒 / 隐藏按钮</button>' +
           '</div>' +
         '</div>';
 
@@ -927,29 +1035,49 @@ const themeInjectionCode = `
         });
 
         overlay.querySelector('#ag-modal-close-x').onclick = closeModal;
-        overlay.querySelector('#ag-modal-btn-dismiss').onclick = closeModal;
+        overlay.querySelector('#ag-modal-btn-dismiss').onclick = () => {
+          closeModal();
+          try {
+            sessionStorage.setItem('ag_hide_update', '1');
+            let hideStyle = document.getElementById('antigravity-hide-update-btn');
+            if (!hideStyle) {
+              hideStyle = document.createElement('style');
+              hideStyle.id = 'antigravity-hide-update-btn';
+              hideStyle.textContent = '[data-testid="app-update-button"], [data-testid*="update"], [aria-label*="update" i] { display: none !important; }';
+              document.head.appendChild(hideStyle);
+            }
+            const btns = document.querySelectorAll('[data-testid="app-update-button"], [data-testid*="update"], [aria-label*="update" i]');
+            btns.forEach(b => b.style.setProperty('display', 'none', 'important'));
+          } catch(e) {}
+        };
         overlay.onclick = (e) => {
           if (e.target === overlay) closeModal();
         };
 
+        const downloadUrl = 'https://storage.googleapis.com/antigravity-public/antigravity-hub/2.15.0-6576870427328512/windows-x64/Antigravity-x64.exe';
         overlay.querySelector('#ag-modal-btn-download').onclick = () => {
           closeModal();
-          if (window.electronNative && window.electronNative.openExternal) {
-            window.electronNative.openExternal('https://antigravity.google');
-          } else {
-            window.open('https://antigravity.google', '_blank');
-          }
-          if (window.showThemeToast) {
-            window.showThemeToast('✨ 正在打开 Antigravity 官方下载页面...', 3000);
+          try {
+            if (window.electronNative && window.electronNative.openExternal) {
+              window.electronNative.openExternal(downloadUrl);
+            } else {
+              window.open(downloadUrl, '_blank');
+            }
+          } catch(e) {
+            window.open(downloadUrl, '_blank');
           }
         };
 
         overlay.querySelector('#ag-modal-btn-changelog').onclick = () => {
           closeModal();
-          if (window.electronNative && window.electronNative.openExternal) {
-            window.electronNative.openExternal('https://antigravity.google/docs/changelog');
-          } else {
-            window.open('https://antigravity.google/docs/changelog', '_blank');
+          try {
+            if (window.electronNative && window.electronNative.openExternal) {
+              window.electronNative.openExternal('https://antigravity.google');
+            } else {
+              window.open('https://antigravity.google', '_blank');
+            }
+          } catch(e) {
+            window.open('https://antigravity.google', '_blank');
           }
         };
 
@@ -963,26 +1091,66 @@ const themeInjectionCode = `
       } catch(e) {}
     };
 
-    if (window.electronUpdater && typeof window.electronUpdater.onStateChanged === 'function' && !window.__updaterHooked) {
-      window.__updaterHooked = true;
-      window.electronUpdater.onStateChanged((state) => {
-        if (!state) return;
-        if (state.type === 'checking for updates') {
-          window.showThemeToast('🔍 正在检查更新...', 2500);
-        } else if (state.type === 'available for download') {
-          const ver = (state.update && state.update.version) ? state.update.version : '2.14.0';
-          window.showThemeToast('✨ 发现新版本 v' + ver + '，点击标题栏更新按钮查看详情', 5000);
-        } else if (state.type === 'idle') {
-          if (window.__userJustCheckedUpdates) {
-            window.__userJustCheckedUpdates = false;
-            window.showThemeToast('✓ 当前已是最新版本', 3000);
+    function findUpdateTarget(el) {
+      if (!el) return null;
+      const btn = el.closest ? el.closest('[data-testid*="update" i], [data-testid="app-update-button"], [aria-label*="update" i]') : null;
+      if (btn) return btn;
+
+      let curr = el;
+      let depth = 0;
+      while (curr && curr !== document.body && curr !== document.documentElement && depth < 6) {
+        const txt = (curr.textContent || '').trim();
+        if (txt.includes('Update Available') || txt.includes('有可用更新') || txt.includes('发现新版本')) {
+          if (curr.tagName === 'BUTTON' || curr.getAttribute('role') === 'button' || (curr.classList && curr.classList.contains('cursor-pointer')) || (curr.closest && curr.closest('button, [role="button"]'))) {
+            return (curr.closest ? curr.closest('button, [role="button"]') : null) || curr;
           }
         }
-      });
+        curr = curr.parentElement;
+        depth++;
+      }
+      return null;
     }
 
     if (!window.__updateClickHooked) {
       window.__updateClickHooked = true;
+
+      let lastUpdateModalOpen = 0;
+      const triggerUpdateModal = async () => {
+        const now = Date.now();
+        if (now - lastUpdateModalOpen < 800) return;
+        lastUpdateModalOpen = now;
+
+        let ver = '2.15.0';
+        try {
+          if (window.electronUpdater && window.electronUpdater.getState) {
+            const state = await window.electronUpdater.getState();
+            if (state && state.update && state.update.version) {
+              ver = state.update.version;
+            }
+          }
+        } catch(err) {}
+
+        window.showThemeUpdateModal(ver);
+      };
+
+      // Pointerdown: Immediately enforce no-drag on button and titlebar ancestors before OS drag starts
+      document.addEventListener('pointerdown', (e) => {
+        try {
+          const updateBtn = findUpdateTarget(e.target);
+          if (updateBtn) {
+            let el = updateBtn;
+            let depth = 0;
+            while (el && el !== document.body && depth < 4) {
+              el.style.setProperty('-webkit-app-region', 'no-drag', 'important');
+              el.style.setProperty('app-region', 'no-drag', 'important');
+              el = el.parentElement;
+              depth++;
+            }
+          }
+        } catch(err) {}
+      }, true);
+
+      // Click: Standard click interception
       document.addEventListener('click', async (e) => {
         try {
           const target = e.target;
@@ -991,30 +1159,29 @@ const themeInjectionCode = `
           // Check for menu "Check for Updates"
           if (target.textContent && target.textContent.trim() === 'Check for Updates') {
             window.__userJustCheckedUpdates = true;
-            window.showThemeToast('🔍 正在检查更新...', 3000);
             return;
           }
 
           // Check for titlebar "Update Available →" button
-          const updateBtn = (target.closest && target.closest('[data-testid="app-update-button"]')) ||
-            (target.textContent && target.textContent.includes('Update Available') && (target.closest('button, [role="button"]') || target.tagName === 'SPAN' || target.tagName === 'DIV') ? (target.closest('[data-testid="app-update-button"]') || target) : null);
+          const updateBtn = findUpdateTarget(target);
 
           if (updateBtn) {
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
+            triggerUpdateModal();
+          }
+        } catch(e) {}
+      }, true);
 
-            let ver = '2.14.0';
-            try {
-              if (window.electronUpdater && window.electronUpdater.getState) {
-                const state = await window.electronUpdater.getState();
-                if (state && state.update && state.update.version) {
-                  ver = state.update.version;
-                }
-              }
-            } catch(err) {}
-
-            window.showThemeUpdateModal(ver);
+      // Mouseup: Fallback in case click was intercepted or cancelled
+      document.addEventListener('mouseup', (e) => {
+        try {
+          if (e.button === 0) {
+            const updateBtn = findUpdateTarget(e.target);
+            if (updateBtn) {
+              triggerUpdateModal();
+            }
           }
         } catch(e) {}
       }, true);

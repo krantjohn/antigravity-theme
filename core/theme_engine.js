@@ -512,10 +512,20 @@ function loadSlotsConfig() {
     } catch (e) {}
   }
 
+  if (config && config.isOriginal) {
+    return config;
+  }
+
   let modified = false;
   const allFiles = fs.existsSync(wallpapersDir) ? fs.readdirSync(wallpapersDir) : [];
 
   for (const [key, meta] of Object.entries(SLOTS_META)) {
+    if (config[key] && config[key].type === 'none') {
+      config[key].file = config[key].file || '';
+      config[key].position = config[key].position || meta.defaultPosition || 'center center';
+      config[key].desc = meta.desc;
+      continue;
+    }
     if (!config[key] || !config[key].file) {
       let foundFile = meta.defaultFile;
       let foundType = 'image';
@@ -784,6 +794,26 @@ function generateMasterCss(slotsConfig) {
     slotsConfig = loadSlotsConfig();
   }
 
+  if (slotsConfig && slotsConfig.isOriginal) {
+    return `/* ==========================================================================
+   Antigravity Official Vanilla Theme (官方原版纯净样式)
+   恢复原版默认外观与性能，禁用自定义二次元壁纸与视频硬件解码
+   ========================================================================== */
+
+body::before {
+  display: none !important;
+  background-image: none !important;
+  opacity: 0 !important;
+  content: "" !important;
+}
+
+.antigravity-slot-video,
+#antigravity-video-left {
+  display: none !important;
+}
+`;
+  }
+
   const font = resolveFontColor(slotsConfig.fontColor);
 
   const isLeftVideo = slotsConfig.left && slotsConfig.left.type === 'video';
@@ -792,21 +822,46 @@ function generateMasterCss(slotsConfig) {
   const isBottomVideo = slotsConfig.bottom && slotsConfig.bottom.type === 'video';
   const isSettingsVideo = slotsConfig.settings && slotsConfig.settings.type === 'video';
 
+  const isLeftNone = !slotsConfig.left || slotsConfig.left.type === 'none' || !slotsConfig.left.file;
+  const isMidNone = !slotsConfig.mid || slotsConfig.mid.type === 'none' || !slotsConfig.mid.file;
+  const isRightNone = !slotsConfig.right || slotsConfig.right.type === 'none' || !slotsConfig.right.file;
+  const isBottomNone = !slotsConfig.bottom || slotsConfig.bottom.type === 'none' || !slotsConfig.bottom.file;
+  const isSettingsNone = !slotsConfig.settings || slotsConfig.settings.type === 'none' || !slotsConfig.settings.file;
+
   // Zero-Black-Void Protection:
   // Fallback static wallpapers guarantee that body::before and every container ALWAYS has a crisp image,
   // preventing any black screen during video buffering, stalls, or decoder errors!
-  const leftImg = isLeftVideo ? (slotsConfig.left.poster || 'left_wallpaper.jpg') : (slotsConfig.left?.file || 'left_wallpaper.jpg');
-  const midImg = isMidVideo ? (slotsConfig.mid.poster || 'mid_wallpaper.jpg') : (slotsConfig.mid?.file || 'mid_wallpaper.jpg');
-  const rightImg = isRightVideo ? (slotsConfig.right.poster || 'right_wallpaper.jpg') : (slotsConfig.right?.file || 'right_wallpaper.jpg');
-  const bottomImg = isBottomVideo ? (slotsConfig.bottom.poster || 'input_wallpaper.jpg') : (slotsConfig.bottom?.file || 'input_wallpaper.jpg');
-  const settingsImg = isSettingsVideo ? (slotsConfig.settings.poster || 'settings_wallpaper.png') : (slotsConfig.settings?.file || 'settings_wallpaper.png');
+  const leftImg = isLeftNone ? '' : (isLeftVideo ? (slotsConfig.left.poster || 'left_wallpaper.jpg') : (slotsConfig.left?.file || 'left_wallpaper.jpg'));
+  const midImg = isMidNone ? '' : (isMidVideo ? (slotsConfig.mid.poster || 'mid_wallpaper.jpg') : (slotsConfig.mid?.file || 'mid_wallpaper.jpg'));
+  const rightImg = isRightNone ? '' : (isRightVideo ? (slotsConfig.right.poster || 'right_wallpaper.jpg') : (slotsConfig.right?.file || 'right_wallpaper.jpg'));
+  const bottomImg = isBottomNone ? '' : (isBottomVideo ? (slotsConfig.bottom.poster || 'input_wallpaper.jpg') : (slotsConfig.bottom?.file || 'input_wallpaper.jpg'));
+  const settingsImg = isSettingsNone ? '' : (isSettingsVideo ? (slotsConfig.settings.poster || 'settings_wallpaper.png') : (slotsConfig.settings?.file || 'settings_wallpaper.png'));
 
   const serverBase = `http://127.0.0.1:${DEFAULT_PORT || 8315}`;
-  const b64Left = leftImg ? `${serverBase}/${encodeURIComponent(leftImg)}` : '';
-  const b64Mid = midImg ? `${serverBase}/${encodeURIComponent(midImg)}` : '';
-  const b64Right = rightImg ? `${serverBase}/${encodeURIComponent(rightImg)}` : '';
-  const b64Bottom = bottomImg ? `${serverBase}/${encodeURIComponent(bottomImg)}` : '';
-  const b64Settings = settingsImg ? `${serverBase}/${encodeURIComponent(settingsImg)}` : '';
+  
+  function getInlineOrUrl(imgFile) {
+    if (!imgFile) return '';
+    try {
+      const pPath = path.join(wallpapersDir, imgFile);
+      if (fs.existsSync(pPath)) {
+        const ext = path.extname(pPath).toLowerCase();
+        if (IMAGE_EXTS.has(ext)) {
+          const stat = fs.statSync(pPath);
+          if (stat.size <= 500 * 1024) {
+            const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
+            return `data:${mime};base64,` + fs.readFileSync(pPath).toString('base64');
+          }
+        }
+      }
+    } catch(e) {}
+    return `${serverBase}/${encodeURIComponent(imgFile)}`;
+  }
+
+  const b64Left = getInlineOrUrl(leftImg);
+  const b64Mid = getInlineOrUrl(midImg);
+  const b64Right = getInlineOrUrl(rightImg);
+  const b64Bottom = getInlineOrUrl(bottomImg);
+  const b64Settings = getInlineOrUrl(settingsImg);
 
   const posLeft = getSlotPosition(slotsConfig, 'left');
   const posMid = getSlotPosition(slotsConfig, 'mid');
@@ -866,7 +921,6 @@ body::before {
   background-size: cover !important;
   background-position: ${posLeft} !important;
   background-repeat: no-repeat !important;
-  background-attachment: fixed !important;
   pointer-events: none !important;
   z-index: 0 !important;
   transform: translate3d(0, 0, 0) !important;
@@ -951,9 +1005,7 @@ div[class*="inset-x-4"][class*="pointer-events-none"][class*="bottom-0"] {
 /* 5. Left Sidebar & Navigation & Conversation History List (深色磨砂背景保护区：纯净浅白文本，彻底杜绝黑色字体与发虚白光晕) */
 aside, nav, [role="navigation"], [class*="sidebar"], [class*="Sidebar"], [class*="navigation"], [class*="Navigation"],
 div.bg-sidebar, [data-panel="conversations"], [data-testid*="sidebar"], [data-testid*="conversation-list"] {
-  background-color: rgba(14, 15, 26, 0.35) !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
+  background-color: rgba(14, 15, 26, 0.78) !important;
   border-right: 1px solid rgba(226, 232, 240, 0.12) !important;
   box-shadow: none !important;
   color: #f1f5f9 !important;
@@ -1012,9 +1064,7 @@ div.bg-sidebar [class*="text-muted"], div.bg-sidebar [class*="text-secondary"],
 
 /* 6. Top Header & Title Bar & Navigation Buttons */
 header, [class*="header"], [class*="Header"], [class*="titlebar"], [class*="menubar"] {
-  background-color: rgba(14, 15, 26, 0.35) !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
+  background-color: rgba(14, 15, 26, 0.78) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: none !important;
   color: #f1f5f9 !important;
@@ -1049,6 +1099,27 @@ button[aria-label*="Undo"]:hover {
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.45) !important;
 }
 
+
+/* 6.3 顶部更新按钮与控制按钮高优先级点击保证 (Titlebar Buttons & Update Button Responsiveness) */
+[data-testid*="update"],
+[data-testid="app-update-button"],
+[aria-label*="update" i],
+[aria-label*="Update" i],
+header button,
+header [role="button"],
+header a,
+[class*="titlebar"] button,
+[class*="titlebar"] [role="button"],
+[class*="titlebar"] a,
+div.absolute.top-0 button,
+div.absolute.top-0 [role="button"],
+.titlebar-button,
+#antigravity-update-modal button {
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
 /* 6.1 顶部标题栏与窗口原生控制按钮防碰撞防御 (Windows Electron Native Window Controls Collision Prevention) */
 /* 右侧边栏展开/收起按钮紧靠 Windows 原生控制按钮左侧 (~138px) 并保留自然间距 */
 div.absolute.top-0.right-0.z-50.flex.items-center.shrink-0,
@@ -1060,7 +1131,9 @@ div:has(> div > [data-testid="toggle-aux-sidebar"]):not([class*="group"]):not([c
 
 /* 辅助面板展开时顶栏标签页与加号按钮右侧内边距，确保不被最大化/侧边栏切换按钮遮挡 (64px按钮组 + 8px自然间距 = 72px) */
 div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),
-div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]) {
+[aria-label="Auxiliary Pane"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),
+div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]),
+[aria-label="Auxiliary Pane"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]) {
   padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 72px) !important;
 }
 
@@ -1084,8 +1157,7 @@ div.group\\/user-input-step div.relative.p-px.rounded-xl {
     rgba(251, 207, 232, 0.08) 50%,
     rgba(147, 197, 253, 0.10) 100%
   ) !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
+  background-color: rgba(22, 24, 38, 0.72) !important;
   border: 1px solid rgba(244, 114, 182, 0.38) !important;
   border-radius: 14px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
@@ -1344,8 +1416,7 @@ div:has(> [id="antigravity.agentSidePanelInputBox"]) {
 [data-testid="running-items-panel"] > div > div,
 [data-testid="running-items-panel"] div[class*="rounded-t-2xl"] {
   background-color: rgba(14, 16, 28, 0.60) !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
+  background-color: rgba(18, 20, 32, 0.85) !important;
   border: 1px solid rgba(244, 114, 182, 0.35) !important;
   border-bottom: none !important;
   border-radius: 14px 14px 0 0 !important;
@@ -1353,11 +1424,14 @@ div:has(> [id="antigravity.agentSidePanelInputBox"]) {
   contain: paint !important;
 }
 
+${!isBottomNone ? `
 /* 8.2 底部输入卡片（仅对真正的输入容器挂载壁纸，严格排除指令菜单、下拉列表、弹窗与浮层） */
 [id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
 [id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
 div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]) {
   position: relative !important;
+  contain: paint !important;
+  will-change: transform !important;
   background-color: transparent !important;
   background-image: 
     linear-gradient(
@@ -1377,6 +1451,7 @@ div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-men
   background-image: none !important;
   background-color: transparent !important;
 }
+` : ''}
 
 /* 8.3 Actions / Slash Command Popup Menu 磨砂琉璃质感（彻底杜绝输入框壁纸渗漏或重复切片） */
 div[role="listbox"],
@@ -1399,8 +1474,7 @@ div[data-mention-menu],
 [id="antigravity.agentSidePanelInputBox"] div.absolute.bottom-full.bg-card,
 [id="antigravity.agentSidePanelInputBox"] div[class*="bottom-full"] {
   background-color: ${font.isDarkText ? 'rgba(255, 255, 255, 0.95)' : 'rgba(16, 18, 32, 0.90)'} !important;
-  backdrop-filter: blur(6px) !important;
-  -webkit-backdrop-filter: blur(6px) !important;
+  background-color: rgba(18, 20, 34, 0.95) !important;
   border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.20)' : 'rgba(244, 114, 182, 0.40)'} !important;
   border-radius: 16px !important;
   box-shadow: ${font.isDarkText ? '0 8px 24px rgba(0, 0, 0, 0.25)' : '0 8px 24px rgba(0, 0, 0, 0.65)'} !important;
@@ -1467,6 +1541,7 @@ div[role="listbox"][data-mention-menu] svg,
   filter: drop-shadow(0 0 4px rgba(244, 114, 182, 0.6)) !important;
 }
 
+${!isBottomNone ? `
 .antigravity-slot-video[data-slot="bottom"] {
   position: absolute !important;
   top: 0 !important;
@@ -1479,6 +1554,7 @@ div[role="listbox"][data-mention-menu] svg,
   z-index: 0 !important;
   border-radius: 15px !important;
 }
+` : ''}
 
 [contenteditable="true"],
 textarea,
@@ -1527,9 +1603,7 @@ pre {
 
 pre > div.relative,
 div.relative:has(> .code-block) {
-  background-color: rgba(15, 18, 30, 0.92) !important;
-  backdrop-filter: blur(2px) !important;
-  -webkit-backdrop-filter: blur(2px) !important;
+  background-color: rgba(15, 18, 30, 0.96) !important;
   border: 1px solid rgba(244, 114, 182, 0.35) !important;
   border-radius: 12px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
@@ -1654,19 +1728,15 @@ pre .line-content span:not([class*="token"]):not([class*="hljs"]):not([class*="s
 /* ==========================================================================
    11. 【中】活跃终端专属壁纸与现代黑客风黑色极清文字 (Active Terminals)
    ========================================================================== */
-div.relative.flex-1.flex.min-w-0.h-full:has(.terminal.xterm),
-div.flex:has(> div > div > .terminal.xterm),
+${!isMidNone ? `
 .terminal.xterm,
-[data-panel="terminal"],
-div:has(> .xterm) {
+[data-panel="terminal"] {
   border-left: 1.5px solid rgba(249, 168, 212, 0.85) !important;
-  box-shadow: 
-    -1px 0 6px rgba(249, 168, 212, 0.75),
-    -3px 0 14px rgba(244, 114, 182, 0.45),
-    -6px 0 28px rgba(244, 114, 182, 0.22) !important;
+  box-shadow: -2px 0 10px rgba(249, 168, 212, 0.40) !important;
   background-color: transparent !important;
   position: relative !important;
   z-index: 10 !important;
+  contain: paint !important;
 }
 
 .terminal.xterm,
@@ -1696,6 +1766,10 @@ div:has(> .xterm-screen) {
   object-position: ${posMid} !important;
   pointer-events: none !important;
   z-index: 0 !important;
+  contain: strict !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  will-change: transform !important;
 }
 
 .terminal.xterm .xterm-viewport,
@@ -1709,6 +1783,7 @@ div:has(> .xterm-screen) {
   position: relative !important;
   z-index: 1 !important;
 }
+` : ''}
 
 /* 终端字体：升级为圆润可爱带中文等宽的 Maple Mono NF CN 现代编程字体 */
 .xterm-char-measure-element {
@@ -1764,26 +1839,21 @@ ${font.isDarkText ? `
 
 /* 顶部两层顶栏彻底透明化与琉璃化 */
 div.shrink-0.flex.items-center.gap-0.5.border-b.pl-1.5.pr-9,
-div:has(> div > div > .terminal.xterm) div.shrink-0.flex.items-center.gap-0.5.border-b,
 header div.shrink-0.flex.items-center.gap-0.5.border-b {
-  background-color: rgba(14, 16, 28, 0.22) !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
+  background-color: rgba(14, 16, 28, 0.75) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
 }
 
-div.flex.items-center.justify-between.pl-3.pr-2.py-1,
-div:has(> div > div > .terminal.xterm) div.flex.items-center.justify-between.pl-3.pr-2.py-1 {
-  background-color: rgba(11, 12, 20, 0.18) !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
+div.flex.items-center.justify-between.pl-3.pr-2.py-1 {
+  background-color: rgba(11, 12, 20, 0.78) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
-div.group\\/file-row:has([class*="font-medium"]),
-div.group\\/file-row {
+div.group\/file-row:has([class*="font-medium"]),
+div.group\/file-row {
   background-color: rgba(11, 12, 20, 0.35) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  transition: all 0.18s ease !important;
 }
 
 div.shrink-0.flex.items-center.gap-0.5.border-b button,
@@ -1827,38 +1897,28 @@ div.group\/file-row span {
 /* ==========================================================================
    12. 【右】独立侧栏壁纸 + 极简纯净无杂线琉璃质感 (Right Drawer)
    ========================================================================== */
-/* 12.1 整个右侧辅助大容器（包含中侧终端与右侧抽屉）：背景必须完全透明，以左侧全局底图为背景！ */
-div[data-aux-pane-open="true"] {
-  position: relative !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  background: transparent !important;
-  border-left: 1.5px solid rgba(249, 168, 212, 0.45) !important;
-  box-shadow: 
-    -1px 0 6px rgba(249, 168, 212, 0.40),
-    -3px 0 14px rgba(244, 114, 182, 0.25) !important;
-  z-index: 10 !important;
-  overflow: hidden !important;
-}
-
 /* 12.1 整个右侧辅助大容器（包含中侧终端、Review面板与右侧抽屉）：背景必须完全透明，以左侧全局底图为背景！ */
-div[data-aux-pane-open="true"],
+div[data-aux-pane-open],
 [aria-label="Auxiliary Pane"],
-div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
-div[data-aux-pane-open="true"] > div:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]),
-div[data-aux-pane-open="true"] .shrink-0,
-div[data-aux-pane-open="true"] .flex-grow,
-div[data-aux-pane-open="true"] .border-b,
-div[data-aux-pane-open="true"] .border-border,
-div[data-aux-pane-open="true"] .bg-background:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]) {
+div[role="region"][aria-label="Terminal"],
+div:has(> [aria-label="Auxiliary Pane"]),
+[aria-label="Auxiliary Pane"] > div:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]),
+[aria-label="Auxiliary Pane"] .shrink-0,
+[aria-label="Auxiliary Pane"] .flex-grow,
+[aria-label="Auxiliary Pane"] .border-b,
+[aria-label="Auxiliary Pane"] .border-border,
+[aria-label="Auxiliary Pane"] .bg-background:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]) {
   background-color: transparent !important;
   background-image: none !important;
   background: transparent !important;
 }
 
-/* 12.2 【右】仅在展开的右侧独立会话抽屉展示右壁纸 (彻底移除终端选择器，杜绝与中壁纸争抢冲突) */
-div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
-div[data-aux-pane-open="true"] [class*="terminal-drawer"] {
+${!isRightNone ? `
+/* 12.2 【右】右侧独立会话抽屉（Conversations Drawer）：无论辅助面板标记状态均生效，彻底消除黑屏 */
+[aria-label="Auxiliary Pane"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full,
+div[role="region"][aria-label="Terminal"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full,
+div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
+[class*="terminal-drawer"] {
   position: relative !important;
   background-color: transparent !important;
   background-image: 
@@ -1871,19 +1931,7 @@ div[data-aux-pane-open="true"] [class*="terminal-drawer"] {
   background-repeat: no-repeat !important;
   border-left: 1px solid rgba(249, 168, 212, 0.35) !important;
   box-shadow: none !important;
-}
-
-/* 严禁右壁纸污染整个辅助面板、Overview总览、任务时间线、Artifact工件预览或Review审查区！ */
-[aria-label="Auxiliary Pane"],
-[aria-label="Auxiliary Pane"] > div:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]),
-[aria-label="Overview"],
-[aria-label="Review"],
-div[role="region"][aria-label="Overview"],
-div[data-aux-pane-open="true"] [aria-label="Auxiliary Pane"],
-div[data-aux-pane-open="true"] .py-3.flex.h-full.w-full.flex-col.gap-6.flex-grow.min-h-0.overflow-y-auto {
-  background-image: none !important;
-  background-color: transparent !important;
-  background: transparent !important;
+  contain: paint !important;
 }
 
 .antigravity-slot-video[data-slot="right"] {
@@ -1896,6 +1944,26 @@ div[data-aux-pane-open="true"] .py-3.flex.h-full.w-full.flex-col.gap-6.flex-grow
   object-position: ${posRight} !important;
   pointer-events: none !important;
   z-index: 0 !important;
+  contain: strict !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  will-change: transform !important;
+}
+` : ''}
+
+/* 拖拽与缩放时禁用过渡动画，实现 60FPS 零延迟跟随 */
+body.is-resizing,
+body.is-resizing * {
+  transition: none !important;
+  user-select: none !important;
+}
+
+.antigravity-slot-video {
+  pointer-events: none !important;
+  contain: strict !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  will-change: transform !important;
 }
 
 div:has([id="antigravity.agentSidePanelInputBox"]) > div,
@@ -1957,12 +2025,11 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div:not([cla
    16. 【设置】设置对话框专属插画壁纸与水晶磨砂视效
    ========================================================================== */
 [data-radix-dialog-overlay] {
-  background-color: rgba(5, 7, 16, 0.72) !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
+  background-color: rgba(5, 7, 16, 0.85) !important;
   z-index: 998 !important;
 }
 
+${!isSettingsNone ? `
 [role="dialog"],
 div[data-state="open"]:has(div.bg-sidebar),
 div.settings-modal-container {
@@ -1997,6 +2064,7 @@ div.settings-modal-container {
   z-index: 0 !important;
   border-radius: 20px !important;
 }
+` : ''}
 
 [role="dialog"] .bg-background,
 [role="dialog"] [class*="bg-background"],
@@ -2016,8 +2084,7 @@ div.settings-modal-container {
 [role="dialog"] [class*="bg-sidebar"],
 [role="dialog"] div.flex:has(> div.h-full.w-full.flex.flex-col.bg-sidebar) {
   background-color: rgba(9, 12, 24, 0.60) !important;
-  backdrop-filter: blur(6px) !important;
-  -webkit-backdrop-filter: blur(6px) !important;
+  background-color: rgba(18, 20, 34, 0.95) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.30) !important;
   contain: paint !important;
@@ -2067,9 +2134,7 @@ div.settings-modal-container {
 [role="dialog"] div.rounded-xl.border,
 [role="dialog"] div[class*="rounded-xl"][class*="border"],
 [role="dialog"] div[class*="divide-y"] {
-  background-color: rgba(12, 16, 32, 0.58) !important;
-  backdrop-filter: blur(6px) !important;
-  -webkit-backdrop-filter: blur(6px) !important;
+  background-color: rgba(12, 16, 32, 0.88) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 14px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
@@ -2162,6 +2227,28 @@ div.settings-modal-container {
 }
 
 function getClientVideoScript(config) {
+  if (config && config.isOriginal) {
+    return `
+    (function() {
+      try {
+        if (window.__antigravityVideoVisibilityObserver) {
+          window.__antigravityVideoVisibilityObserver.disconnect();
+          window.__antigravityVideoVisibilityObserver = null;
+        }
+        const vids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
+        for (let i = 0; i < vids.length; i++) {
+          try {
+            vids[i].pause();
+            vids[i].removeAttribute('src');
+            vids[i].load();
+            vids[i].remove();
+          } catch(e) {}
+        }
+      } catch(e) {}
+    })();
+    `;
+  }
+
   const configJson = JSON.stringify(config || {});
   const posLeft = getSlotPosition(config, 'left');
   const posMid = getSlotPosition(config, 'mid');
@@ -2197,8 +2284,8 @@ function getClientVideoScript(config) {
       if (v.style.display === 'none' || v.style.visibility === 'hidden') return false;
       const p = v.parentElement;
       if (!p) return false;
-      if (p.offsetWidth === 0 && p.offsetHeight === 0) return false;
       if (p.style && (p.style.display === 'none' || p.style.visibility === 'hidden')) return false;
+      if (p.hasAttribute && p.hasAttribute('hidden')) return false;
       if (p.closest && p.closest('[hidden], [aria-hidden="true"], [data-state="closed"]')) return false;
       return true;
     }
@@ -2338,6 +2425,10 @@ function getClientVideoScript(config) {
         const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
         let leftVid = document.getElementById('antigravity-video-left');
         if (leftVid && leftVid.isConnected && leftVid.dataset.currentSrc === src) {
+          leftVid.style.transform = 'translateZ(0)';
+          leftVid.style.contain = 'strict';
+          leftVid.style.backfaceVisibility = 'hidden';
+          leftVid.style.willChange = 'transform';
           if (document.body && leftVid.parentElement !== document.body) {
             document.body.prepend(leftVid);
           }
@@ -2385,8 +2476,10 @@ function getClientVideoScript(config) {
             leftVid.style.objectPosition = '${posLeft}';
             leftVid.style.zIndex = '0';
             leftVid.style.pointerEvents = 'none';
-            leftVid.style.transform = 'translate3d(0, 0, 0)';
-            leftVid.style.contain = 'layout paint';
+            leftVid.style.transform = 'translateZ(0)';
+            leftVid.style.contain = 'strict';
+            leftVid.style.backfaceVisibility = 'hidden';
+            leftVid.style.willChange = 'transform';
             leftVid.style.display = 'block';
             if (posterSrc) {
               leftVid.poster = posterSrc;
@@ -2451,8 +2544,10 @@ function getClientVideoScript(config) {
           '[data-panel="terminal"]'
         ],
         'right': [
-          'div[data-aux-pane-open="true"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background',
-          'div[data-aux-pane-open="true"] [class*="terminal-drawer"]'
+          '[aria-label="Auxiliary Pane"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full',
+          'div[role="region"][aria-label="Terminal"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full',
+          'div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background',
+          '[class*="terminal-drawer"]'
         ],
         'bottom': [
           '[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
@@ -2466,14 +2561,22 @@ function getClientVideoScript(config) {
           'div[data-state="open"]:has(div.bg-sidebar)',
           'div.settings-modal-container'
         ]
-      };
-
       for (const slotKey in slotSelectors) {
         const slotData = config[slotKey];
         const isVideo = slotData && slotData.type === 'video' && slotData.file;
         const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : ('?v=' + Date.now());
         const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
-        const posterSrc = (isVideo && slotData.poster) ? (SERVER_URL + '/' + encodeURIComponent(slotData.poster) + vParam) : '';
+        let posterSrc = (isVideo && slotData.poster) ? (SERVER_URL + '/' + encodeURIComponent(slotData.poster) + vParam) : '';
+        try {
+          if (isVideo && slotData.poster) {
+            const pPath = path.join(wallpapersDir, slotData.poster);
+            if (fs.existsSync(pPath)) {
+              const ext = path.extname(pPath).toLowerCase();
+              const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
+              posterSrc = 'data:' + mime + ';base64,' + fs.readFileSync(pPath).toString('base64');
+            }
+          }
+        } catch(e) {}
         const selectors = slotSelectors[slotKey];
 
         if (!isVideo) {
@@ -2546,6 +2649,10 @@ function getClientVideoScript(config) {
             }
             let vid = allSlotVidsInContainer[0];
             if (vid && vid.dataset.currentSrc === src) {
+              vid.style.transform = 'translateZ(0)';
+              vid.style.contain = 'strict';
+              vid.style.backfaceVisibility = 'hidden';
+              vid.style.willChange = 'transform';
               syncVideoPlaybackState(vid);
               continue;
             }
@@ -2580,8 +2687,10 @@ function getClientVideoScript(config) {
               vid.style.objectPosition = slotPositions[slotKey] || 'center center';
               vid.style.pointerEvents = 'none';
               vid.style.zIndex = '0';
-              vid.style.transform = 'translate3d(0, 0, 0)';
-              vid.style.contain = 'layout paint';
+              vid.style.transform = 'translateZ(0)';
+              vid.style.contain = 'strict';
+              vid.style.backfaceVisibility = 'hidden';
+              vid.style.willChange = 'transform';
               vid.style.display = 'block';
               if (posterSrc) {
                 vid.poster = posterSrc;
@@ -2610,6 +2719,8 @@ function getClientVideoScript(config) {
                   targetContainer.style.position = 'relative';
                 }
                 targetContainer.style.overflow = 'hidden';
+                targetContainer.style.contain = 'paint';
+                targetContainer.style.willChange = 'transform';
               }
               targetContainer.prepend(vid);
             }
@@ -2704,6 +2815,9 @@ function getClientVideoScript(config) {
         if (!isRelevant) return;
       }
 
+      if (window.__isDraggingSplit || (document.body && document.body.classList.contains('is-resizing'))) {
+        return;
+      }
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(function() {
         debounceTimer = null;
@@ -2720,6 +2834,62 @@ function getClientVideoScript(config) {
       attributes: true,
       attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
     });
+
+    // 拖拽与窗口缩放 60FPS 性能优化：监听分栏拖拽与窗口尺寸变动
+    let resizeThrottleTimer = null;
+    const onDragStart = function(e) {
+      const target = e.target;
+      if (!target) return;
+      let isHandle = false;
+      if (target.classList && (target.classList.contains('cursor-col-resize') || target.classList.contains('cursor-row-resize'))) {
+        isHandle = true;
+      } else {
+        try {
+          const cs = window.getComputedStyle(target);
+          if (cs && cs.cursor && cs.cursor.includes('resize')) isHandle = true;
+        } catch(err) {}
+      }
+      if (isHandle) {
+        window.__isDraggingSplit = true;
+        if (document.body) document.body.classList.add('is-resizing');
+      }
+    };
+    const onDragEnd = function() {
+      if (window.__isDraggingSplit) {
+        window.__isDraggingSplit = false;
+        if (document.body) document.body.classList.remove('is-resizing');
+        if (window.__antigravityApplyVideos) {
+          window.__antigravityApplyVideos();
+        }
+      }
+    };
+    const onWindowResize = function() {
+      if (document.body) document.body.classList.add('is-resizing');
+      if (resizeThrottleTimer) clearTimeout(resizeThrottleTimer);
+      resizeThrottleTimer = setTimeout(function() {
+        resizeThrottleTimer = null;
+        if (document.body) document.body.classList.remove('is-resizing');
+        if (window.__antigravityApplyVideos) {
+          window.__antigravityApplyVideos();
+        }
+      }, 150);
+    };
+
+    try {
+      if (window.__antigravityDragStartHandler) {
+        window.removeEventListener('pointerdown', window.__antigravityDragStartHandler, true);
+        window.removeEventListener('pointerup', window.__antigravityDragEndHandler, true);
+        window.removeEventListener('pointercancel', window.__antigravityDragEndHandler, true);
+        window.removeEventListener('resize', window.__antigravityResizeHandler);
+      }
+      window.__antigravityDragStartHandler = onDragStart;
+      window.__antigravityDragEndHandler = onDragEnd;
+      window.__antigravityResizeHandler = onWindowResize;
+      window.addEventListener('pointerdown', onDragStart, true);
+      window.addEventListener('pointerup', onDragEnd, true);
+      window.addEventListener('pointercancel', onDragEnd, true);
+      window.addEventListener('resize', onWindowResize);
+    } catch(e) {}
 
     if (window.__antigravitySyncInterval) {
       clearInterval(window.__antigravitySyncInterval);
@@ -2739,7 +2909,7 @@ function getClientVideoScript(config) {
   `;
 }
 
-function triggerLiveHotReload(css, slotsConfig, onComplete) {
+function triggerLiveHotReload(arg1, arg2, onComplete) {
   return new Promise((resolve) => {
     const finish = () => {
       if (typeof onComplete === 'function') {
@@ -2749,8 +2919,14 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
     };
 
     try {
-      const activeConfig = slotsConfig || loadSlotsConfig();
-      const activeCss = css || (fs.existsSync(customCssPath) ? fs.readFileSync(customCssPath, 'utf-8') : '');
+      let activeConfig, activeCss;
+      if (typeof arg1 === 'string') {
+        activeCss = arg1;
+        activeConfig = (arg2 && typeof arg2 === 'object') ? arg2 : loadSlotsConfig();
+      } else {
+        activeConfig = (arg1 && typeof arg1 === 'object') ? arg1 : loadSlotsConfig();
+        activeCss = typeof arg2 === 'string' ? arg2 : (fs.existsSync(customCssPath) ? fs.readFileSync(customCssPath, 'utf-8') : '');
+      }
       http.get('http://127.0.0.1:8314/json', (res) => {
         let data = '';
         res.on('data', chunk => data += chunk);
@@ -2767,6 +2943,25 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
                     let titlebarFix = document.getElementById('antigravity-titlebar-fix');
                     if (titlebarFix) {
                       titlebarFix.textContent = [
+                        '/* 6.3 顶部更新按钮与控制按钮高优先级点击保证 (Titlebar Buttons & Update Button Responsiveness) */',
+                        '[data-testid*="update"],',
+                        '[data-testid="app-update-button"],',
+                        '[aria-label*="update" i],',
+                        '[aria-label*="Update" i],',
+                        'header button,',
+                        'header [role="button"],',
+                        'header a,',
+                        '[class*="titlebar"] button,',
+                        '[class*="titlebar"] [role="button"],',
+                        '[class*="titlebar"] a,',
+                        'div.absolute.top-0 button,',
+                        'div.absolute.top-0 [role="button"],',
+                        '.titlebar-button,',
+                        '#antigravity-update-modal button {',
+                        '  -webkit-app-region: no-drag !important;',
+                        '  pointer-events: auto !important;',
+                        '  cursor: pointer !important;',
+                        '}',
                         '/* 6.1 顶部标题栏与窗口原生控制按钮防碰撞防御 (Windows Electron Native Window Controls Collision Prevention) */',
                         'div.absolute.top-0.right-0.z-50.flex.items-center.shrink-0,',
                         'div.absolute.top-0:has(> div > [data-testid="toggle-aux-sidebar"]),',
@@ -2776,7 +2971,9 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
                         '}',
                         '/* 辅助面板展开时顶栏标签页与加号按钮右侧内边距，确保不被最大化/侧边栏切换按钮遮挡 (64px按钮组 + 8px自然间距 = 72px) */',
                         'div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),',
-                        'div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]) {',
+                        '[aria-label="Auxiliary Pane"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),',
+                        'div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]),',
+                        '[aria-label="Auxiliary Pane"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]) {',
                         '  padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 72px) !important;',
                         '}',
                         '/* 当辅助面板收起时，主对话顶栏更多操作容器紧邻侧边栏切换按钮，严格限定于父级容器，杜绝子元素重复嵌套叠加 padding (32px单按钮 + 10px自然间距 = 42px) */',
@@ -2794,9 +2991,7 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
                         '}',
                         'div.absolute.top-full:has(button),',
                         'div.absolute.top-full.border.shadow-lg {',
-                        '  background: rgba(22, 24, 34, 0.94) !important;',
-                        '  backdrop-filter: blur(6px) !important;',
-                        '  -webkit-backdrop-filter: blur(6px) !important;',
+                        '  background: rgba(22, 24, 34, 0.96) !important;',
                         '  border: 1px solid rgba(255, 255, 255, 0.12) !important;',
                         '  border-radius: 8px !important;',
                         '  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5) !important;',
@@ -2814,6 +3009,10 @@ function triggerLiveHotReload(css, slotsConfig, onComplete) {
                         '  color: #ffffff !important;',
                         '}'
                       ].join('\\n');
+                    }
+                    let link = document.getElementById('antigravity-custom-theme-link');
+                    if (link) {
+                      link.href = 'http://127.0.0.1:8315/custom_theme.css?v=' + Date.now();
                     }
                     let s = document.getElementById('antigravity-custom-theme');
                     if (!s) {
@@ -2975,6 +3174,7 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
   } else {
     delete slotsConfig[slotKey].unsupportedCodec;
   }
+  slotsConfig.isOriginal = false;
   saveSlotsConfig(slotsConfig);
   console.log(`✓ slots_config.json 已更新配置`);
 
@@ -3022,6 +3222,7 @@ async function revertToBaseline() {
     };
   }
   baselineConfig.fontColor = FONT_PRESETS['pure-white'];
+  baselineConfig.isOriginal = false;
   saveSlotsConfig(baselineConfig);
 
   console.log(`✓ 初版文件已全部还原，正在重新编译并输出黄金基线样式...`);
@@ -3223,6 +3424,21 @@ function listFontPresets() {
 
 function listSlotsStatus() {
   const config = loadSlotsConfig();
+  if (config && config.isOriginal) {
+    console.log('=======================================================');
+    console.log('   🛡️ Antigravity 壁纸槽位状态一览');
+    console.log('=======================================================');
+    console.log('');
+    console.log('   当前模式: 🛡️ [官方原版纯净模式 (Official Vanilla)]');
+    console.log('   运行状态: 零自定义壁纸、零视频硬件解码、零毛玻璃，极致原生流畅');
+    console.log('');
+    console.log('💡 随时一键切回个性化壁纸:');
+    console.log('   • 恢复原版前的个性化配置: node core/theme_engine.js --apply-preset "恢复原版前的个性化配置"');
+    console.log('   • 或应用已有预设: node core/theme_engine.js --apply-preset 1');
+    console.log('   • 或运行批处理菜单: bin\\preset_manager.bat');
+    console.log('=======================================================');
+    return;
+  }
   const font = resolveFontColor(config.fontColor);
   console.log('=======================================================');
   console.log('   🌸 Antigravity 壁纸槽位状态一览');
@@ -3231,14 +3447,15 @@ function listSlotsStatus() {
   console.log(`🎨 当前字体颜色: 【${font.name}】 (${font.primary}) [${font.desc}]`);
   console.log('');
   for (const [key, item] of Object.entries(config)) {
-    if (key === 'fontColor') continue;
+    if (key === 'fontColor' || !item || typeof item !== 'object' || !item.file) continue;
     const isVid = item.type === 'video';
     const typeLabel = isVid ? '🎬 [动态视频]' : '🖼️ [静态壁纸]';
     const filePath = path.join(wallpapersDir, item.file);
     const exists = fs.existsSync(filePath);
     const size = exists ? (fs.statSync(filePath).size / 1024 / 1024).toFixed(2) + ' MB' : '未找到文件';
     const pos = getSlotPosition(config, key);
-    console.log(`槽位 [${key.padEnd(8)}] (${item.desc}):`);
+    const desc = item.desc || (SLOTS_META[key] ? SLOTS_META[key].desc : key);
+    console.log(`槽位 [${key.padEnd(8)}] (${desc}):`);
     console.log(`   类型: ${typeLabel}`);
     console.log(`   🎯 位置: ${pos}`);
     console.log(`   文件: ${item.file} (${size})`);
@@ -3839,6 +4056,7 @@ async function applyPreset(nameOrIndex) {
       targetConfig.fontColor = current.fontColor;
     }
   }
+  targetConfig.isOriginal = false;
   saveSlotsConfig(targetConfig);
   console.log(`✓ slots_config.json 已更新为预设配置`);
 
@@ -3882,6 +4100,82 @@ function deletePreset(nameOrIndex) {
 }
 
 /**
+ * Restores Antigravity to official vanilla state:
+ * 1. Automatically snapshots active custom wallpaper/font configuration to "恢复原版前的个性化配置" preset
+ * 2. Creates slots_config.pre_vanilla_backup.json safety backup
+ * 3. Writes vanilla slots_config.json (isOriginal: true)
+ * 4. Generates minimal vanilla custom_theme.css (hiding body::before and video players)
+ * 5. Triggers 0.3s seamless hot reload via CDP 8314 (pausing & removing all video DOM elements)
+ */
+async function restoreOriginal() {
+  console.log('=======================================================');
+  console.log('   🛡️ 正在执行：一键恢复 Antigravity 官方原版纯净模式');
+  console.log('=======================================================');
+
+  const currentConfig = loadSlotsConfig();
+
+  // 1. 自动安全快照备份（若当前非原版模式且存在配置）
+  if (!currentConfig.isOriginal) {
+    console.log('[1/4] 正在为当前个性化壁纸与字体配置创建安全快照预设...');
+    const snapshotName = '恢复原版前的个性化配置';
+    const snapshotDesc = `在恢复官方原版前由系统自动创建的安全快照 (${new Date().toLocaleString()})`;
+    try {
+      savePreset(snapshotName, snapshotDesc);
+      console.log(`✓ 已自动归档至独立预设: 【${snapshotName}】`);
+    } catch (e) {
+      console.warn(`⚠️ 自动快照保存出现警告: ${e.message}`);
+    }
+    try {
+      const backupPath = path.join(antigravityDir, 'slots_config.pre_vanilla_backup.json');
+      fs.writeFileSync(backupPath, JSON.stringify(currentConfig, null, 2), 'utf8');
+    } catch (e) {}
+  } else {
+    console.log('[1/4] 当前已处于官方原版模式，跳过重复快照。');
+  }
+
+  // 2. 构建纯净原版配置
+  console.log('[2/4] 生成官方原版配置并重置 slots_config.json...');
+  const vanillaConfig = {
+    isOriginal: true,
+    version: Date.now(),
+    left: { key: 'left', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
+    mid: { key: 'mid', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
+    right: { key: 'right', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
+    bottom: { key: 'bottom', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
+    settings: { key: 'settings', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
+    fontColor: FONT_PRESETS['pure-white']
+  };
+  saveSlotsConfig(vanillaConfig);
+  console.log('✓ slots_config.json 已重置为官方原版');
+
+  // 3. 输出极简原版样式
+  console.log('[3/4] 编译极简纯净样式表 (移除所有透明毛玻璃与壁纸覆盖)...');
+  const css = generateMasterCss(vanillaConfig);
+  fs.writeFileSync(customCssPath, css, 'utf-8');
+  try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch (e) {}
+  console.log(`✓ custom_theme.css 已重置为官方纯净版 (${(css.length / 1024).toFixed(2)} KB)`);
+
+  // 4. 触发 CDP 0.3s 热重载，卸载视频并重置样式
+  console.log('[4/4] 触发界面 0.3 秒极速热重载与视频播放器彻底卸载 (CDP 8314)...');
+  const reloadPromise = await triggerLiveHotReload(css, vanillaConfig);
+
+  console.log('');
+  console.log('=======================================================');
+  console.log('✨ 已成功恢复为【Google Antigravity 官方原版纯净模式】！');
+  console.log('=======================================================');
+  console.log('   • 视频硬件解码器已彻底卸载，CPU/GPU 零无效能耗');
+  console.log('   • 自定义透明度与毛玻璃滤镜已移除，界面回归官方原生');
+  console.log('   • 原有个性化壁纸与位置已安全保存至预设【恢复原版前的个性化配置】');
+  console.log('');
+  console.log('💡 随时一键切回壁纸配置:');
+  console.log('   • 命令行: node core/theme_engine.js --apply-preset "恢复原版前的个性化配置"');
+  console.log('   • 或运行: bin\\preset_manager.bat / bin\\swap_wallpaper.bat');
+  console.log('=======================================================');
+  console.log('');
+  return reloadPromise;
+}
+
+/**
  * Prints comprehensive help message for theme engine CLI.
  */
 function printHelp() {
@@ -3889,6 +4183,10 @@ function printHelp() {
 ================================================================================
   🚀 Antigravity Theme Engine —— 壁纸、位置微调与预设管理引擎
 ================================================================================
+
+【恢复官方原版纯净模式 (Restore Vanilla)】:
+  node core/theme_engine.js --restore-original
+      一键恢复 Antigravity 官方原版 (纯净无壁纸、无视频硬解、零能耗，自动快照当前配置)
 
 【壁纸预设管理 (Wallpaper Presets)】:
   node core/theme_engine.js --save-preset <预设名称> [描述]
@@ -3924,6 +4222,17 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   if (args[0] === '--help' || args[0] === '-h' || args[0] === 'help') {
     printHelp();
+  } else if (
+    args[0] === '--restore-original' || args[0] === '--original' || args[0] === '--vanilla' ||
+    args[0] === '--restore-vanilla' || args[0] === 'restore-original' || args[0] === 'original' ||
+    args[0] === 'vanilla'
+  ) {
+    restoreOriginal().then(ok => {
+      if (!ok) process.exit(1);
+    }).catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
   } else if (
     args[0] === '--save-preset' || args[0] === '--save' || args[0] === 'save-preset' ||
     args[0] === 'save'
@@ -4158,6 +4467,7 @@ module.exports = {
   getWallpaperById,
   formatWallpaperTable,
   generateMasterCss,
+  restoreOriginal,
   revertToBaseline,
   loadSlotsConfig,
   saveSlotsConfig,
@@ -4195,6 +4505,7 @@ module.exports = {
   SLOTS,
   SLOTS_META,
   SLOT_ALIASES,
+  ensureMp4Faststart,
   VIDEO_EXTS,
   IMAGE_EXTS
 };

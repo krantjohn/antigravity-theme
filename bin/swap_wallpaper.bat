@@ -104,6 +104,18 @@ if /i "%arg1%"=="apply-preset" (
     node "%~dp0..\core\theme_engine.js" %*
     exit /b %ERRORLEVEL%
 )
+if /i "%arg1%"=="restore-original" (
+    node "%~dp0..\core\theme_engine.js" --restore-original
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="vanilla" (
+    node "%~dp0..\core\theme_engine.js" --restore-original
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="original" (
+    node "%~dp0..\core\theme_engine.js" --restore-original
+    exit /b %ERRORLEVEL%
+)
 if "%arg1:~0,1%"=="-" (
     node "%~dp0..\core\theme_engine.js" %*
 ) else (
@@ -114,7 +126,7 @@ exit /b %ERRORLEVEL%
 :MENU
 cls
 echo =======================================================
-echo    🌸 Antigravity Theme Customizer —— 壁纸与样式中心 
+echo    🌸 Antigravity Theme Customizer —— 壁纸与样式主菜单 
 echo =======================================================
 echo.
 echo   [1] 更换本地壁纸 (输入路径或直接拖入视频/图片)
@@ -124,10 +136,11 @@ echo   [4] 调节各个位置壁纸的位置 (上下/左右微调与居中复位
 echo   [5] 自定义字体颜色与预设 (解决亮/暗壁纸字体不清问题)
 echo   [6] 预设管理中心 (保存当前壁纸全套配置 / 一键切换预设)
 echo   [7] 查看当前各个槽位与字体状态 
-echo   [8] 退出 
+echo   [8] 一键恢复官方原版 (纯净无壁纸，极致流畅，自动备份当前配置)
+echo   [9] 退出 
 echo.
 set "choice="
-set /p "choice=请选择操作 (1-8) [默认 1]: "
+set /p "choice=请选择操作 (1-9) [默认 1]: "
 if not defined choice set "choice=1"
 if "%choice%"=="1" goto LOCAL_SWAP
 if "%choice%"=="2" goto WE_LIST
@@ -136,7 +149,8 @@ if "%choice%"=="4" goto POS_MENU
 if "%choice%"=="5" goto FONT_MENU
 if "%choice%"=="6" goto PRESET_MENU
 if "%choice%"=="7" goto VIEW_STATUS
-if "%choice%"=="8" goto EXIT
+if "%choice%"=="8" goto RESTORE_ORIGINAL_PROMPT
+if "%choice%"=="9" goto EXIT
 goto MENU
 
 :LOCAL_SWAP
@@ -322,6 +336,27 @@ goto MENU
 :VIEW_STATUS
 echo.
 node "%~dp0..\core\theme_engine.js" --status
+echo.
+pause
+goto MENU
+
+:RESTORE_ORIGINAL_PROMPT
+echo.
+echo -------------------------------------------------------
+echo   [8] 一键恢复官方原版纯净模式 
+echo -------------------------------------------------------
+echo 恢复官方原生深色外观，彻底关闭壁纸与视频硬件解码，恢复极致性能。
+echo 系统将自动把当前个性化壁纸与位置备份为预设【恢复原版前的个性化配置】。
+echo.
+set "confirm_orig="
+set /p "confirm_orig=确定要恢复官方原版纯净模式吗？(Y/n): "
+if /i "%confirm_orig%"=="n" (
+    echo 已取消恢复。
+    pause
+    goto MENU
+)
+echo.
+node "%~dp0..\core\theme_engine.js" --restore-original
 echo.
 pause
 goto MENU

@@ -73,6 +73,18 @@ if /i "%arg1%"=="delete" (
         exit /b %ERRORLEVEL%
     )
 )
+if /i "%arg1%"=="restore-original" (
+    node "%~dp0..\core\theme_engine.js" --restore-original
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="vanilla" (
+    node "%~dp0..\core\theme_engine.js" --restore-original
+    exit /b %ERRORLEVEL%
+)
+if /i "%arg1%"=="original" (
+    node "%~dp0..\core\theme_engine.js" --restore-original
+    exit /b %ERRORLEVEL%
+)
 if "%arg1:~0,1%"=="-" (
     node "%~dp0..\core\theme_engine.js" %*
 ) else (
@@ -92,10 +104,11 @@ echo   [3] 保存当前壁纸与位置为新预设
 echo   [4] 查看指定预设的详细信息 
 echo   [5] 删除指定预设 
 echo   [6] 打开壁纸与样式主菜单 (更换壁纸/微调位置/字体)
+echo   [7] 一键恢复官方原版 (纯净官方外观，自动备份当前配置为预设)
 echo   [0] 退出 
 echo.
 set "choice="
-set /p "choice=请选择操作 (0-6) [默认 1]: "
+set /p "choice=请选择操作 (0-7) [默认 1]: "
 if not defined choice set "choice=1"
 if "%choice%"=="1" goto LIST_PRESETS
 if "%choice%"=="2" goto APPLY_PROMPT
@@ -103,6 +116,7 @@ if "%choice%"=="3" goto SAVE_PROMPT
 if "%choice%"=="4" goto INFO_PROMPT
 if "%choice%"=="5" goto DEL_PROMPT
 if "%choice%"=="6" goto GOTO_MAIN_MENU
+if "%choice%"=="7" goto RESTORE_ORIGINAL_PROMPT
 if "%choice%"=="0" goto EXIT
 goto MENU
 
@@ -196,6 +210,27 @@ if /i not "%confirm_del%"=="y" (
 )
 echo.
 node "%~dp0..\core\theme_engine.js" --delete-preset "%del_target%"
+echo.
+pause
+goto MENU
+
+:RESTORE_ORIGINAL_PROMPT
+echo.
+echo -------------------------------------------------------
+echo   [7] 一键恢复官方原版纯净模式 
+echo -------------------------------------------------------
+echo 恢复官方原生深色外观，彻底关闭壁纸与视频硬件解码，恢复极致性能。
+echo 系统将自动把当前个性化壁纸与位置备份为预设【恢复原版前的个性化配置】。
+echo.
+set "confirm_orig="
+set /p "confirm_orig=确定要恢复官方原版纯净模式吗？(Y/n): "
+if /i "%confirm_orig%"=="n" (
+    echo 已取消恢复。
+    pause
+    goto MENU
+)
+echo.
+node "%~dp0..\core\theme_engine.js" --restore-original
 echo.
 pause
 goto MENU

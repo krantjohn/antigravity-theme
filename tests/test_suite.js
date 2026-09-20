@@ -8,6 +8,7 @@ const {
   scanWorkshopWallpapers,
   getWallpaperById,
   generateMasterCss,
+  restoreOriginal,
   revertToBaseline,
   loadSlotsConfig,
   saveSlotsConfig,
@@ -318,7 +319,7 @@ async function runTests() {
     new Promise((resolve) => {
       const start = Date.now();
       const check = () => {
-        const hasContainer = !!document.querySelector('div[data-aux-pane-open="true"] .terminal.xterm, [class*="terminal-drawer"]');
+        const hasContainer = !!document.querySelector('[aria-label="Auxiliary Pane"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full, div[role="region"][aria-label="Terminal"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full, div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background, [class*="terminal-drawer"]');
         const vids = document.querySelectorAll('.antigravity-slot-video[data-slot="right"]');
         const v = vids[0];
         if (v && v.paused) {
@@ -371,7 +372,7 @@ async function runTests() {
   const hasToggleBtn = await evalCdp(`!!document.querySelector('button[aria-label="Toggle Auxiliary Pane"]')`);
   if (hasToggleBtn) {
     // 确保辅助面板打开
-    const isAuxOpen = await evalCdp(`!!document.querySelector('div[data-aux-pane-open="true"]')`);
+    const isAuxOpen = await evalCdp(`!!document.querySelector('[aria-label="Auxiliary Pane"], div[data-aux-pane-open="true"]')`);
     if (!isAuxOpen) {
       await evalCdp(`document.querySelector('button[aria-label="Toggle Auxiliary Pane"]').click()`);
       await new Promise(r => setTimeout(r, 600));
@@ -1060,8 +1061,68 @@ async function runTests() {
 
   console.log('✓ [Test 16] 壁纸全套配置保存、独立素材归档、一键应用与 CDP 0.3s 热重载闭环测试全部通过');
 
+  // Test 17: 一键恢复官方原版纯净模式与安全快照备份闭环测试
+  console.log('\n[Test 17] 校验一键恢复官方原版纯净模式 (Restore Vanilla) 闭环流程...');
+
+  // 17.1 执行 restoreOriginal()
+  console.log('   正在触发 restoreOriginal()...');
+  const restoreOk = await restoreOriginal();
+  assert.strictEqual(restoreOk, true, 'restoreOriginal should resolve true');
+
+  // 17.2 验证安全快照预设是否自动创建
+  const snapshotPreset = getPresetDetails('恢复原版前的个性化配置');
+  assert.ok(snapshotPreset, '自动安全快照预设【恢复原版前的个性化配置】必须存在');
+  assert.ok(fs.existsSync(path.join(antigravityDir, 'slots_config.pre_vanilla_backup.json')), 'slots_config.pre_vanilla_backup.json 必须存在');
+  console.log('   ✓ 恢复原版前当前壁纸配置与素材安全快照预设归档校验通过');
+
+  // 17.3 验证 slots_config.json 处于 isOriginal: true 状态
+  const vanillaCfg = loadSlotsConfig();
+  assert.strictEqual(vanillaCfg.isOriginal, true, 'slots_config.json must have isOriginal: true');
+  console.log('   ✓ slots_config.json 原版标志位校验通过');
+
+  // 17.4 验证 custom_theme.css 生成为纯净官方样式
+  const vanillaCssContent = fs.readFileSync(customCssPath, 'utf8');
+  assert.ok(vanillaCssContent.includes('Antigravity Official Vanilla Theme'), 'custom_theme.css must contain vanilla theme header');
+  assert.ok(vanillaCssContent.includes('body::before'), 'custom_theme.css must hide body::before');
+  assert.strictEqual(vanillaCssContent.includes('backdrop-filter: blur'), false, 'Vanilla CSS must not contain backdrop blur filters');
+  console.log('   ✓ custom_theme.css 官方纯净重置样式校验通过');
+
+  // 17.5 验证 CDP DOM 中所有视频元素已彻底卸载
+  await new Promise(r => setTimeout(r, 600));
+  const cdpVanillaCheck = await evalCdp(`
+    (() => {
+      const vids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
+      const styleEl = document.getElementById('antigravity-custom-theme');
+      const isVanillaStyle = styleEl && styleEl.textContent && styleEl.textContent.includes('Official Vanilla Theme');
+      return JSON.stringify({
+        videoCount: vids.length,
+        isVanillaStyle
+      });
+    })()
+  `);
+  const cdpVanillaState = JSON.parse(cdpVanillaCheck);
+  console.log('   CDP 官方原版实时状态:', cdpVanillaState);
+  assert.strictEqual(cdpVanillaState.videoCount, 0, 'All video DOM elements must be removed in vanilla mode');
+  assert.strictEqual(cdpVanillaState.isVanillaStyle, true, 'DOM style element must contain vanilla theme CSS');
+  console.log('   ✓ CDP 0.3s 极速热重载验证通过: 视频完全卸载且官方纯净样式生效');
+
+  // 17.6 验证一键切回壁纸预设（无损还原）
+  console.log('   正在测试从官方原版一键切回用户壁纸预设...');
+  const reApplyOk = await applyPreset('默认活跃配置');
+  assert.strictEqual(reApplyOk, true, 'applyPreset must succeed');
+  const restoredFromVanilla = loadSlotsConfig();
+  assert.strictEqual(restoredFromVanilla.isOriginal, false, 'isOriginal must be reset to false after applying preset');
+  assert.strictEqual(restoredFromVanilla.left.type, 'video', 'Left slot must be video');
+  console.log('   ✓ 从官方原版切回个性化壁纸预设校验通过');
+
+  // 17.7 清理测试快照预设
+  deletePreset('恢复原版前的个性化配置');
+  console.log('   ✓ 临时快照清理完成');
+
+  console.log('✓ [Test 17] 一键恢复官方原版纯净模式、自动安全快照备份与切回闭环测试全部通过');
+
   console.log('\n=======================================================');
-  console.log('✨ 所有的 16 项单元与深度端到端实测全部通过 (PASS)！');
+  console.log('✨ 所有的 17 项单元与深度端到端实测全部通过 (PASS)！');
   console.log('=======================================================');
   } finally {
     await restoreUserWallpaperEnvironment();
