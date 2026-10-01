@@ -97,6 +97,10 @@ const electronNativeAPI = {
 const ideAPI = {
     isInstalled: () => electron_1.ipcRenderer.invoke('ide:is-installed'),
 };
+const wslAPI = {
+    getState: () => electron_1.ipcRenderer.invoke('wsl:get-state'),
+    connect: (distro) => electron_1.ipcRenderer.invoke('wsl:connect', distro),
+};
 electron_1.contextBridge.exposeInMainWorld('electronUpdater', updaterAPI);
 electron_1.contextBridge.exposeInMainWorld('dialog', dialogAPI);
 electron_1.contextBridge.exposeInMainWorld('nativeNotifications', notificationAPI);
@@ -107,46 +111,56 @@ electron_1.contextBridge.exposeInMainWorld('deepLink', deepLinkAPI);
 electron_1.contextBridge.exposeInMainWorld('agent', agentAPI);
 electron_1.contextBridge.exposeInMainWorld('electronNative', electronNativeAPI);
 electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
 // ================= Antigravity Master Theme & Dynamic Video Auto-Loader =================
 (function() {
   const SERVER_URL = 'http://127.0.0.1:8315';
-  let cachedConfig = {"left":{"key":"left","file":"left_wallpaper.mp4","type":"video","version":1790338043806,"position":"center center","desc":"AI主对话界面 / 全局底图","poster":"left_poster.jpg"},"mid":{"key":"mid","file":"mid_wallpaper.jpg","type":"image","position":"center 20%","desc":"终端界面 (活跃终端壁纸)"},"right":{"key":"right","file":"right_wallpaper.jpg","type":"image","position":"center 20%","desc":"最右侧界面 (独立终端/侧栏壁纸)"},"bottom":{"key":"bottom","file":"input_wallpaper.mp4","type":"video","version":1790398254742,"position":"50% 36%","desc":"底部输入框","poster":"input_poster.jpg"},"settings":{"key":"settings","file":"settings_wallpaper.png","type":"image","position":"center 65%","desc":"设置界面"},"fontColor":{"id":"pure-white","name":"纯白高对比 (Pure White)","primary":"#ffffff","secondary":"#f1f5f9","muted":"#94a3b8","terminal":"#ffffff","shadow":"0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)","terminalShadow":"0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)","isDarkText":false,"desc":"适合绝大多数暗色、炫彩或复杂壁纸，纯白字体配深色轮廓，极致清晰","aliases":["1","white","pure-white","纯白","白","高对比白"]},"isOriginal":false};
+  let cachedConfig = {"left":{"key":"left","file":"left_wallpaper.mp4","type":"video","version":1790842917156,"position":"center center","desc":"AI主对话界面 / 全局底图","poster":"left_poster.jpg"},"mid":{"key":"mid","file":"mid_wallpaper.jpg","type":"image","position":"center 20%","desc":"终端界面 (活跃终端壁纸)","version":1790842917156},"right":{"key":"right","file":"right_wallpaper.jpg","type":"image","position":"center 20%","desc":"最右侧界面 (独立终端/侧栏壁纸)","version":1790842917156},"bottom":{"key":"bottom","file":"input_wallpaper.mp4","type":"video","version":1790842917156,"position":"50% 36%","desc":"底部输入框","poster":"input_poster.jpg"},"settings":{"key":"settings","file":"settings_wallpaper.png","type":"image","position":"center 65%","desc":"设置界面","version":1790842917156},"fontColor":{"id":"pure-white","name":"纯白高对比 (Pure White)","primary":"#ffffff","secondary":"#f1f5f9","muted":"#94a3b8","terminal":"#ffffff","shadow":"0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)","terminalShadow":"0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)","isDarkText":false,"desc":"适合绝大多数暗色、炫彩或复杂壁纸，纯白字体配深色轮廓，极致清晰","aliases":["1","white","pure-white","纯白","白","高对比白"]},"isOriginal":false};
+  let _fs, _path, _os, _antigravityDir, _wallpapersDir;
   try {
-    const _fs = require('fs');
-    const _path = require('path');
-    const _os = require('os');
-    const _cfg = _path.join(process.env.ANTIGRAVITY_CONFIG_DIR || _path.join(_os.homedir(), '.gemini', 'antigravity'), 'slots_config.json');
+    _fs = require('fs');
+    _path = require('path');
+    _os = require('os');
+    _antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || _path.join(_os.homedir(), '.gemini', 'antigravity');
+    _wallpapersDir = _path.join(_antigravityDir, 'wallpapers');
+    const _cfg = _path.join(_antigravityDir, 'slots_config.json');
     if (_fs.existsSync(_cfg)) {
       const _data = JSON.parse(_fs.readFileSync(_cfg, 'utf8'));
       if (_data) cachedConfig = _data;
     }
   } catch(e) {}
+
+  function getBase64DataUri(fileName) {
+    if (!fileName || !_fs || !_path || !_wallpapersDir) return '';
+    try {
+      const p = _path.join(_wallpapersDir, fileName);
+      if (_fs.existsSync(p)) {
+        const ext = _path.extname(p).toLowerCase();
+        const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
+        return 'data:' + mime + ';base64,' + _fs.readFileSync(p).toString('base64');
+      }
+    } catch(e) {}
+    return '';
+  }
   let lastAppliedConfigHash = JSON.stringify(cachedConfig || {});
   let isFetching = false;
 
-  // Tick 0 极速挂载底图壁纸 (0ms 显示海报图并立即预载视频流，绝无开机黑屏与卡顿延迟)
+  // Tick 0 极速注入本地定制 CSS 主题 (0ms 无缝高保真界面呈现，杜绝白屏/黑屏与 HTTP 往返等待)
+  try {
+    const _localCss = _path.join(_antigravityDir, 'custom_theme.css');
+    if (_fs && _fs.existsSync(_localCss)) {
+      let instantTheme = document.getElementById('antigravity-custom-theme-instant');
+      if (!instantTheme) {
+        instantTheme = document.createElement('style');
+        instantTheme.id = 'antigravity-custom-theme-instant';
+        instantTheme.textContent = _fs.readFileSync(_localCss, 'utf8');
+        (document.head || document.documentElement).appendChild(instantTheme);
+      }
+    }
+  } catch(e) {}
+
+  // Tick 0 极速挂载底图壁纸 (0ms 显示高保真静态海报图并立即挂载至 documentElement，绝无开机黑屏与卡顿延迟)
   function mountTickZeroBase() {
     try {
       const cfg = (window.__antigravityConfig && window.__antigravityConfig.isOriginal) ? window.__antigravityConfig : (window.__antigravityConfig || cachedConfig);
@@ -154,18 +168,58 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
       const left = cfg.left;
       const vParam = (left && left.version) ? ('?v=' + left.version) : '';
       const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
-      let posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
-      try {
-        if (left && left.poster) {
-          const posterPath = _path.join(process.env.ANTIGRAVITY_CONFIG_DIR || _path.join(_os.homedir(), '.gemini', 'antigravity'), 'wallpapers', left.poster);
-          if (_fs.existsSync(posterPath)) {
-            const ext = _path.extname(posterPath).toLowerCase();
-            const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
-            posterSrc = 'data:' + mime + ';base64,' + _fs.readFileSync(posterPath).toString('base64');
-          }
-        }
-      } catch(e) {}
+      const posterSrc = (left && left.poster) ? (getBase64DataUri(left.poster) || (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam)) : '';
       const posLeft = (left && left.position) || '0% 45%';
+
+      const bottom = cfg.bottom;
+      const bottomPosterSrc = (bottom && bottom.poster) ? (getBase64DataUri(bottom.poster) || (SERVER_URL + '/' + encodeURIComponent(bottom.poster) + vParam)) : '';
+      const posBottom = (bottom && bottom.position) || '50% 36%';
+
+      // 0ms 高保真底图静态海报瞬发样式，杜绝开机黑屏/空白
+      let zeroLatencyStyle = document.getElementById('antigravity-zero-latency-style');
+      if (!zeroLatencyStyle && (posterSrc || bottomPosterSrc)) {
+        zeroLatencyStyle = document.createElement('style');
+        zeroLatencyStyle.id = 'antigravity-zero-latency-style';
+        const rules = [
+          'html {',
+          '  background-color: transparent !important;',
+          '}',
+          'html::before {',
+          '  content: "" !important;',
+          '  position: fixed !important;',
+          '  top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;',
+          '  width: 100vw !important; height: 100vh !important;',
+          posterSrc ? '  background-image: linear-gradient(rgba(11, 12, 20, 0.06), rgba(11, 12, 20, 0.10)), url("' + posterSrc + '") !important;' : '',
+          '  background-size: cover !important;',
+          '  background-position: ' + posLeft + ' !important;',
+          '  background-repeat: no-repeat !important;',
+          '  pointer-events: none !important;',
+          '  z-index: 0 !important;',
+          '}'
+        ];
+        if (bottomPosterSrc) {
+          rules.push(
+            '[id="antigravity.agentSidePanelInputBox"] > div.bg-card,',
+            '[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"],',
+            'div.rounded-2xl.bg-card-border > div.bg-card {',
+            '  position: relative !important;',
+            '  background-color: transparent !important;',
+            '  background-image: linear-gradient(rgba(12, 14, 24, 0.15), rgba(12, 14, 24, 0.28)), url("' + bottomPosterSrc + '") !important;',
+            '  background-size: cover !important;',
+            '  background-position: ' + posBottom + ' !important;',
+            '}'
+          );
+        }
+        rules.push(
+          '#root, #app {',
+          '  position: relative !important;',
+          '  z-index: 1 !important;',
+          '}'
+        );
+        zeroLatencyStyle.textContent = rules.join('\n');
+        (document.head || document.documentElement).appendChild(zeroLatencyStyle);
+      }
+
       let leftVid = document.getElementById('antigravity-video-left');
       if (!leftVid) {
         leftVid = document.createElement('video');
@@ -198,8 +252,9 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
         leftVid.style.objectPosition = posLeft;
         leftVid.style.zIndex = '0';
         leftVid.style.pointerEvents = 'none';
-        leftVid.style.transform = 'translate3d(0, 0, 0)';
-        leftVid.style.contain = 'layout paint';
+        leftVid.style.transform = 'translateZ(0)';
+        leftVid.style.contain = 'strict';
+        leftVid.style.backfaceVisibility = 'hidden';
         leftVid.style.display = 'block';
         if (posterSrc) {
           leftVid.poster = posterSrc;
@@ -210,6 +265,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
         }
         leftVid.dataset.currentSrc = src;
         leftVid.src = src;
+
         const tryRecoverLeft = function() {
           if (!leftVid || leftVid.readyState >= 1) return;
           const now = Date.now();
@@ -220,16 +276,25 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
             leftVid._errorRetryCount++;
             leftVid.src = src;
             leftVid.load();
-            leftVid.play().catch(function(){});
+            if (!document.hidden) leftVid.play().catch(function(){});
           }
         };
         leftVid.addEventListener('error', function() {
           setTimeout(tryRecoverLeft, 1000);
         });
-        (document.body || document.documentElement).prepend(leftVid);
-        leftVid.play().catch(function(){});
-      } else if (document.body && leftVid.parentElement !== document.body) {
-        document.body.prepend(leftVid);
+
+        // 挂载至 document.body (若 DOM 构建中则暂挂 documentElement.prepend，确保绝不遮挡主对话区)
+        if (!leftVid.isConnected) {
+          if (document.body) {
+            document.body.prepend(leftVid);
+          } else if (document.documentElement) {
+            document.documentElement.prepend(leftVid);
+          }
+          if (!document.hidden) leftVid.play().catch(function(){});
+        }
+        if (document.body && leftVid.parentElement !== document.body) {
+          document.body.prepend(leftVid);
+        }
       }
     } catch(e) {}
   }
@@ -238,11 +303,22 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
   // 1. 样式表热注入与双重挂载机制 (<link> 极速挂载 + <style> 容灾同步，避免重复全量拉取 5MB 样式)
   async function applyTheme(force) {
     try {
+      if (document.body) {
+        const zeroStyle = document.getElementById('antigravity-zero-latency-style');
+        if (zeroStyle) {
+          try { zeroStyle.remove(); } catch(e) {}
+        }
+      }
       let titlebarFix = document.getElementById('antigravity-titlebar-fix');
       if (!titlebarFix) {
         titlebarFix = document.createElement('style');
         titlebarFix.id = 'antigravity-titlebar-fix';
         titlebarFix.textContent = [
+          '/* 6.0 主界面堆叠层级根基保障 (Guarantee React root stacks on top of base wallpapers) */',
+          '#root, #app {',
+          '  position: relative !important;',
+          '  z-index: 1 !important;',
+          '}',
           '/* 6.3 顶部标题栏操作与控制按钮点击保证 (Titlebar Buttons Responsiveness) */',
           'header button,',
           'header [role="button"],',
@@ -427,6 +503,12 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
 
   // 3. 动态视频槽位自动化挂载与播放引擎 (硬件加速合成层隔离与快速通道)
   function applyVideos() {
+    if (document.body) {
+      const zeroStyle = document.getElementById('antigravity-zero-latency-style');
+      if (zeroStyle) {
+        try { zeroStyle.remove(); } catch(e) {}
+      }
+    }
     const config = (window.__antigravityConfig && window.__antigravityConfig.isOriginal) ? window.__antigravityConfig : (window.__antigravityConfig || cachedConfig);
     if (!config) return;
     if (config.isOriginal) {
@@ -445,13 +527,30 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
     if (left && left.type === 'video' && left.file) {
       const vParam = (left && left.version) ? ('?v=' + left.version) : '';
       const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
-      const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
+      const posterSrc = (left && left.poster) ? (getBase64DataUri(left.poster) || (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam)) : '';
       let leftVid = document.getElementById('antigravity-video-left');
       if (leftVid && leftVid.isConnected && leftVid.dataset.currentSrc === src) {
+        if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
+          leftVid.poster = posterSrc;
+          leftVid.setAttribute('poster', posterSrc);
+          leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
+          leftVid.style.backgroundSize = 'cover';
+          leftVid.style.backgroundPosition = (config.left && config.left.position) || '0% 45%';
+        }
         leftVid.style.transform = 'translateZ(0)';
         leftVid.style.contain = 'strict';
         leftVid.style.backfaceVisibility = 'hidden';
+        if (!leftVid.isConnected) {
+          if (document.body) {
+            document.body.prepend(leftVid);
+          } else if (document.documentElement) {
+            document.documentElement.prepend(leftVid);
+          }
+        }
         if (document.body && leftVid.parentElement !== document.body) {
+          document.body.prepend(leftVid);
+        }
+        if (document.body && document.body.firstElementChild !== leftVid && document.body.contains(leftVid)) {
           document.body.prepend(leftVid);
         }
         if (leftVid.error) {
@@ -542,9 +641,25 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
               }, 1000);
             }
           });
-          (document.body || document.documentElement).prepend(leftVid);
+          if (!leftVid.isConnected) {
+            if (document.body) {
+              document.body.prepend(leftVid);
+            } else if (document.documentElement) {
+              document.documentElement.prepend(leftVid);
+            }
+          }
+        }
+        if (!leftVid.isConnected) {
+          if (document.body) {
+            document.body.prepend(leftVid);
+          } else if (document.documentElement) {
+            document.documentElement.prepend(leftVid);
+          }
         }
         if (document.body && leftVid.parentElement !== document.body) {
+          document.body.prepend(leftVid);
+        }
+        if (document.body && document.body.firstElementChild !== leftVid && document.body.contains(leftVid)) {
           document.body.prepend(leftVid);
         }
         if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
@@ -616,17 +731,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
       const isVideo = slotData && slotData.type === 'video' && slotData.file;
       const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : '';
       const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
-      let posterSrc = (isVideo && slotData.poster) ? (SERVER_URL + '/' + encodeURIComponent(slotData.poster) + vParam) : '';
-      try {
-        if (isVideo && slotData.poster) {
-          const pPath = _path.join(process.env.ANTIGRAVITY_CONFIG_DIR || _path.join(_os.homedir(), '.gemini', 'antigravity'), 'wallpapers', slotData.poster);
-          if (_fs.existsSync(pPath)) {
-            const ext = _path.extname(pPath).toLowerCase();
-            const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
-            posterSrc = 'data:' + mime + ';base64,' + _fs.readFileSync(pPath).toString('base64');
-          }
-        }
-      } catch(e) {}
+      const posterSrc = (isVideo && slotData.poster) ? (getBase64DataUri(slotData.poster) || (SERVER_URL + '/' + encodeURIComponent(slotData.poster) + vParam)) : '';
       const selectors = slotSelectors[slotKey];
 
       if (!isVideo) {
@@ -715,6 +820,13 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
 
           // Fast-path: already mounted in targetContainer with expected source
           if (vid && vid.dataset.currentSrc === src) {
+            if (posterSrc && vid.getAttribute('poster') !== posterSrc) {
+              vid.poster = posterSrc;
+              vid.setAttribute('poster', posterSrc);
+              vid.style.backgroundImage = 'url("' + posterSrc + '")';
+              vid.style.backgroundSize = 'cover';
+              vid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
+            }
             vid.style.transform = 'translateZ(0)';
             vid.style.contain = 'strict';
             vid.style.backfaceVisibility = 'hidden';
@@ -886,7 +998,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
 
     let debounceTimer = null;
     const scheduledApply = function(mutations) {
-      if (debounceTimer) return;
+      let isHighPriority = false;
       if (mutations && mutations.length > 0) {
         let isRelevant = false;
         for (let i = 0; i < mutations.length; i++) {
@@ -908,12 +1020,16 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
               if (node.nodeType === 1) {
                 const role = node.getAttribute ? node.getAttribute('role') : null;
                 const ds = node.getAttribute ? node.getAttribute('data-state') : null;
+                if (node.id === 'antigravity.agentSidePanelInputBox' || 
+                    (node.id && node.id.includes('agentSidePanelInputBox')) ||
+                    (node.classList && (node.classList.contains('bg-card') || node.classList.contains('bg-card-border')))) {
+                  isRelevant = true;
+                  isHighPriority = true;
+                  break;
+                }
                 if (role === 'dialog' || ds === 'open' || 
-                  node.id === 'antigravity.agentSidePanelInputBox' || 
-                  (node.id && node.id.includes('agentSidePanelInputBox')) ||
                   (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm') ||
-                   node.classList.contains('overflow-y-auto') || node.classList.contains('bg-background') ||
-                   node.classList.contains('bg-card') || node.classList.contains('bg-card-border')))) {
+                   node.classList.contains('overflow-y-auto') || node.classList.contains('bg-background')))) {
                   isRelevant = true;
                   break;
                 }
@@ -941,10 +1057,21 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
       if (window.__isDraggingSplit || (document.body && document.body.classList.contains('is-resizing'))) {
         return;
       }
+
+      if (isHighPriority) {
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
+        applyVideos();
+        return;
+      }
+
+      if (debounceTimer) return;
       debounceTimer = setTimeout(function() {
         debounceTimer = null;
         applyVideos();
-      }, 300);
+      }, 50);
     };
 
     window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
@@ -1017,10 +1144,31 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
     window.__antigravitySyncInterval = setInterval(syncAndApply, 10000);
   };
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initEngine);
-  } else {
+  let engineStarted = false;
+  let earlyBodyChecker = null;
+  const startEngine = function() {
+    if (engineStarted) return;
+    engineStarted = true;
+    if (earlyBodyChecker) {
+      clearInterval(earlyBodyChecker);
+      earlyBodyChecker = null;
+    }
+    const lv = document.getElementById('antigravity-video-left');
+    if (lv && document.body && lv.parentElement !== document.body) {
+      document.body.prepend(lv);
+    }
     initEngine();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startEngine);
+    earlyBodyChecker = setInterval(function() {
+      if (document.body) {
+        startEngine();
+      }
+    }, 20);
+  } else {
+    startEngine();
   }
 })();
 // =========================================================================

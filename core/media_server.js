@@ -279,8 +279,8 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         }
 
         const chunkSize = (end - start) + 1;
-        // Dynamic adaptive buffer: bounded between 64KB and 512KB to minimize memory allocation while maximizing 60FPS throughput
-        const bufferSize = Math.min(512 * 1024, Math.max(64 * 1024, chunkSize));
+        // Dynamic adaptive buffer: bounded between 64KB and 256KB to minimize memory allocation while maximizing 60FPS throughput
+        const bufferSize = Math.min(256 * 1024, Math.max(64 * 1024, chunkSize));
         const stream = fs.createReadStream(filePath, { start, end, highWaterMark: bufferSize });
         res.writeHead(206, {
           'Content-Range': `bytes ${start}-${end}/${fileSize}`,
@@ -300,6 +300,7 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         stream.on('error', () => {
           res.destroy();
         });
+        req.on('close', cleanup);
         res.on('error', cleanup);
         res.on('close', cleanup);
         res.on('finish', cleanup);
@@ -323,6 +324,7 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         stream.on('error', () => {
           res.destroy();
         });
+        req.on('close', cleanup);
         res.on('error', cleanup);
         res.on('close', cleanup);
         res.on('finish', cleanup);
@@ -349,6 +351,7 @@ function startMediaServer(wallpapersDir, port = DEFAULT_PORT, callback) {
   let callbackCalled = false;
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
+      try { server.close(); } catch(e) {}
       if (typeof callback === 'function' && !callbackCalled) {
         callbackCalled = true;
         callback(null, server);

@@ -22,14 +22,19 @@ const repoMediaServer = path.join(__dirname, 'media_server.js');
 const distMediaServer = path.join(appDir, 'dist', 'media_server.js');
 const antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || path.join(os.homedir(), '.gemini', 'antigravity');
 const userMediaServer = path.join(antigravityDir, 'media_server.js');
-if (fs.existsSync(repoMediaServer)) {
-  try {
-    if (fs.existsSync(path.join(appDir, 'dist'))) {
-      fs.copyFileSync(repoMediaServer, distMediaServer);
-    }
-    fs.copyFileSync(repoMediaServer, userMediaServer);
-  } catch(e) {}
-}
+const repoPreload = path.join(__dirname, '..', 'preload.js');
+const distPreload = path.join(appDir, 'dist', 'preload.js');
+const repoMain = path.join(__dirname, '..', 'main.js');
+const distMain = path.join(appDir, 'dist', 'main.js');
+
+try {
+  if (fs.existsSync(path.join(appDir, 'dist'))) {
+    if (fs.existsSync(repoMediaServer)) fs.copyFileSync(repoMediaServer, distMediaServer);
+    if (fs.existsSync(repoPreload)) fs.copyFileSync(repoPreload, distPreload);
+    if (fs.existsSync(repoMain)) fs.copyFileSync(repoMain, distMain);
+  }
+  if (fs.existsSync(repoMediaServer)) fs.copyFileSync(repoMediaServer, userMediaServer);
+} catch(e) {}
 
 // 0. Backup original unpatched app.asar if not already backed up
 if (fs.existsSync(asarPath) && !fs.existsSync(asarOrigBak)) {

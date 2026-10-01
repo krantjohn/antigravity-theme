@@ -93,7 +93,7 @@ try {
   const _antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || _path.join(_os.homedir(), '.gemini', 'antigravity');
   const _p1 = _path.join(__dirname, 'media_server.js');
   const _p2 = _path.join(_antigravityDir, 'media_server.js');
-  const _target = _fs.existsSync(_p1) ? _p1 : (_fs.existsSync(_p2) ? _p2 : null);
+  const _target = _fs.existsSync(_p2) ? _p2 : (_fs.existsSync(_p1) ? _p1 : null);
   if (_target) {
     const { startMediaServer } = require(_target);
     startMediaServer(_path.join(_antigravityDir, 'wallpapers'), 8315);
@@ -111,16 +111,23 @@ try {
     if (!_cl.hasSwitch('enable-zero-copy')) _cl.appendSwitch('enable-zero-copy');
     if (!_cl.hasSwitch('enable-accelerated-video-decode')) _cl.appendSwitch('enable-accelerated-video-decode');
     if (!_cl.hasSwitch('enable-accelerated-mjpeg-decode')) _cl.appendSwitch('enable-accelerated-mjpeg-decode');
+    if (!_cl.hasSwitch('disable-background-media-suspend')) _cl.appendSwitch('disable-background-media-suspend');
+    if (!_cl.hasSwitch('autoplay-policy')) _cl.appendSwitch('autoplay-policy', 'no-user-gesture-required');
     if (!_cl.hasSwitch('enable-features')) {
-      _cl.appendSwitch('enable-features', 'D3D11VideoDecoder,DirectCompositionVideoOverlays');
+      _cl.appendSwitch('enable-features', 'D3D11VideoDecoder');
     } else {
       const _cur = _cl.getSwitchValue('enable-features');
       if (!_cur.includes('D3D11VideoDecoder')) {
-        _cl.appendSwitch('enable-features', _cur + ',D3D11VideoDecoder,DirectCompositionVideoOverlays');
+        _cl.appendSwitch('enable-features', _cur + ',D3D11VideoDecoder');
       }
     }
     if (!_cl.hasSwitch('disable-features')) {
-      _cl.appendSwitch('disable-features', 'UseChromeOSDirectVideoDecoder');
+      _cl.appendSwitch('disable-features', 'UseChromeOSDirectVideoDecoder,BackgroundVideoTrackOptimization,CalculateNativeWinOcclusion,PauseBackgroundMutedVideos');
+    } else {
+      const _cur = _cl.getSwitchValue('disable-features');
+      if (!_cur.includes('BackgroundVideoTrackOptimization')) {
+        _cl.appendSwitch('disable-features', _cur + ',BackgroundVideoTrackOptimization,CalculateNativeWinOcclusion,PauseBackgroundMutedVideos');
+      }
     }
   }
 } catch(e) {}

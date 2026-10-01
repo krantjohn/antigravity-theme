@@ -222,7 +222,11 @@ async function runTests() {
             src: v.src,
             paused: v.paused,
             readyState: v.readyState,
-            slot: v.getAttribute('data-slot')
+            slot: v.getAttribute('data-slot'),
+            parentElement: v.parentElement ? v.parentElement.tagName : null,
+            isFirstChildOfBody: document.body ? document.body.firstElementChild === v : false,
+            rootPos: document.getElementById('root') ? getComputedStyle(document.getElementById('root')).position : null,
+            rootZIndex: document.getElementById('root') ? getComputedStyle(document.getElementById('root')).zIndex : null
           }));
         } else if (Date.now() - start > 25000) {
           resolve(JSON.stringify({
@@ -246,6 +250,10 @@ async function runTests() {
   assert.ok(videoState.src.includes('8315'), 'Video src must point to media server port 8315');
   assert.strictEqual(videoState.slot, 'left', 'Slot attribute must be left');
   assert.ok(videoState.readyState >= 1, 'Left video must have readyState >= 1');
+  assert.strictEqual(videoState.parentElement, 'BODY', 'Left video element must be mounted as a child of BODY');
+  assert.strictEqual(videoState.isFirstChildOfBody, true, 'Left video must be the first child of BODY');
+  assert.strictEqual(videoState.rootPos, 'relative', '#root must have relative position');
+  assert.strictEqual(videoState.rootZIndex, '1', '#root must have z-index 1 to stay above base wallpaper');
 
   // Verify right_wallpaper is NOT painted over body or the left chat pane
   const cdpLeftCleanCheck = await evalCdp(`

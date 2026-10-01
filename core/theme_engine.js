@@ -931,6 +931,8 @@ html, body {
 }
 
 #root, #app {
+  position: relative !important;
+  z-index: 1 !important;
   overflow: hidden !important;
   width: 100% !important;
   height: 100% !important;
@@ -2313,10 +2315,27 @@ function getClientVideoScript(config) {
   const posBottom = getSlotPosition(config, 'bottom');
   const posSettings = getSlotPosition(config, 'settings');
 
+  const slotPosters = {};
+  ['left', 'mid', 'right', 'bottom', 'settings'].forEach(slotKey => {
+    const slotData = config && config[slotKey];
+    if (slotData && slotData.poster) {
+      try {
+        const pPath = path.join(wallpapersDir, slotData.poster);
+        if (fs.existsSync(pPath)) {
+          const ext = path.extname(pPath).toLowerCase();
+          const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
+          slotPosters[slotKey] = 'data:' + mime + ';base64,' + fs.readFileSync(pPath).toString('base64');
+        }
+      } catch (e) {}
+    }
+  });
+  const slotPostersJson = JSON.stringify(slotPosters);
+
   return `
   (function() {
     const SERVER_URL = 'http://127.0.0.1:${DEFAULT_PORT}';
     const config = ${configJson};
+    const slotPosters = ${slotPostersJson};
     window.__antigravityConfig = config;
     const slotPositions = {
       'left': '${posLeft}',
@@ -2370,8 +2389,65 @@ function getClientVideoScript(config) {
         if (!left || left.type !== 'video' || !left.file) return;
         const vParam = (left && left.version) ? ('?v=' + left.version) : ('?v=' + Date.now());
         const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
-        const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
+        const posterSrc = slotPosters['left'] || ((left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '');
         const posLeft = '${posLeft}';
+
+        const bottom = config.bottom;
+        const bottomPosterSrc = slotPosters['bottom'] || ((bottom && bottom.poster) ? (SERVER_URL + '/' + encodeURIComponent(bottom.poster) + vParam) : '');
+        const posBottom = '${posBottom}';
+
+        if (document.body) {
+          const zeroStyle = document.getElementById('antigravity-zero-latency-style');
+          if (zeroStyle) {
+            try { zeroStyle.remove(); } catch(e) {}
+          }
+        }
+
+        // 0ms 高保真底图与底部卡片静态海报瞬发样式，杜绝开机黑屏与卡顿延迟
+        let zeroLatencyStyle = document.getElementById('antigravity-zero-latency-style');
+        if (!zeroLatencyStyle && (posterSrc || bottomPosterSrc)) {
+          zeroLatencyStyle = document.createElement('style');
+          zeroLatencyStyle.id = 'antigravity-zero-latency-style';
+          const rules = [
+            'html {',
+            '  background-color: transparent !important;',
+            '}',
+            'html::before {',
+            '  content: "" !important;',
+            '  position: fixed !important;',
+            '  top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;',
+            '  width: 100vw !important; height: 100vh !important;',
+            posterSrc ? '  background-image: linear-gradient(rgba(11, 12, 20, 0.06), rgba(11, 12, 20, 0.10)), url("' + posterSrc + '") !important;' : '',
+            '  background-size: cover !important;',
+            '  background-position: ' + posLeft + ' !important;',
+            '  background-repeat: no-repeat !important;',
+            '  pointer-events: none !important;',
+            '  z-index: 0 !important;',
+            '}'
+          ];
+          if (bottomPosterSrc) {
+            rules.push(
+              '[id="antigravity.agentSidePanelInputBox"] > div.bg-card,',
+              '[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"],',
+              'div.rounded-2xl.bg-card-border > div.bg-card {',
+              '  position: relative !important;',
+              '  background-color: transparent !important;',
+              '  background-image: linear-gradient(rgba(12, 14, 24, 0.15), rgba(12, 14, 24, 0.28)), url("' + bottomPosterSrc + '") !important;',
+              '  background-size: cover !important;',
+              '  background-position: ' + posBottom + ' !important;',
+              '}'
+            );
+          }
+          rules.push(
+            '#root, #app {',
+            '  position: relative !important;',
+            '  z-index: 1 !important;',
+            '}'
+          );
+          zeroLatencyStyle.textContent = rules.join('\\n');
+          (document.head || document.documentElement).appendChild(zeroLatencyStyle);
+        }
+
         let leftVid = document.getElementById('antigravity-video-left');
         if (!leftVid) {
           leftVid = document.createElement('video');
@@ -2404,8 +2480,9 @@ function getClientVideoScript(config) {
           leftVid.style.objectPosition = posLeft;
           leftVid.style.zIndex = '0';
           leftVid.style.pointerEvents = 'none';
-          leftVid.style.transform = 'translate3d(0, 0, 0)';
-          leftVid.style.contain = 'layout paint';
+          leftVid.style.transform = 'translateZ(0)';
+          leftVid.style.contain = 'strict';
+          leftVid.style.backfaceVisibility = 'hidden';
           leftVid.style.display = 'block';
           if (posterSrc) {
             leftVid.poster = posterSrc;
@@ -2424,10 +2501,17 @@ function getClientVideoScript(config) {
               }
             }, 300);
           });
-          (document.body || document.documentElement).prepend(leftVid);
-          if (!document.hidden) leftVid.play().catch(function(){});
-        } else if (document.body && leftVid.parentElement !== document.body) {
-          document.body.prepend(leftVid);
+          if (!leftVid.isConnected) {
+            if (document.body) {
+              document.body.prepend(leftVid);
+            } else if (document.documentElement) {
+              document.documentElement.prepend(leftVid);
+            }
+            if (!document.hidden) leftVid.play().catch(function(){});
+          }
+          if (document.body && leftVid.parentElement !== document.body) {
+            document.body.prepend(leftVid);
+          }
         }
       } catch(e) {}
     }
@@ -2492,14 +2576,30 @@ function getClientVideoScript(config) {
       if (left && left.type === 'video' && left.file) {
         const vParam = (left && left.version) ? ('?v=' + left.version) : ('?v=' + Date.now());
         const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
-        const posterSrc = (left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '';
+        const posterSrc = slotPosters['left'] || ((left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '');
         let leftVid = document.getElementById('antigravity-video-left');
         if (leftVid && leftVid.isConnected && leftVid.dataset.currentSrc === src) {
+          if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
+            leftVid.poster = posterSrc;
+            leftVid.setAttribute('poster', posterSrc);
+            leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
+            leftVid.style.backgroundSize = 'cover';
+            leftVid.style.backgroundPosition = '${posLeft}';
+          }
           leftVid.style.transform = 'translateZ(0)';
           leftVid.style.contain = 'strict';
           leftVid.style.backfaceVisibility = 'hidden';
-          leftVid.style.willChange = 'transform';
+          if (!leftVid.isConnected) {
+            if (document.body) {
+              document.body.prepend(leftVid);
+            } else if (document.documentElement) {
+              document.documentElement.prepend(leftVid);
+            }
+          }
           if (document.body && leftVid.parentElement !== document.body) {
+            document.body.prepend(leftVid);
+          }
+          if (document.body && document.body.firstElementChild !== leftVid && document.body.contains(leftVid)) {
             document.body.prepend(leftVid);
           }
           if (leftVid.error) {
@@ -2561,7 +2661,6 @@ function getClientVideoScript(config) {
             leftVid.style.transform = 'translateZ(0)';
             leftVid.style.contain = 'strict';
             leftVid.style.backfaceVisibility = 'hidden';
-            leftVid.style.willChange = 'transform';
             leftVid.style.display = 'block';
             if (posterSrc) {
               leftVid.poster = posterSrc;
@@ -2591,9 +2690,25 @@ function getClientVideoScript(config) {
                 }, 1000);
               }
             });
-            (document.body || document.documentElement).prepend(leftVid);
+            if (!leftVid.isConnected) {
+              if (document.body) {
+                document.body.prepend(leftVid);
+              } else if (document.documentElement) {
+                document.documentElement.prepend(leftVid);
+              }
+            }
+          }
+          if (!leftVid.isConnected) {
+            if (document.body) {
+              document.body.prepend(leftVid);
+            } else if (document.documentElement) {
+              document.documentElement.prepend(leftVid);
+            }
           }
           if (document.body && leftVid.parentElement !== document.body) {
+            document.body.prepend(leftVid);
+          }
+          if (document.body && document.body.firstElementChild !== leftVid && document.body.contains(leftVid)) {
             document.body.prepend(leftVid);
           }
           if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
@@ -2656,17 +2771,7 @@ function getClientVideoScript(config) {
         const isVideo = slotData && slotData.type === 'video' && slotData.file;
         const vParam = (slotData && slotData.version) ? ('?v=' + slotData.version) : ('?v=' + Date.now());
         const src = isVideo ? (SERVER_URL + '/' + encodeURIComponent(slotData.file) + vParam) : null;
-        let posterSrc = (isVideo && slotData.poster) ? (SERVER_URL + '/' + encodeURIComponent(slotData.poster) + vParam) : '';
-        try {
-          if (isVideo && slotData.poster) {
-            const pPath = path.join(wallpapersDir, slotData.poster);
-            if (fs.existsSync(pPath)) {
-              const ext = path.extname(pPath).toLowerCase();
-              const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
-              posterSrc = 'data:' + mime + ';base64,' + fs.readFileSync(pPath).toString('base64');
-            }
-          }
-        } catch(e) {}
+        const posterSrc = slotPosters[slotKey] || ((isVideo && slotData.poster) ? (SERVER_URL + '/' + encodeURIComponent(slotData.poster) + vParam) : '');
         const selectors = slotSelectors[slotKey];
 
         if (!isVideo) {
@@ -2749,6 +2854,13 @@ function getClientVideoScript(config) {
 
             // Fast-path: already mounted in targetContainer with expected source
             if (vid && vid.dataset.currentSrc === src) {
+              if (posterSrc && vid.getAttribute('poster') !== posterSrc) {
+                vid.poster = posterSrc;
+                vid.setAttribute('poster', posterSrc);
+                vid.style.backgroundImage = 'url("' + posterSrc + '")';
+                vid.style.backgroundSize = 'cover';
+                vid.style.backgroundPosition = (slotPositions[slotKey] || 'center center');
+              }
               vid.style.transform = 'translateZ(0)';
               vid.style.contain = 'strict';
               vid.style.backfaceVisibility = 'hidden';
@@ -3074,6 +3186,11 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                     let titlebarFix = document.getElementById('antigravity-titlebar-fix');
                     if (titlebarFix) {
                       titlebarFix.textContent = [
+                        '/* 6.0 主界面堆叠层级根基保障 (Guarantee React root stacks on top of base wallpapers) */',
+                        '#root, #app {',
+                        '  position: relative !important;',
+                        '  z-index: 1 !important;',
+                        '}',
                         '/* 6.3 顶部标题栏操作与控制按钮点击保证 (Titlebar Buttons Responsiveness) */',
                         'header button,',
                         'header [role="button"],',
@@ -3139,6 +3256,12 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                     let link = document.getElementById('antigravity-custom-theme-link');
                     if (link) {
                       link.href = 'http://127.0.0.1:8315/custom_theme.css?v=' + Date.now();
+                    }
+                    if (document.body) {
+                      const zeroStyle = document.getElementById('antigravity-zero-latency-style');
+                      if (zeroStyle) {
+                        try { zeroStyle.remove(); } catch(e) {}
+                      }
                     }
                     let s = document.getElementById('antigravity-custom-theme');
                     if (!s) {
