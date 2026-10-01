@@ -567,15 +567,31 @@ function loadSlotsConfig() {
       }
       const ext = path.extname(config[key].file).toLowerCase();
       config[key].type = VIDEO_EXTS.has(ext) ? 'video' : 'image';
-      if (config[key].type === 'video' && !config[key].poster) {
+      if (config[key].type === 'video') {
         const prefix = key === 'bottom' ? 'input' : key;
-        const matchingPoster = allFiles.find(f => {
-          const e = path.extname(f).toLowerCase();
-          return IMAGE_EXTS.has(e) && f.startsWith(`${prefix}_poster`);
-        });
-        if (matchingPoster) {
-          config[key].poster = matchingPoster;
+        if (config[key].poster && config[key].poster.toLowerCase().endsWith('.gif')) {
+          config[key].poster = null;
           modified = true;
+        }
+        const highResPoster = allFiles.find(f => {
+          const e = path.extname(f).toLowerCase();
+          return (e === '.jpg' || e === '.jpeg' || e === '.png' || e === '.webp') && f.startsWith(`${prefix}_poster`);
+        });
+        if (highResPoster && config[key].poster !== highResPoster) {
+          config[key].poster = highResPoster;
+          modified = true;
+        } else if (!config[key].poster) {
+          const videoFile = config[key].file;
+          const vAbs = path.isAbsolute(videoFile) ? videoFile : path.join(wallpapersDir, videoFile);
+          const pTarget = path.join(wallpapersDir, `${prefix}_poster.jpg`);
+          if (fs.existsSync(vAbs)) {
+            const ok = extractPosterFromVideo(vAbs, pTarget);
+            if (ok) {
+              config[key].poster = `${prefix}_poster.jpg`;
+              allFiles.push(`${prefix}_poster.jpg`);
+              modified = true;
+            }
+          }
         }
       }
       if (!config[key].position) {
@@ -725,16 +741,28 @@ function detectVideoCodec(filePath) {
 function extractPosterFromVideo(videoPath, targetPosterPath) {
   if (!videoPath || !fs.existsSync(videoPath)) return false;
   const candidates = [
-    'D:\\SteamLibrary\\steamapps\\common\\wallpaper_engine\\dlc\\pymidas\\python.exe',
     'python',
-    'python3'
+    'python3',
+    'D:\\SteamLibrary\\steamapps\\common\\wallpaper_engine\\dlc\\pymidas\\python.exe'
   ];
   const cp = require('child_process');
   for (const py of candidates) {
     try {
       const vSafe = videoPath.replace(/\\/g, '/');
       const pSafe = targetPosterPath.replace(/\\/g, '/');
-      const script = 'import cv2, sys; cap = cv2.VideoCapture(r\x22' + vSafe + '\x22); cap.set(cv2.CAP_PROP_POS_MSEC, 1000); ret, f = cap.read(); (not ret) and (cap.set(cv2.CAP_PROP_POS_FRAMES, 0), None); ret, f = (ret, f) if ret else cap.read(); cv2.imwrite(r\x22' + pSafe + '\x22, f) if ret else sys.exit(1); cap.release()';
+      const script = [
+        'import cv2, sys',
+        `cap = cv2.VideoCapture(r"${vSafe}")`,
+        'if not cap.isOpened(): sys.exit(1)',
+        'cap.set(cv2.CAP_PROP_POS_MSEC, 1000)',
+        'ret, f = cap.read()',
+        'if not ret: cap.set(cv2.CAP_PROP_POS_FRAMES, 0); ret, f = cap.read()',
+        'if not ret: sys.exit(1)',
+        'h, w = f.shape[:2]',
+        'if w > 1920 or h > 1080: scale = min(1920.0 / w, 1080.0 / h); f = cv2.resize(f, (max(1, int(w * scale)), max(1, int(h * scale))), interpolation=cv2.INTER_AREA)',
+        `cv2.imwrite(r"${pSafe}", f, [cv2.IMWRITE_JPEG_QUALITY, 85])`,
+        'cap.release()'
+      ].join('; ');
       cp.execFileSync(py, ['-c', script], { timeout: 8000, stdio: 'pipe', windowsHide: true });
       if (fs.existsSync(targetPosterPath) && fs.statSync(targetPosterPath).size > 1000) {
         return true;
@@ -760,28 +788,32 @@ function findCompanionPoster(videoPath) {
         const pj = JSON.parse(fs.readFileSync(pjPath, 'utf8'));
         if (pj.preview) {
           const pCandidate = path.join(dir, pj.preview);
-          if (fs.existsSync(pCandidate)) return pCandidate;
+          if (fs.existsSync(pCandidate) && !pj.preview.toLowerCase().endsWith('.gif')) {
+            return pCandidate;
+          }
         }
       } catch (e) {}
     }
 
-    // 2. Common preview names
+    // 2. Common high-res preview and poster names (prioritizing high-res formats over low-res GIF)
     const baseWithoutExt = path.basename(videoPath, path.extname(videoPath));
     const commonNames = [
-      'preview.gif', 'preview.jpg', 'preview.png', 'preview.webp',
-      'poster.jpg', 'poster.png', 'cover.jpg', 'cover.png',
-      `${baseWithoutExt}.jpg`, `${baseWithoutExt}.png`, `${baseWithoutExt}.webp`, `${baseWithoutExt}.gif`
+      `${baseWithoutExt}.jpg`, `${baseWithoutExt}.png`, `${baseWithoutExt}.webp`,
+      'poster.jpg', 'poster.png', 'poster.webp',
+      'cover.jpg', 'cover.png', 'cover.webp',
+      'preview.jpg', 'preview.png', 'preview.webp',
+      `${baseWithoutExt}.jpeg`, 'poster.jpeg', 'preview.jpeg'
     ];
     for (const name of commonNames) {
       const p = path.join(dir, name);
       if (fs.existsSync(p)) return p;
     }
 
-    // 3. Any image in the same directory
+    // 3. Any non-gif image in the same directory
     const files = fs.readdirSync(dir);
     for (const f of files) {
       const ext = path.extname(f).toLowerCase();
-      if (IMAGE_EXTS.has(ext)) {
+      if (IMAGE_EXTS.has(ext) && ext !== '.gif') {
         return path.join(dir, f);
       }
     }
@@ -828,14 +860,26 @@ body::before {
   const isBottomNone = !slotsConfig.bottom || slotsConfig.bottom.type === 'none' || !slotsConfig.bottom.file;
   const isSettingsNone = !slotsConfig.settings || slotsConfig.settings.type === 'none' || !slotsConfig.settings.file;
 
-  // Zero-Black-Void Protection:
-  // Fallback static wallpapers guarantee that body::before and every container ALWAYS has a crisp image,
-  // preventing any black screen during video buffering, stalls, or decoder errors!
-  const leftImg = isLeftNone ? '' : (isLeftVideo ? (slotsConfig.left.poster || 'left_wallpaper.jpg') : (slotsConfig.left?.file || 'left_wallpaper.jpg'));
-  const midImg = isMidNone ? '' : (isMidVideo ? (slotsConfig.mid.poster || 'mid_wallpaper.jpg') : (slotsConfig.mid?.file || 'mid_wallpaper.jpg'));
-  const rightImg = isRightNone ? '' : (isRightVideo ? (slotsConfig.right.poster || 'right_wallpaper.jpg') : (slotsConfig.right?.file || 'right_wallpaper.jpg'));
-  const bottomImg = isBottomNone ? '' : (isBottomVideo ? (slotsConfig.bottom.poster || 'input_wallpaper.jpg') : (slotsConfig.bottom?.file || 'input_wallpaper.jpg'));
-  const settingsImg = isSettingsNone ? '' : (isSettingsVideo ? (slotsConfig.settings.poster || 'settings_wallpaper.png') : (slotsConfig.settings?.file || 'settings_wallpaper.png'));
+  function resolveSlotImg(key, slotConfig, defaultStatic) {
+    if (!slotConfig || slotConfig.type === 'none' || !slotConfig.file) return '';
+    if (slotConfig.type === 'video') {
+      const prefix = key === 'bottom' ? 'input' : key;
+      let poster = slotConfig.poster;
+      if (poster && poster.toLowerCase().endsWith('.gif')) poster = null;
+      if (!poster) {
+        const candidate = `${prefix}_poster.jpg`;
+        if (fs.existsSync(path.join(wallpapersDir, candidate))) poster = candidate;
+      }
+      return poster || defaultStatic;
+    }
+    return slotConfig.file || defaultStatic;
+  }
+
+  const leftImg = resolveSlotImg('left', slotsConfig.left, 'left_wallpaper.jpg');
+  const midImg = resolveSlotImg('mid', slotsConfig.mid, 'mid_wallpaper.jpg');
+  const rightImg = resolveSlotImg('right', slotsConfig.right, 'right_wallpaper.jpg');
+  const bottomImg = resolveSlotImg('bottom', slotsConfig.bottom, 'input_wallpaper.jpg');
+  const settingsImg = resolveSlotImg('settings', slotsConfig.settings, 'settings_wallpaper.png');
 
   const serverBase = `http://127.0.0.1:${DEFAULT_PORT || 8315}`;
   
@@ -1100,11 +1144,7 @@ button[aria-label*="Undo"]:hover {
 }
 
 
-/* 6.3 顶部更新按钮与控制按钮高优先级点击保证 (Titlebar Buttons & Update Button Responsiveness) */
-[data-testid*="update"],
-[data-testid="app-update-button"],
-[aria-label*="update" i],
-[aria-label*="Update" i],
+/* 6.3 顶部标题栏操作与控制按钮点击保证 (Titlebar Buttons Responsiveness) */
 header button,
 header [role="button"],
 header a,
@@ -1113,8 +1153,7 @@ header a,
 [class*="titlebar"] a,
 div.absolute.top-0 button,
 div.absolute.top-0 [role="button"],
-.titlebar-button,
-#antigravity-update-modal button {
+.titlebar-button {
   -webkit-app-region: no-drag !important;
   pointer-events: auto !important;
   cursor: pointer !important;
@@ -2231,9 +2270,27 @@ function getClientVideoScript(config) {
     return `
     (function() {
       try {
+        window.__antigravityConfig = { isOriginal: true };
+        window.__antigravityApplyVideos = null;
+        if (window.__antigravityVideoObserver) {
+          try { window.__antigravityVideoObserver.disconnect(); } catch(e) {}
+          window.__antigravityVideoObserver = null;
+        }
         if (window.__antigravityVideoVisibilityObserver) {
-          window.__antigravityVideoVisibilityObserver.disconnect();
+          try { window.__antigravityVideoVisibilityObserver.disconnect(); } catch(e) {}
           window.__antigravityVideoVisibilityObserver = null;
+        }
+        if (window.__antigravitySyncInterval) {
+          clearInterval(window.__antigravitySyncInterval);
+          window.__antigravitySyncInterval = null;
+        }
+        if (window.__antigravityPreloadInterval) {
+          clearInterval(window.__antigravityPreloadInterval);
+          window.__antigravityPreloadInterval = null;
+        }
+        if (window.__antigravityInterval) {
+          clearInterval(window.__antigravityInterval);
+          window.__antigravityInterval = null;
         }
         const vids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
         for (let i = 0; i < vids.length; i++) {
@@ -2260,6 +2317,7 @@ function getClientVideoScript(config) {
   (function() {
     const SERVER_URL = 'http://127.0.0.1:${DEFAULT_PORT}';
     const config = ${configJson};
+    window.__antigravityConfig = config;
     const slotPositions = {
       'left': '${posLeft}',
       'mid': '${posMid}',
@@ -2417,6 +2475,18 @@ function getClientVideoScript(config) {
     }
 
     function applyVideos() {
+      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
+        const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
+        for (let i = 0; i < allVids.length; i++) {
+          try {
+            allVids[i].pause();
+            allVids[i].removeAttribute('src');
+            allVids[i].load();
+            allVids[i].remove();
+          } catch(e) {}
+        }
+        return;
+      }
       // 1. Slot: left (Global base wallpaper)
       const left = config.left;
       if (left && left.type === 'video' && left.file) {
@@ -2431,6 +2501,18 @@ function getClientVideoScript(config) {
           leftVid.style.willChange = 'transform';
           if (document.body && leftVid.parentElement !== document.body) {
             document.body.prepend(leftVid);
+          }
+          if (leftVid.error) {
+            const now = Date.now();
+            leftVid._lastErrorRetry = leftVid._lastErrorRetry || 0;
+            leftVid._errorRetryCount = leftVid._errorRetryCount || 0;
+            if (leftVid._errorRetryCount < 3 && (now - leftVid._lastErrorRetry > 2000)) {
+              leftVid._lastErrorRetry = now;
+              leftVid._errorRetryCount++;
+              leftVid.src = src;
+              leftVid.load();
+              if (!document.hidden) leftVid.play().catch(function(){});
+            }
           }
           if (!document.hidden && leftVid.paused && leftVid.readyState >= 1) {
             leftVid.play().catch(function() {});
@@ -2495,12 +2577,19 @@ function getClientVideoScript(config) {
               if (!document.hidden && leftVid.paused) leftVid.play().catch(function() {});
             });
             leftVid.addEventListener('error', function() {
-              setTimeout(function() {
-                if (leftVid.error) {
-                  leftVid.load();
-                  if (!document.hidden) leftVid.play().catch(function(){});
-                }
-              }, 300);
+              const now = Date.now();
+              leftVid._lastErrorRetry = leftVid._lastErrorRetry || 0;
+              leftVid._errorRetryCount = leftVid._errorRetryCount || 0;
+              if (leftVid._errorRetryCount < 3 && (now - leftVid._lastErrorRetry > 2000)) {
+                leftVid._lastErrorRetry = now;
+                leftVid._errorRetryCount++;
+                setTimeout(function() {
+                  if (leftVid.error) {
+                    leftVid.load();
+                    if (!document.hidden) leftVid.play().catch(function(){});
+                  }
+                }, 1000);
+              }
             });
             (document.body || document.documentElement).prepend(leftVid);
           }
@@ -2561,6 +2650,7 @@ function getClientVideoScript(config) {
           'div[data-state="open"]:has(div.bg-sidebar)',
           'div.settings-modal-container'
         ]
+      };
       for (const slotKey in slotSelectors) {
         const slotData = config[slotKey];
         const isVideo = slotData && slotData.type === 'video' && slotData.file;
@@ -2629,31 +2719,54 @@ function getClientVideoScript(config) {
             } catch (e) {}
           }
 
-          const existingVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
-          for (let i = 0; i < existingVids.length; i++) {
-            if (!targetContainer || existingVids[i].parentElement !== targetContainer) {
-              existingVids[i].pause();
-              existingVids[i].removeAttribute('src');
-              existingVids[i].load();
-              existingVids[i].remove();
-            }
-          }
-
           if (targetContainer) {
             const allSlotVidsInContainer = targetContainer.querySelectorAll(':scope > .antigravity-slot-video[data-slot="' + slotKey + '"]');
             for (let i = 1; i < allSlotVidsInContainer.length; i++) {
               allSlotVidsInContainer[i].pause();
               allSlotVidsInContainer[i].removeAttribute('src');
-              allSlotVidsInContainer[i].load();
               allSlotVidsInContainer[i].remove();
             }
             let vid = allSlotVidsInContainer[0];
+
+            // If no video in targetContainer, check if an existing instance is elsewhere and move it
+            if (!vid) {
+              const existingOutside = document.querySelector('.antigravity-slot-video[data-slot="' + slotKey + '"]');
+              if (existingOutside) {
+                targetContainer.prepend(existingOutside);
+                vid = existingOutside;
+              }
+            }
+
+            // Clean up any extra duplicate instances outside targetContainer
+            const allInstances = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
+            for (let i = 0; i < allInstances.length; i++) {
+              if (allInstances[i] !== vid) {
+                allInstances[i].pause();
+                allInstances[i].removeAttribute('src');
+                allInstances[i].remove();
+              }
+            }
+
+            // Fast-path: already mounted in targetContainer with expected source
             if (vid && vid.dataset.currentSrc === src) {
               vid.style.transform = 'translateZ(0)';
               vid.style.contain = 'strict';
               vid.style.backfaceVisibility = 'hidden';
               vid.style.willChange = 'transform';
-              syncVideoPlaybackState(vid);
+              if (vid.error) {
+                const now = Date.now();
+                vid._lastErrorRetry = vid._lastErrorRetry || 0;
+                vid._errorRetryCount = vid._errorRetryCount || 0;
+                if (vid._errorRetryCount < 3 && (now - vid._lastErrorRetry > 2000)) {
+                  vid._lastErrorRetry = now;
+                  vid._errorRetryCount++;
+                  vid.src = src;
+                  vid.load();
+                  if (isVideoVisible(vid)) vid.play().catch(function(){});
+                }
+              } else {
+                syncVideoPlaybackState(vid);
+              }
               continue;
             }
 
@@ -2706,12 +2819,19 @@ function getClientVideoScript(config) {
                 if (isVideoVisible(vid) && vid.paused) vid.play().catch(function() {});
               });
               vid.addEventListener('error', function() {
-                setTimeout(function() {
-                  if (vid.error) {
-                    vid.load();
-                    if (isVideoVisible(vid)) vid.play().catch(function(){});
-                  }
-                }, 300);
+                const now = Date.now();
+                vid._lastErrorRetry = vid._lastErrorRetry || 0;
+                vid._errorRetryCount = vid._errorRetryCount || 0;
+                if (vid._errorRetryCount < 3 && (now - vid._lastErrorRetry > 2000)) {
+                  vid._lastErrorRetry = now;
+                  vid._errorRetryCount++;
+                  setTimeout(function() {
+                    if (vid.error) {
+                      vid.load();
+                      if (isVideoVisible(vid)) vid.play().catch(function(){});
+                    }
+                  }, 1000);
+                }
               });
               if (!targetContainer.dataset.agPositioned) {
                 targetContainer.dataset.agPositioned = 'true';
@@ -2742,6 +2862,14 @@ function getClientVideoScript(config) {
             if (window.__antigravityVideoVisibilityObserver) {
               window.__antigravityVideoVisibilityObserver.observe(vid);
             }
+          } else {
+            // If no target container exists right now (e.g. collapsed right panel), clean up dangling instances
+            const danglingVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
+            for (let i = 0; i < danglingVids.length; i++) {
+              danglingVids[i].pause();
+              danglingVids[i].removeAttribute('src');
+              danglingVids[i].remove();
+            }
           }
         }
       }
@@ -2751,8 +2879,8 @@ function getClientVideoScript(config) {
     window.__antigravityApplyVideos = applyVideos;
     applyVideos();
 
-    // Fast startup retry ladder
-    [50, 150, 300, 600, 1200, 2500, 5000].forEach(function(delay) {
+    // Gentle startup retry ladder without aggressive abort loops
+    [100, 500, 1500].forEach(function(delay) {
       setTimeout(applyVideos, delay);
     });
 
@@ -2815,6 +2943,9 @@ function getClientVideoScript(config) {
         if (!isRelevant) return;
       }
 
+      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
+        return;
+      }
       if (window.__isDraggingSplit || (document.body && document.body.classList.contains('is-resizing'))) {
         return;
       }
@@ -2943,11 +3074,7 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                     let titlebarFix = document.getElementById('antigravity-titlebar-fix');
                     if (titlebarFix) {
                       titlebarFix.textContent = [
-                        '/* 6.3 顶部更新按钮与控制按钮高优先级点击保证 (Titlebar Buttons & Update Button Responsiveness) */',
-                        '[data-testid*="update"],',
-                        '[data-testid="app-update-button"],',
-                        '[aria-label*="update" i],',
-                        '[aria-label*="Update" i],',
+                        '/* 6.3 顶部标题栏操作与控制按钮点击保证 (Titlebar Buttons Responsiveness) */',
                         'header button,',
                         'header [role="button"],',
                         'header a,',
@@ -2956,8 +3083,7 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         '[class*="titlebar"] a,',
                         'div.absolute.top-0 button,',
                         'div.absolute.top-0 [role="button"],',
-                        '.titlebar-button,',
-                        '#antigravity-update-modal button {',
+                        '.titlebar-button {',
                         '  -webkit-app-region: no-drag !important;',
                         '  pointer-events: auto !important;',
                         '  cursor: pointer !important;',
@@ -3024,6 +3150,10 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
 
                     ${videoScript}
 
+                    try {
+                      window.postMessage({ type: 'antigravity-config-updated', config: ${JSON.stringify(activeConfig)} }, '*');
+                    } catch(e) {}
+
                     return "Live theme & video hot-reloaded!";
                   })()
                 `;
@@ -3034,17 +3164,38 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                   try { ws.close(); } catch(e) {}
                   finish();
                 };
+                let contexts = [];
+                let waitingCount = 0;
+                let receivedCount = 0;
+
                 ws.addEventListener('message', (evt) => {
                   try {
                     const msg = JSON.parse(evt.data);
+                    if (msg.method === 'Runtime.executionContextCreated') {
+                      contexts.push(msg.params.context);
+                    }
                     if (msg.id === 1) {
-                      onDone();
+                      setTimeout(() => {
+                        const targetContexts = contexts.length > 0 ? contexts : [{ id: undefined }];
+                        waitingCount = targetContexts.length + 1;
+                        targetContexts.forEach((ctx, idx) => {
+                          const params = { expression: applyCode };
+                          if (ctx && ctx.id !== undefined) params.contextId = ctx.id;
+                          ws.send(JSON.stringify({ id: 100 + idx, method: 'Runtime.evaluate', params }));
+                        });
+                        ws.send(JSON.stringify({ id: 999, method: 'Runtime.evaluate', params: { expression: applyCode } }));
+                      }, 40);
+                    } else if (msg.id >= 100) {
+                      receivedCount++;
+                      if (receivedCount >= waitingCount) {
+                        onDone();
+                      }
                     }
                   } catch(e) {
                     onDone();
                   }
                 });
-                ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: applyCode } }));
+                ws.send(JSON.stringify({ id: 1, method: 'Runtime.enable' }));
                 setTimeout(onDone, 3000);
               });
               ws.addEventListener('error', finish);
@@ -3117,8 +3268,21 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
     const defaultPosterTarget = path.join(wallpapersDir, `${posterPrefix}_poster.jpg`);
     let companionPoster = customPosterPath || findCompanionPoster(srcPath);
 
-    // If no existing companion poster was found, automatically extract a frame from the video!
-    if (!companionPoster || !fs.existsSync(companionPoster)) {
+    // If companion poster is absent or is a low-res GIF/preview, extract a crystal-clear frame directly from the video
+    let needsExtract = !companionPoster || !fs.existsSync(companionPoster);
+    if (companionPoster && fs.existsSync(companionPoster)) {
+      const ext = path.extname(companionPoster).toLowerCase();
+      if (ext === '.gif') {
+        needsExtract = true;
+      } else {
+        try {
+          const st = fs.statSync(companionPoster);
+          if (st.size < 20 * 1024) needsExtract = true;
+        } catch (e) {}
+      }
+    }
+
+    if (needsExtract) {
       console.log(`      正在从视频中提取高清静态首帧作为保底...`);
       const extracted = extractPosterFromVideo(srcPath, defaultPosterTarget);
       if (extracted) {
@@ -3128,7 +3292,8 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
 
     if (companionPoster && fs.existsSync(companionPoster)) {
       try {
-        const pExt = path.extname(companionPoster).toLowerCase();
+        let pExt = path.extname(companionPoster).toLowerCase();
+        if (pExt === '.gif') pExt = '.jpg';
         posterFileName = `${posterPrefix}_poster${pExt}`;
         const posterTargetPath = path.join(wallpapersDir, posterFileName);
         if (path.resolve(companionPoster) !== path.resolve(posterTargetPath)) {
@@ -3196,18 +3361,32 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
 
 async function revertToBaseline() {
   console.log(`正在从黄金基线【初版】恢复...`);
-  if (!fs.existsSync(baselineDir)) {
-    console.error(`❌ 未找到初版备份目录: ${baselineDir}`);
+  let sourceWallpapersDir = null;
+  let baselineCssPath = null;
+  if (fs.existsSync(baselineDir)) {
+    baselineCssPath = path.join(baselineDir, 'custom_theme.css');
+    const baselineWallpapers = path.join(baselineDir, 'wallpapers');
+    if (fs.existsSync(baselineWallpapers)) {
+      sourceWallpapersDir = baselineWallpapers;
+    }
+  }
+
+  if (!sourceWallpapersDir) {
+    const repoWallpapersDir = path.join(__dirname, '..', 'wallpapers');
+    if (fs.existsSync(repoWallpapersDir)) {
+      sourceWallpapersDir = repoWallpapersDir;
+      console.log(`ℹ️ 初版备份不存在，自动使用仓库自带壁纸目录作为基线: ${repoWallpapersDir}`);
+    }
+  }
+
+  if (!sourceWallpapersDir) {
+    console.error(`❌ 未找到初版备份目录: ${baselineDir} 且仓库壁纸目录不可用`);
     return false;
   }
-  const baselineCssPath = path.join(baselineDir, 'custom_theme.css');
-  const baselineWallpapers = path.join(baselineDir, 'wallpapers');
-  
-  if (fs.existsSync(baselineWallpapers)) {
-    fs.readdirSync(baselineWallpapers).forEach(f => {
-      fs.copyFileSync(path.join(baselineWallpapers, f), path.join(wallpapersDir, f));
-    });
-  }
+
+  fs.readdirSync(sourceWallpapersDir).forEach(f => {
+    fs.copyFileSync(path.join(sourceWallpapersDir, f), path.join(wallpapersDir, f));
+  });
 
   // 重置槽位为初始全静态图片
   const baselineConfig = {};
@@ -3615,6 +3794,17 @@ function savePreset(presetName, description, options = {}) {
         filesToArchive.set(baseName, absPath);
         fileRoles[baseName] = `${key} 槽位主壁纸`;
         slot.file = baseName;
+      }
+    }
+    if (slot.type === 'video') {
+      const prefix = key === 'bottom' ? 'input' : key;
+      if (slot.poster && slot.poster.toLowerCase().endsWith('.gif')) {
+        const jpgCandidate = `${prefix}_poster.jpg`;
+        if (fs.existsSync(path.join(wallpapersDir, jpgCandidate))) {
+          slot.poster = jpgCandidate;
+        } else {
+          slot.poster = null;
+        }
       }
     }
     if (slot.poster) {
@@ -4048,6 +4238,24 @@ async function applyPreset(nameOrIndex) {
     if (key !== 'fontColor' && slot && typeof slot === 'object') {
       slot.key = slot.key || key;
       slot.version = newVersion;
+      if (slot.type === 'video') {
+        const prefix = key === 'bottom' ? 'input' : key;
+        if (slot.poster && slot.poster.toLowerCase().endsWith('.gif')) {
+          slot.poster = null;
+        }
+        const jpgCandidate = `${prefix}_poster.jpg`;
+        if (fs.existsSync(path.join(wallpapersDir, jpgCandidate))) {
+          slot.poster = jpgCandidate;
+        } else if (fs.existsSync(path.join(presetWallpapersDir, jpgCandidate))) {
+          slot.poster = jpgCandidate;
+        } else {
+          const vAbs = path.join(wallpapersDir, slot.file);
+          if (fs.existsSync(vAbs)) {
+            const ok = extractPosterFromVideo(vAbs, path.join(wallpapersDir, jpgCandidate));
+            if (ok) slot.poster = jpgCandidate;
+          }
+        }
+      }
     }
   }
   if (!targetConfig.fontColor) {
@@ -4176,6 +4384,106 @@ async function restoreOriginal() {
 }
 
 /**
+ * 彻底卸载美化并物理还原官方 app.asar 核心与配置文件
+ */
+async function uninstallCompletely() {
+  console.log('=======================================================');
+  console.log('   🗑️ 正在执行：完全卸载美化并物理还原官方核心');
+  console.log('=======================================================');
+
+  console.log('[1/4] 正在安全解除 Antigravity 进程与文件占用...');
+  const allowKill = process.env.ALLOW_ANTIGRAVITY_KILL === '1' || process.argv.includes('--force-kill');
+  if (allowKill) {
+    try {
+      const { execSync } = require('child_process');
+      execSync('taskkill /f /im "Antigravity.exe"', { stdio: 'ignore' });
+      const waitMs = (ms) => {
+        const start = Date.now();
+        while (Date.now() - start < ms) {}
+      };
+      waitMs(1200);
+    } catch (e) {}
+  } else {
+    console.log('ℹ️ 保护模式生效：跳过自动关闭 Antigravity 进程以保持会话活跃 (如需强制终止请传 --force-kill 或设置 ALLOW_ANTIGRAVITY_KILL=1)');
+  }
+
+  const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  const defaultResDir = path.join(localAppData, 'Programs', 'antigravity', 'resources');
+  const resDir = process.env.ANTIGRAVITY_RESOURCES || defaultResDir;
+  const asarPath = path.join(resDir, 'app.asar');
+  const asarOrigBak = path.join(resDir, 'app.asar.orig.bak');
+  const patchedAsarPath = path.join(resDir, 'app.asar.patched');
+  const appDir = path.join(resDir, 'app');
+  const appUpdateYml = path.join(resDir, 'app-update.yml');
+  const appUpdateYmlBak = path.join(resDir, 'app-update.yml.bak');
+
+  console.log('[2/4] 正在物理还原官方原版 app.asar...');
+  if (fs.existsSync(asarOrigBak)) {
+    try {
+      fs.copyFileSync(asarOrigBak, asarPath);
+      console.log(`✓ 成功将官方原版核心 (${(fs.statSync(asarPath).size / 1024 / 1024).toFixed(2)} MB) 物理还原至: ${asarPath}`);
+    } catch (err) {
+      if (allowKill) {
+        console.error(`❌ 还原 app.asar 失败: ${err.message}`);
+      } else {
+        console.warn(`⚠️ 还原 app.asar 提示: ${err.message} (当前客户端正在运行占用，退出后可手动将 ${asarOrigBak} 覆盖至 ${asarPath})`);
+      }
+    }
+  } else {
+    console.log(`ℹ️ 未找到物理备份文件: ${asarOrigBak}`);
+  }
+
+  console.log('[3/4] 正在还原官方更新配置与清理补丁临时文件...');
+  if (fs.existsSync(appUpdateYmlBak)) {
+    try {
+      fs.copyFileSync(appUpdateYmlBak, appUpdateYml);
+      fs.rmSync(appUpdateYmlBak, { force: true });
+      console.log(`✓ 成功还原官方 app-update.yml`);
+    } catch (e) {
+      console.warn(`⚠️ 还原 app-update.yml 提示: ${e.message}`);
+    }
+  }
+
+  if (fs.existsSync(patchedAsarPath)) {
+    try {
+      fs.rmSync(patchedAsarPath, { force: true });
+      console.log(`✓ 已清理补丁镜像 app.asar.patched`);
+    } catch (e) {}
+  }
+
+  if (fs.existsSync(appDir)) {
+    try {
+      fs.rmSync(appDir, { recursive: true, force: true });
+      console.log(`✓ 已清理解包源码目录 app`);
+    } catch (e) {}
+  }
+
+  console.log('[4/4] 正在重置主题样式与配置为官方默认...');
+  try {
+    const vanillaConfig = {
+      isOriginal: true,
+      version: Date.now(),
+      left: { key: 'left', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
+      mid: { key: 'mid', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
+      right: { key: 'right', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
+      bottom: { key: 'bottom', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
+      settings: { key: 'settings', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
+      fontColor: FONT_PRESETS['pure-white']
+    };
+    saveSlotsConfig(vanillaConfig);
+    fs.writeFileSync(customCssPath, '/* Vanilla Mode - No Custom CSS */\n', 'utf8');
+    try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), '/* Vanilla Mode - No Custom CSS */\n', 'utf8'); } catch(e) {}
+    console.log(`✓ 主题配置文件与样式已重置为官方原版`);
+  } catch (e) {}
+
+  console.log('');
+  console.log('=======================================================');
+  console.log('✨ 完全卸载成功！Antigravity 已恢复官方出厂原生物理状态。');
+  console.log('=======================================================');
+  return true;
+}
+
+/**
  * Prints comprehensive help message for theme engine CLI.
  */
 function printHelp() {
@@ -4183,6 +4491,10 @@ function printHelp() {
 ================================================================================
   🚀 Antigravity Theme Engine —— 壁纸、位置微调与预设管理引擎
 ================================================================================
+
+【完全卸载与物理还原 (Complete Uninstall)】:
+  node core/theme_engine.js --uninstall-completely
+      彻底卸载美化、物理还原官方原版 app.asar 与官方更新配置，恢复出厂原生状态
 
 【恢复官方原版纯净模式 (Restore Vanilla)】:
   node core/theme_engine.js --restore-original
@@ -4222,6 +4534,16 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   if (args[0] === '--help' || args[0] === '-h' || args[0] === 'help') {
     printHelp();
+  } else if (
+    args[0] === '--uninstall-completely' || args[0] === '--uninstall' || args[0] === 'uninstall' ||
+    args[0] === '--completely-uninstall'
+  ) {
+    uninstallCompletely().then(ok => {
+      if (!ok) process.exit(1);
+    }).catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
   } else if (
     args[0] === '--restore-original' || args[0] === '--original' || args[0] === '--vanilla' ||
     args[0] === '--restore-vanilla' || args[0] === 'restore-original' || args[0] === 'original' ||
@@ -4468,6 +4790,7 @@ module.exports = {
   formatWallpaperTable,
   generateMasterCss,
   restoreOriginal,
+  uninstallCompletely,
   revertToBaseline,
   loadSlotsConfig,
   saveSlotsConfig,

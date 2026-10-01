@@ -6,12 +6,14 @@ function getHash(buf) {
   return crypto.createHash('sha256').update(buf).digest('hex');
 }
 
-const inputPosterPath = 'C:\\Users\\lenvo\\.gemini\\antigravity\\wallpapers\\input_poster.jpg';
-const leftPosterPath = 'C:\\Users\\lenvo\\.gemini\\antigravity\\wallpapers\\left_poster.jpg';
-const leftWallpaperJpg = 'C:\\Users\\lenvo\\.gemini\\antigravity\\wallpapers\\left_wallpaper.jpg';
+const os = require('os');
+const antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || path.join(os.homedir(), '.gemini', 'antigravity');
+const inputPosterPath = path.join(antigravityDir, 'wallpapers', 'input_poster.jpg');
+const leftPosterPath = path.join(antigravityDir, 'wallpapers', 'left_poster.jpg');
+const leftWallpaperJpg = path.join(antigravityDir, 'wallpapers', 'left_wallpaper.jpg');
 
-const inputPoster = fs.readFileSync(inputPosterPath);
-const leftPoster = fs.readFileSync(leftPosterPath);
+const inputPoster = fs.existsSync(inputPosterPath) ? fs.readFileSync(inputPosterPath) : Buffer.alloc(0);
+const leftPoster = fs.existsSync(leftPosterPath) ? fs.readFileSync(leftPosterPath) : Buffer.alloc(0);
 console.log('input_poster.jpg:', inputPoster.length, getHash(inputPoster));
 console.log('left_poster.jpg:', leftPoster.length, getHash(leftPoster));
 if (fs.existsSync(leftWallpaperJpg)) {
@@ -19,7 +21,8 @@ if (fs.existsSync(leftWallpaperJpg)) {
   console.log('left_wallpaper.jpg:', lw.length, getHash(lw));
 }
 
-const css = fs.readFileSync('C:\\Users\\lenvo\\.gemini\\antigravity\\custom_theme.css', 'utf-8');
+const cssFile = path.join(antigravityDir, 'custom_theme.css');
+const css = fs.existsSync(cssFile) ? fs.readFileSync(cssFile, 'utf-8') : '';
 const regex = /url\("data:image\/jpeg;base64,([^"]+)"\)/g;
 let match;
 let count = 0;

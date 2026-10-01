@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const http = require('http');
 const assert = require('assert');
 const {
@@ -44,8 +45,9 @@ const { startMediaServer, isMediaServerRunning, DEFAULT_PORT } = require('../cor
 
 const repoDir = path.join(__dirname, '..');
 const repoWallpapers = path.join(repoDir, 'wallpapers');
-const sampleVideoPath = fs.existsSync('C:/Users/lenvo/Videos/2025-01-18 20-06-44.mp4')
-  ? 'C:/Users/lenvo/Videos/2025-01-18 20-06-44.mp4'
+const userSampleVideo = path.join(os.homedir(), 'Videos', '2025-01-18 20-06-44.mp4');
+const sampleVideoPath = fs.existsSync(userSampleVideo)
+  ? userSampleVideo
   : path.join(__dirname, 'sample_wallpaper.mp4');
 
 function evalCdp(expression, retries = 3) {
@@ -151,6 +153,18 @@ async function runTests() {
     let targetConfig = userConfigBackup;
     if (fs.existsSync(goldenConfigPath)) {
       try { targetConfig = JSON.parse(fs.readFileSync(goldenConfigPath, 'utf8')); } catch (e) {}
+    }
+    for (const [key, slot] of Object.entries(targetConfig)) {
+      if (slot && slot.type === 'video') {
+        const prefix = key === 'bottom' ? 'input' : key;
+        if (slot.poster && slot.poster.toLowerCase().endsWith('.gif')) {
+          slot.poster = null;
+        }
+        const jpgCandidate = `${prefix}_poster.jpg`;
+        if (fs.existsSync(path.join(liveWallpapersDir, jpgCandidate))) {
+          slot.poster = jpgCandidate;
+        }
+      }
     }
     saveSlotsConfig(targetConfig);
     const userCss = generateMasterCss(targetConfig);
@@ -1108,7 +1122,10 @@ async function runTests() {
 
   // 17.6 验证一键切回壁纸预设（无损还原）
   console.log('   正在测试从官方原版一键切回用户壁纸预设...');
-  const reApplyOk = await applyPreset('默认活跃配置');
+  const targetPresetName = getPresetDetails('默认活跃配置')
+    ? '默认活跃配置'
+    : (getPresetDetails('守岸人') ? '守岸人' : (listPresets().find(p => !p.name.includes('恢复原版前'))?.name || '1'));
+  const reApplyOk = await applyPreset(targetPresetName);
   assert.strictEqual(reApplyOk, true, 'applyPreset must succeed');
   const restoredFromVanilla = loadSlotsConfig();
   assert.strictEqual(restoredFromVanilla.isOriginal, false, 'isOriginal must be reset to false after applying preset');

@@ -22,7 +22,9 @@ http.get('http://127.0.0.1:8314/json', (res) => {
     ws.addEventListener('message', (event) => {
       const resp = JSON.parse(event.data);
       if (resp.id === 1 && resp.result && resp.result.data) {
-        const outPath = 'C:\\\\Users\\\\lenvo\\\\.gemini\\\\antigravity\\\\brain\\\\2ea5575d-04fc-4078-88aa-ed41ef4479c6\\\\perf_optimized_live_v3.png';
+        const os = require('os');
+        const outDir = path.join(__dirname, '..', 'tests');
+        const outPath = path.join(outDir, 'perf_optimized_live_v3.png');
         fs.writeFileSync(outPath, Buffer.from(resp.result.data, 'base64'));
         console.log('Screenshot saved to:', outPath);
         ws.close();

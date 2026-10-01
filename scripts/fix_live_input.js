@@ -110,7 +110,7 @@ http.get('http://127.0.0.1:8314/json', (res) => {
         }, 1000);
       } else if (resp.id === 2) {
         const buf = Buffer.from(resp.result.data, 'base64');
-        const outPath = 'C:\\Users\\lenvo\\.gemini\\antigravity\\brain\\2ea5575d-04fc-4078-88aa-ed41ef4479c6\\live_input_fixed.png';
+        const outPath = path.join(__dirname, '..', 'tests', 'live_input_fixed.png');
         fs.writeFileSync(outPath, buf);
         console.log(`Saved screenshot to ${outPath} (${buf.length} bytes)`);
         ws.close();

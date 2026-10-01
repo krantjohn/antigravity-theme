@@ -67,3 +67,6 @@ tests/test_stream_speed.js
 tests/test_terminal_tab.js
 tests/test_video_events.js
 tests/verify_*.js
+
+# Third-party unmanaged repositories
+antigravity2-cn-main/

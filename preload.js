@@ -132,7 +132,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
 // ================= Antigravity Master Theme & Dynamic Video Auto-Loader =================
 (function() {
   const SERVER_URL = 'http://127.0.0.1:8315';
-  let cachedConfig = {"left":{"key":"left","file":"left_wallpaper.mp4","type":"video","version":1789301454022,"position":"0% 45%","desc":"AI主对话界面 / 全局底图","poster":"left_poster.jpg"},"mid":{"key":"mid","file":"mid_wallpaper.mp4","type":"video","version":1789301802474,"position":"75% 50%","desc":"终端界面 (活跃终端壁纸)","poster":"mid_poster.gif"},"right":{"key":"right","file":"right_wallpaper.mp4","type":"video","version":1789302062720,"position":"70% 50%","desc":"最右侧界面 (独立终端/侧栏壁纸)","poster":"right_poster.jpg"},"bottom":{"key":"bottom","file":"input_wallpaper.mp4","type":"video","version":1789300554146,"position":"50% 40%","desc":"底部输入框","poster":"input_poster.gif"},"settings":{"key":"settings","file":"settings_wallpaper.png","type":"image","version":1789298704540,"position":"center 65%","desc":"设置界面"},"fontColor":{"id":"obsidian-black","name":"暗夜曜黑 (Obsidian Black)","primary":"#0f172a","secondary":"#1e293b","muted":"#475569","terminal":"#05070d","shadow":"0 0 2px #ffffff, 0 1px 3px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.85)","terminalShadow":"0 0 2px #ffffff, 0 1px 2px rgba(255, 255, 255, 0.98), 0 0 1px #ffffff, 0 0 5px rgba(255, 255, 255, 0.85)","isDarkText":true,"desc":"适合纯白、超亮浅色动漫或明亮风景壁纸，曜黑字体搭配白辉光描边，不晃眼且字迹清晰","aliases":["2","black","obsidian-black","暗黑","黑","曜黑","暗夜曜黑"]}};
+  let cachedConfig = {"left":{"key":"left","file":"left_wallpaper.mp4","type":"video","version":1790338043806,"position":"center center","desc":"AI主对话界面 / 全局底图","poster":"left_poster.jpg"},"mid":{"key":"mid","file":"mid_wallpaper.jpg","type":"image","position":"center 20%","desc":"终端界面 (活跃终端壁纸)"},"right":{"key":"right","file":"right_wallpaper.jpg","type":"image","position":"center 20%","desc":"最右侧界面 (独立终端/侧栏壁纸)"},"bottom":{"key":"bottom","file":"input_wallpaper.mp4","type":"video","version":1790398254742,"position":"50% 36%","desc":"底部输入框","poster":"input_poster.jpg"},"settings":{"key":"settings","file":"settings_wallpaper.png","type":"image","position":"center 65%","desc":"设置界面"},"fontColor":{"id":"pure-white","name":"纯白高对比 (Pure White)","primary":"#ffffff","secondary":"#f1f5f9","muted":"#94a3b8","terminal":"#ffffff","shadow":"0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)","terminalShadow":"0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)","isDarkText":false,"desc":"适合绝大多数暗色、炫彩或复杂壁纸，纯白字体配深色轮廓，极致清晰","aliases":["1","white","pure-white","纯白","白","高对比白"]},"isOriginal":false};
   try {
     const _fs = require('fs');
     const _path = require('path');
@@ -149,7 +149,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
   // Tick 0 极速挂载底图壁纸 (0ms 显示海报图并立即预载视频流，绝无开机黑屏与卡顿延迟)
   function mountTickZeroBase() {
     try {
-      const cfg = cachedConfig;
+      const cfg = (window.__antigravityConfig && window.__antigravityConfig.isOriginal) ? window.__antigravityConfig : (window.__antigravityConfig || cachedConfig);
       if (!cfg || cfg.isOriginal || !cfg.left || cfg.left.type !== 'video' || !cfg.left.file) return;
       const left = cfg.left;
       const vParam = (left && left.version) ? ('?v=' + left.version) : '';
@@ -212,16 +212,19 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
         leftVid.src = src;
         const tryRecoverLeft = function() {
           if (!leftVid || leftVid.readyState >= 1) return;
-          if (leftVid.error || leftVid.networkState === 3 || leftVid.readyState === 0) {
+          const now = Date.now();
+          leftVid._lastErrorRetry = leftVid._lastErrorRetry || 0;
+          leftVid._errorRetryCount = leftVid._errorRetryCount || 0;
+          if (leftVid.error && leftVid._errorRetryCount < 3 && (now - leftVid._lastErrorRetry > 2000)) {
+            leftVid._lastErrorRetry = now;
+            leftVid._errorRetryCount++;
             leftVid.src = src;
             leftVid.load();
             leftVid.play().catch(function(){});
           }
         };
         leftVid.addEventListener('error', function() {
-          setTimeout(tryRecoverLeft, 100);
-          setTimeout(tryRecoverLeft, 300);
-          setTimeout(tryRecoverLeft, 800);
+          setTimeout(tryRecoverLeft, 1000);
         });
         (document.body || document.documentElement).prepend(leftVid);
         leftVid.play().catch(function(){});
@@ -240,11 +243,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
         titlebarFix = document.createElement('style');
         titlebarFix.id = 'antigravity-titlebar-fix';
         titlebarFix.textContent = [
-          '/* 6.3 顶部更新按钮与操作按钮高优先级点击保证 (Titlebar Buttons & Update Button Responsiveness) */',
-          '[data-testid*="update"],',
-          '[data-testid="app-update-button"],',
-          '[aria-label*="update" i],',
-          '[aria-label*="Update" i],',
+          '/* 6.3 顶部标题栏操作与控制按钮点击保证 (Titlebar Buttons Responsiveness) */',
           'header button,',
           'header [role="button"],',
           'header a,',
@@ -253,8 +252,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
           '[class*="titlebar"] a,',
           'div.absolute.top-0 button,',
           'div.absolute.top-0 [role="button"],',
-          '.titlebar-button,',
-          '#antigravity-update-modal button {',
+          '.titlebar-button {',
           '  -webkit-app-region: no-drag !important;',
           '  pointer-events: auto !important;',
           '  cursor: pointer !important;',
@@ -429,7 +427,7 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
 
   // 3. 动态视频槽位自动化挂载与播放引擎 (硬件加速合成层隔离与快速通道)
   function applyVideos() {
-    const config = cachedConfig;
+    const config = (window.__antigravityConfig && window.__antigravityConfig.isOriginal) ? window.__antigravityConfig : (window.__antigravityConfig || cachedConfig);
     if (!config) return;
     if (config.isOriginal) {
       const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
@@ -456,9 +454,17 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
         if (document.body && leftVid.parentElement !== document.body) {
           document.body.prepend(leftVid);
         }
-        if (leftVid.error || (leftVid.networkState === 3 && leftVid.readyState === 0)) {
-          leftVid.src = src;
-          leftVid.load();
+        if (leftVid.error) {
+          const now = Date.now();
+          leftVid._lastErrorRetry = leftVid._lastErrorRetry || 0;
+          leftVid._errorRetryCount = leftVid._errorRetryCount || 0;
+          if (leftVid._errorRetryCount < 3 && (now - leftVid._lastErrorRetry > 2000)) {
+            leftVid._lastErrorRetry = now;
+            leftVid._errorRetryCount++;
+            leftVid.src = src;
+            leftVid.load();
+            if (!document.hidden) leftVid.play().catch(function(){});
+          }
         }
         if (!document.hidden && leftVid.paused && leftVid.readyState >= 1) {
           leftVid.play().catch(function(){});
@@ -522,12 +528,19 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
             if (!document.hidden && leftVid.paused) leftVid.play().catch(function(){});
           });
           leftVid.addEventListener('error', function() {
-            setTimeout(function() {
-              if (leftVid.error) {
-                leftVid.load();
-                if (!document.hidden) leftVid.play().catch(function(){});
-              }
-            }, 300);
+            const now = Date.now();
+            leftVid._lastErrorRetry = leftVid._lastErrorRetry || 0;
+            leftVid._errorRetryCount = leftVid._errorRetryCount || 0;
+            if (leftVid._errorRetryCount < 3 && (now - leftVid._lastErrorRetry > 2000)) {
+              leftVid._lastErrorRetry = now;
+              leftVid._errorRetryCount++;
+              setTimeout(function() {
+                if (leftVid.error) {
+                  leftVid.load();
+                  if (!document.hidden) leftVid.play().catch(function(){});
+                }
+              }, 1000);
+            }
           });
           (document.body || document.documentElement).prepend(leftVid);
         }
@@ -671,38 +684,54 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
           } catch(e) {}
         }
 
-        // 2. Clean up any video instances that are NOT inside the active targetContainer
-        const existingVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
-        for (let i = 0; i < existingVids.length; i++) {
-          if (!targetContainer || existingVids[i].parentElement !== targetContainer) {
-            existingVids[i].pause();
-            existingVids[i].removeAttribute('src');
-            existingVids[i].load();
-            existingVids[i].remove();
-          }
-        }
-
-        // 3. If targetContainer exists, manage the single slot video
+        // 2. Manage slot video inside or across targetContainer
         if (targetContainer) {
           const allSlotVidsInContainer = targetContainer.querySelectorAll(':scope > .antigravity-slot-video[data-slot="' + slotKey + '"]');
           for (let i = 1; i < allSlotVidsInContainer.length; i++) {
             allSlotVidsInContainer[i].pause();
             allSlotVidsInContainer[i].removeAttribute('src');
-            allSlotVidsInContainer[i].load();
             allSlotVidsInContainer[i].remove();
           }
           let vid = allSlotVidsInContainer[0];
+
+          // If no video in targetContainer, check if an existing instance is elsewhere and move it
+          if (!vid) {
+            const existingOutside = document.querySelector('.antigravity-slot-video[data-slot="' + slotKey + '"]');
+            if (existingOutside) {
+              targetContainer.prepend(existingOutside);
+              vid = existingOutside;
+            }
+          }
+
+          // Clean up any extra duplicate instances outside targetContainer
+          const allInstances = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
+          for (let i = 0; i < allInstances.length; i++) {
+            if (allInstances[i] !== vid) {
+              allInstances[i].pause();
+              allInstances[i].removeAttribute('src');
+              allInstances[i].remove();
+            }
+          }
 
           // Fast-path: already mounted in targetContainer with expected source
           if (vid && vid.dataset.currentSrc === src) {
             vid.style.transform = 'translateZ(0)';
             vid.style.contain = 'strict';
             vid.style.backfaceVisibility = 'hidden';
-            if (vid.error || (vid.networkState === 3 && vid.readyState === 0)) {
-              vid.src = src;
-              vid.load();
+            if (vid.error) {
+              const now = Date.now();
+              vid._lastErrorRetry = vid._lastErrorRetry || 0;
+              vid._errorRetryCount = vid._errorRetryCount || 0;
+              if (vid._errorRetryCount < 3 && (now - vid._lastErrorRetry > 2000)) {
+                vid._lastErrorRetry = now;
+                vid._errorRetryCount++;
+                vid.src = src;
+                vid.load();
+                if (isVideoVisible(vid)) vid.play().catch(function(){});
+              }
+            } else {
+              syncVideoPlaybackState(vid);
             }
-            syncVideoPlaybackState(vid);
             continue;
           }
 
@@ -754,12 +783,19 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
               if (isVideoVisible(vid) && vid.paused) vid.play().catch(function(){});
             });
             vid.addEventListener('error', function() {
-              setTimeout(function() {
-                if (vid.error) {
-                  vid.load();
-                  if (isVideoVisible(vid)) vid.play().catch(function(){});
-                }
-              }, 300);
+              const now = Date.now();
+              vid._lastErrorRetry = vid._lastErrorRetry || 0;
+              vid._errorRetryCount = vid._errorRetryCount || 0;
+              if (vid._errorRetryCount < 3 && (now - vid._lastErrorRetry > 2000)) {
+                vid._lastErrorRetry = now;
+                vid._errorRetryCount++;
+                setTimeout(function() {
+                  if (vid.error) {
+                    vid.load();
+                    if (isVideoVisible(vid)) vid.play().catch(function(){});
+                  }
+                }, 1000);
+              }
             });
             if (!targetContainer.dataset.agPositioned) {
               targetContainer.dataset.agPositioned = 'true';
@@ -790,6 +826,14 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
           if (window.__antigravityVideoVisibilityObserver) {
             window.__antigravityVideoVisibilityObserver.observe(vid);
           }
+        } else {
+          // If no target container exists right now (e.g. collapsed right panel), clean up dangling instances
+          const danglingVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
+          for (let i = 0; i < danglingVids.length; i++) {
+            danglingVids[i].pause();
+            danglingVids[i].removeAttribute('src');
+            danglingVids[i].remove();
+          }
         }
       }
     }
@@ -797,6 +841,9 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
 
   // 4. 定时轮询与 DOM 监听自适应驱动 (智能去抖与低开销轮询)
   async function syncAndApply() {
+    if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
+      return;
+    }
     const cfg = await fetchConfig();
     if (cfg) {
       const cfgHash = JSON.stringify(cfg);
@@ -808,13 +855,27 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
     applyVideos();
   }
 
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'antigravity-config-updated') {
+      if (e.data.config) {
+        cachedConfig = e.data.config;
+        window.__antigravityConfig = e.data.config;
+        if (cachedConfig.isOriginal) {
+          applyVideos();
+        } else {
+          applyTheme(true);
+          applyVideos();
+        }
+      }
+    }
+  });
+
   const initEngine = () => {
     applyTheme();
     applyVideos();
 
-    // Fast startup retry ladder (50ms, 150ms, 300ms, 600ms, 1200ms, 2500ms, 5000ms)
-    // Ensures videos mount immediately as React components hydrate
-    [50, 150, 300, 600, 1200, 2500, 5000].forEach(function(delay) {
+    // Gentle startup ladder without aggressive abort loops
+    [100, 500, 1500].forEach(function(delay) {
       setTimeout(applyVideos, delay);
     });
 
@@ -874,6 +935,9 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
         if (!isRelevant) return;
       }
 
+      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
+        return;
+      }
       if (window.__isDraggingSplit || (document.body && document.body.classList.contains('is-resizing'))) {
         return;
       }
@@ -952,228 +1016,6 @@ electron_1.contextBridge.exposeInMainWorld('ide', ideAPI);
     }
     window.__antigravitySyncInterval = setInterval(syncAndApply, 10000);
   };
-
-  
-    // ================= Update Modal & Notification =================
-    window.showThemeUpdateModal = function(version = '2.15.0') {
-      try {
-        const existing = document.getElementById('antigravity-update-modal');
-        if (existing) existing.remove();
-
-        const overlay = document.createElement('div');
-        overlay.id = 'antigravity-update-modal';
-        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); z-index: 9999999; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);';
-
-        const box = document.createElement('div');
-        box.style.cssText = 'background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.25); border-radius: 20px; padding: 28px 32px; max-width: 480px; width: 90%; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; transform: scale(0.92) translateY(8px); transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1); box-sizing: border-box; user-select: none;';
-
-        box.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px;">' +
-          '<div style="display: flex; align-items: center; gap: 12px;">' +
-            '<div style="font-size: 26px; filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.6));">🚀</div>' +
-            '<div>' +
-              '<div style="font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: 0.2px;">Google Antigravity 检查更新</div>' +
-              '<div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">' +
-                '<span style="font-size: 11.5px; padding: 2px 9px; border-radius: 9999px; background: rgba(56, 189, 248, 0.18); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 600;">发现官方新版本 v' + version + '</span>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-          '<button id="ag-modal-close-x" style="background: rgba(255, 255, 255, 0.08); border: none; color: #94a3b8; font-size: 15px; cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.15s;" onmouseover="this.style.color=\'#fff\'; this.style.background=\'rgba(255,255,255,0.16)\'" onmouseout="this.style.color=\'#94a3b8\'; this.style.background=\'rgba(255,255,255,0.08)\'">✕</button>' +
-        '</div>' +
-        '<div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;">' +
-          '<div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">' +
-            '<span style="color: #94a3b8;">当前运行版本</span>' +
-            '<span style="color: #e2e8f0; font-weight: 500;">v2.14.0</span>' +
-          '</div>' +
-          '<div style="display: flex; justify-content: space-between; font-size: 13px;">' +
-            '<span style="color: #94a3b8;">官方最新版本</span>' +
-            '<span style="color: #38bdf8; font-weight: 700;">v' + version + '</span>' +
-          '</div>' +
-        '</div>' +
-        '<div style="font-size: 12.5px; line-height: 1.6; color: #cbd5e1; margin-bottom: 22px; padding: 12px 14px; background: rgba(245, 158, 11, 0.12); border-left: 3.5px solid #f59e0b; border-radius: 8px;">' +
-          '<div style="font-weight: 600; color: #fbbf24; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">' +
-            '<span>🌸</span><span>二次元主题美化环境保护</span>' +
-          '</div>' +
-          '当前客户端已安装专属壁纸与美化补丁。直接覆盖升级将需要重新安装补丁。建议您先在工具中保存壁纸预设，或按需前往官网下载新版。' +
-        '</div>' +
-        '<div style="display: flex; flex-direction: column; gap: 10px;">' +
-          '<button id="ag-modal-btn-download" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; border: none; border-radius: 10px; padding: 11px 18px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4); transition: all 0.15s;" onmouseover="this.style.filter=\'brightness(1.1)\'; this.style.transform=\'translateY(-1px)\'" onmouseout="this.style.filter=\'none\'; this.style.transform=\'none\'">' +
-            '<span>前往官网下载安装包</span>' +
-            '<span style="font-weight: bold;">→</span>' +
-          '</button>' +
-          '<div style="display: flex; gap: 10px;">' +
-            '<button id="ag-modal-btn-changelog" style="flex: 1; background: rgba(255, 255, 255, 0.08); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 9px 14px; font-size: 12.5px; font-weight: 500; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.14)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.08)\'">查看更新日志</button>' +
-            '<button id="ag-modal-btn-dismiss" style="flex: 1; background: transparent; color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 9px 14px; font-size: 12.5px; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background=\'rgba(255,255,255,0.06)\'; this.style.color=\'#cbd5e1\'" onmouseout="this.style.background=\'transparent\'; this.style.color=\'#94a3b8\'">稍后提醒 / 隐藏按钮</button>' +
-          '</div>' +
-        '</div>';
-
-        overlay.appendChild(box);
-        document.body.appendChild(overlay);
-
-        const closeModal = () => {
-          overlay.style.opacity = '0';
-          box.style.transform = 'scale(0.92) translateY(8px)';
-          setTimeout(() => {
-            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-          }, 220);
-        };
-
-        requestAnimationFrame(() => {
-          overlay.style.opacity = '1';
-          box.style.transform = 'scale(1) translateY(0)';
-        });
-
-        overlay.querySelector('#ag-modal-close-x').onclick = closeModal;
-        overlay.querySelector('#ag-modal-btn-dismiss').onclick = () => {
-          closeModal();
-          try {
-            sessionStorage.setItem('ag_hide_update', '1');
-            let hideStyle = document.getElementById('antigravity-hide-update-btn');
-            if (!hideStyle) {
-              hideStyle = document.createElement('style');
-              hideStyle.id = 'antigravity-hide-update-btn';
-              hideStyle.textContent = '[data-testid="app-update-button"], [data-testid*="update"], [aria-label*="update" i] { display: none !important; }';
-              document.head.appendChild(hideStyle);
-            }
-            const btns = document.querySelectorAll('[data-testid="app-update-button"], [data-testid*="update"], [aria-label*="update" i]');
-            btns.forEach(b => b.style.setProperty('display', 'none', 'important'));
-          } catch(e) {}
-        };
-        overlay.onclick = (e) => {
-          if (e.target === overlay) closeModal();
-        };
-
-        const downloadUrl = 'https://storage.googleapis.com/antigravity-public/antigravity-hub/2.15.0-6576870427328512/windows-x64/Antigravity-x64.exe';
-        overlay.querySelector('#ag-modal-btn-download').onclick = () => {
-          closeModal();
-          try {
-            if (window.electronNative && window.electronNative.openExternal) {
-              window.electronNative.openExternal(downloadUrl);
-            } else {
-              window.open(downloadUrl, '_blank');
-            }
-          } catch(e) {
-            window.open(downloadUrl, '_blank');
-          }
-        };
-
-        overlay.querySelector('#ag-modal-btn-changelog').onclick = () => {
-          closeModal();
-          try {
-            if (window.electronNative && window.electronNative.openExternal) {
-              window.electronNative.openExternal('https://antigravity.google');
-            } else {
-              window.open('https://antigravity.google', '_blank');
-            }
-          } catch(e) {
-            window.open('https://antigravity.google', '_blank');
-          }
-        };
-
-        const onKeyDown = (e) => {
-          if (e.key === 'Escape') {
-            closeModal();
-            document.removeEventListener('keydown', onKeyDown);
-          }
-        };
-        document.addEventListener('keydown', onKeyDown);
-      } catch(e) {}
-    };
-
-    function findUpdateTarget(el) {
-      if (!el) return null;
-      const btn = el.closest ? el.closest('[data-testid*="update" i], [data-testid="app-update-button"], [aria-label*="update" i]') : null;
-      if (btn) return btn;
-
-      let curr = el;
-      let depth = 0;
-      while (curr && curr !== document.body && curr !== document.documentElement && depth < 6) {
-        const txt = (curr.textContent || '').trim();
-        if (txt.includes('Update Available') || txt.includes('有可用更新') || txt.includes('发现新版本')) {
-          if (curr.tagName === 'BUTTON' || curr.getAttribute('role') === 'button' || (curr.classList && curr.classList.contains('cursor-pointer')) || (curr.closest && curr.closest('button, [role="button"]'))) {
-            return (curr.closest ? curr.closest('button, [role="button"]') : null) || curr;
-          }
-        }
-        curr = curr.parentElement;
-        depth++;
-      }
-      return null;
-    }
-
-    if (!window.__updateClickHooked) {
-      window.__updateClickHooked = true;
-
-      let lastUpdateModalOpen = 0;
-      const triggerUpdateModal = async () => {
-        const now = Date.now();
-        if (now - lastUpdateModalOpen < 800) return;
-        lastUpdateModalOpen = now;
-
-        let ver = '2.15.0';
-        try {
-          if (window.electronUpdater && window.electronUpdater.getState) {
-            const state = await window.electronUpdater.getState();
-            if (state && state.update && state.update.version) {
-              ver = state.update.version;
-            }
-          }
-        } catch(err) {}
-
-        window.showThemeUpdateModal(ver);
-      };
-
-      // Pointerdown: Immediately enforce no-drag on button and titlebar ancestors before OS drag starts
-      document.addEventListener('pointerdown', (e) => {
-        try {
-          const updateBtn = findUpdateTarget(e.target);
-          if (updateBtn) {
-            let el = updateBtn;
-            let depth = 0;
-            while (el && el !== document.body && depth < 4) {
-              el.style.setProperty('-webkit-app-region', 'no-drag', 'important');
-              el.style.setProperty('app-region', 'no-drag', 'important');
-              el = el.parentElement;
-              depth++;
-            }
-          }
-        } catch(err) {}
-      }, true);
-
-      // Click: Standard click interception
-      document.addEventListener('click', async (e) => {
-        try {
-          const target = e.target;
-          if (!target) return;
-
-          // Check for menu "Check for Updates"
-          if (target.textContent && target.textContent.trim() === 'Check for Updates') {
-            window.__userJustCheckedUpdates = true;
-            return;
-          }
-
-          // Check for titlebar "Update Available →" button
-          const updateBtn = findUpdateTarget(target);
-
-          if (updateBtn) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            triggerUpdateModal();
-          }
-        } catch(e) {}
-      }, true);
-
-      // Mouseup: Fallback in case click was intercepted or cancelled
-      document.addEventListener('mouseup', (e) => {
-        try {
-          if (e.button === 0) {
-            const updateBtn = findUpdateTarget(e.target);
-            if (updateBtn) {
-              triggerUpdateModal();
-            }
-          }
-        } catch(e) {}
-      }, true);
-    }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initEngine);

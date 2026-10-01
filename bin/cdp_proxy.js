@@ -37,7 +37,7 @@ function startCdpProxy(targetPort = 7907, listenPort = 8314) {
     const proxySocket = net.connect(targetPort, '127.0.0.1', () => {
       let rawReq = req.method + ' ' + req.url + ' HTTP/' + req.httpVersion + '\r\n';
       for (const [key, value] of Object.entries(req.headers)) {
-        if (key.lowerCase() === 'host') {
+        if (key.toLowerCase() === 'host') {
           rawReq += 'Host: 127.0.0.1:' + targetPort + '\r\n';
         } else {
           rawReq += key + ': ' + value + '\r\n';
