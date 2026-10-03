@@ -5023,6 +5023,104 @@ if (require.main === module) {
   }
 }
 
+/**
+ * 校验 Antigravity 核心注入状态（是否已注入 CDP 8314 与流媒体 8315）
+ */
+function checkInjectionStatus() {
+  const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  const rDir = process.env.ANTIGRAVITY_RESOURCES || path.join(localAppData, 'Programs', 'antigravity', 'resources');
+  const aPath = path.join(rDir, 'app.asar');
+  const aBak = path.join(rDir, 'app.asar.orig.bak');
+  const appDistMain = path.join(rDir, 'app', 'dist', 'main.js');
+
+  const asarExists = fs.existsSync(aPath);
+  let asarPatched = false;
+  if (asarExists) {
+    try {
+      const fd = fs.openSync(aPath, 'r');
+      const buf = Buffer.alloc(32768);
+      const read = fs.readSync(fd, buf, 0, 32768, 0);
+      fs.closeSync(fd);
+      asarPatched = buf.toString('utf8', 0, read).includes('media_server.js');
+    } catch(e) {}
+  }
+
+  let appDirPatched = false;
+  if (fs.existsSync(appDistMain)) {
+    try {
+      const mainContent = fs.readFileSync(appDistMain, 'utf8');
+      appDirPatched = mainContent.includes('media_server.js') || mainContent.includes('8314');
+    } catch(e) {}
+  }
+
+  const isPatched = asarPatched || appDirPatched;
+  const hasBackup = fs.existsSync(aBak);
+  
+  let isFreshOfficialUpdate = false;
+  if (asarExists && !asarPatched) {
+    if (!hasBackup) {
+      isFreshOfficialUpdate = true;
+    } else {
+      try {
+        const asarStat = fs.statSync(aPath);
+        const bakStat = fs.statSync(aBak);
+        if (asarStat.size !== bakStat.size || asarStat.mtimeMs > bakStat.mtimeMs + 2000) {
+          isFreshOfficialUpdate = true;
+        }
+      } catch(e) {}
+    }
+  }
+
+  return {
+    isPatched,
+    asarPatched,
+    appDirPatched,
+    hasBackup,
+    isFreshOfficialUpdate,
+    asarExists
+  };
+}
+
+/**
+ * 执行一键安装/注入美化底层补丁 (即使官方更新后也是一键自动化完成)
+ */
+async function installPatch() {
+  console.log('=======================================================');
+  console.log('   ⚡ 正在执行：一键注入 / 安装 Antigravity 美化核心');
+  console.log('=======================================================');
+
+  const patcherScript = path.join(__dirname, 'auto_patcher.js');
+  if (!fs.existsSync(patcherScript)) {
+    throw new Error('未找到补丁脚本: ' + patcherScript);
+  }
+
+  // 1. 运行 auto_patcher.js 自动化解包、注入与打包
+  const { execSync } = require('child_process');
+  execSync(`node "${patcherScript}"`, { stdio: 'inherit', env: process.env });
+
+  // 2. 重新编译 Master CSS
+  const cfg = loadSlotsConfig();
+  const css = generateMasterCss(cfg);
+  try {
+    fs.writeFileSync(customCssPath, css, 'utf8');
+    fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf8');
+  } catch(e) {}
+
+  // 3. 启动流媒体服务
+  ensureMediaServerRunning();
+
+  // 4. 尝试热重载 (如果客户端当前已在线)
+  try {
+    await triggerLiveHotReload(css, cfg);
+  } catch(e) {}
+
+  const status = checkInjectionStatus();
+  return {
+    success: true,
+    status
+  };
+}
+
 module.exports = {
   swapWallpaper,
   swapWallpaperFromWE,
@@ -5034,6 +5132,8 @@ module.exports = {
   restoreOriginal,
   uninstallCompletely,
   revertToBaseline,
+  checkInjectionStatus,
+  installPatch,
   loadSlotsConfig,
   saveSlotsConfig,
   triggerLiveHotReload,

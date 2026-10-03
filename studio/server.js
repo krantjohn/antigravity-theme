@@ -182,7 +182,8 @@ const server = http.createServer(async (req, res) => {
         hasBackup,
         backupSize,
         weCount,
-        slotsMeta: themeEngine.SLOTS_META
+        slotsMeta: themeEngine.SLOTS_META,
+        patchStatus: themeEngine.checkInjectionStatus()
       });
     } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message });
@@ -394,6 +395,18 @@ const server = http.createServer(async (req, res) => {
       const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
       return sendJson(res, 200, { success: isOk });
     } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 9.5. POST /api/patch/install - Install or re-inject core patch
+  if (req.method === 'POST' && pathname === '/api/patch/install') {
+    try {
+      console.log('[Studio] 收到核心注入请求，正在执行一键补丁安装...');
+      const result = await themeEngine.installPatch();
+      return sendJson(res, 200, result);
+    } catch (err) {
+      console.error('[Studio] 补丁注入失败:', err);
       return sendJson(res, 500, { success: false, error: err.message });
     }
   }

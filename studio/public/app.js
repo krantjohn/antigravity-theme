@@ -52,8 +52,11 @@ const btnReload = document.getElementById('btn-reload');
 const toastContainer = document.getElementById('toast-container');
 const weBadge = document.getElementById('we-badge');
 const weCount = document.getElementById('we-count');
-const backupBanner = document.getElementById('backup-banner');
-const backupText = document.getElementById('backup-text');
+const patchBadge = document.getElementById('patch-badge');
+const patchBanner = document.getElementById('patch-banner');
+const patchDot = document.getElementById('patch-dot');
+const patchText = document.getElementById('patch-text');
+const btnInstallPatch = document.getElementById('btn-install-patch');
 
 // 1. Raycast Spotlight Border Effect
 function initSpotlightEffect() {
@@ -99,7 +102,7 @@ async function fetchStatus() {
       try { renderFontPresets(); } catch(e) { console.error('Error in renderFontPresets:', e); }
       try { renderPresetsList(); } catch(e) { console.error('Error in renderPresetsList:', e); }
       try { renderWeStatus(data.weCount); } catch(e) { console.error('Error in renderWeStatus:', e); }
-      try { renderBackupStatus(data.hasBackup, data.backupSize); } catch(e) { console.error('Error in renderBackupStatus:', e); }
+      try { renderPatchStatus(data.patchStatus, data.hasBackup, data.backupSize); } catch(e) { console.error('Error in renderPatchStatus:', e); }
     }
   } catch (err) {
     console.error('Failed to fetch status:', err);
@@ -471,18 +474,64 @@ function renderWeStatus(count) {
   }
 }
 
-// 9. Render Backup Status
-function renderBackupStatus(hasBackup, size) {
-  if (hasBackup) {
-    backupBanner.style.background = 'rgba(52, 211, 153, 0.08)';
-    backupBanner.style.borderColor = 'rgba(52, 211, 153, 0.2)';
-    backupBanner.style.color = '#6ee7b7';
-    backupText.textContent = `官方原版物理备份已在列 (${size} MB 出厂保护)`;
+// 9. Render Core Patch & Backup Status
+function renderPatchStatus(patchStatus, hasBackup, backupSize) {
+  if (!patchBanner || !patchText) return;
+  const isPatched = patchStatus && patchStatus.isPatched;
+  const isFreshOfficialUpdate = patchStatus && patchStatus.isFreshOfficialUpdate;
+
+  if (isPatched) {
+    if (patchBadge) {
+      patchBadge.className = 'badge badge-accent';
+      patchBadge.textContent = '🟢 核心已注入';
+    }
+    patchBanner.style.background = 'rgba(52, 211, 153, 0.08)';
+    patchBanner.style.borderColor = 'rgba(52, 211, 153, 0.2)';
+    patchBanner.style.color = '#6ee7b7';
+    if (patchDot) {
+      patchDot.style.background = 'var(--accent-emerald)';
+      patchDot.style.boxShadow = '0 0 10px rgba(52, 211, 153, 0.6)';
+    }
+    const bakStr = hasBackup ? ` (官方备份: ${backupSize}MB)` : '';
+    patchText.textContent = `🟢 核心补丁已就绪 (CDP与流媒体双引擎已激活)${bakStr}`;
+    if (btnInstallPatch) {
+      btnInstallPatch.textContent = '🔄 重新注入 / 官方更新后重补';
+      btnInstallPatch.className = 'btn btn-secondary btn-block';
+    }
+  } else if (isFreshOfficialUpdate) {
+    if (patchBadge) {
+      patchBadge.className = 'badge badge-danger';
+      patchBadge.textContent = '⚡ 官方已更新';
+    }
+    patchBanner.style.background = 'rgba(234, 179, 8, 0.1)';
+    patchBanner.style.borderColor = 'rgba(234, 179, 8, 0.35)';
+    patchBanner.style.color = '#fde047';
+    if (patchDot) {
+      patchDot.style.background = '#eab308';
+      patchDot.style.boxShadow = '0 0 10px rgba(234, 179, 8, 0.6)';
+    }
+    patchText.textContent = '⚡ 检测到 Google 官方刚完成更新！当前为原生未注入状态';
+    if (btnInstallPatch) {
+      btnInstallPatch.textContent = '⚡ 一键注入美化底层 (自动继承官方新特性)';
+      btnInstallPatch.className = 'btn btn-primary btn-block';
+    }
   } else {
-    backupBanner.style.background = 'rgba(244, 63, 94, 0.08)';
-    backupBanner.style.borderColor = 'rgba(244, 63, 94, 0.2)';
-    backupBanner.style.color = '#fb7185';
-    backupText.textContent = '未找到官方原版备份镜像';
+    if (patchBadge) {
+      patchBadge.className = 'badge badge-subtle';
+      patchBadge.textContent = '⚪ 官方原生';
+    }
+    patchBanner.style.background = 'rgba(244, 63, 94, 0.08)';
+    patchBanner.style.borderColor = 'rgba(244, 63, 94, 0.2)';
+    patchBanner.style.color = '#fb7185';
+    if (patchDot) {
+      patchDot.style.background = 'var(--accent-rose)';
+      patchDot.style.boxShadow = '0 0 10px rgba(244, 63, 94, 0.6)';
+    }
+    patchText.textContent = '⚠️ 当前处于官方原生未注入状态，点击下方一键注入';
+    if (btnInstallPatch) {
+      btnInstallPatch.textContent = '⚡ 一键注入 / 安装美化底层';
+      btnInstallPatch.className = 'btn btn-primary btn-block';
+    }
   }
 }
 
@@ -723,6 +772,30 @@ function setupEvents() {
   };
 
   // Safety Center Actions
+  if (btnInstallPatch) {
+    btnInstallPatch.onclick = async () => {
+      btnInstallPatch.disabled = true;
+      const originalText = btnInstallPatch.textContent;
+      btnInstallPatch.textContent = '⏳ 正在自动化安全注入核心 (约需5秒)...';
+      showToast('⚡ 正在注入 Antigravity 美化核心底层，请稍候...', 6000);
+      try {
+        const res = await fetch('/api/patch/install', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('✨ 核心注入成功！8314 CDP 与 8315 流媒体双引擎已就绪！', 4000);
+          await fetchStatus();
+        } else {
+          showToast('❌ 注入失败: ' + (data.error || '未知错误'), 4000);
+        }
+      } catch (e) {
+        showToast('❌ 注入失败: ' + e.message, 4000);
+      } finally {
+        btnInstallPatch.disabled = false;
+        btnInstallPatch.textContent = originalText;
+      }
+    };
+  }
+
   btnVanilla.onclick = async () => {
     if (!confirm('确定要恢复为 Antigravity 官方原版纯净模式吗？\n（当前壁纸将自动保存为快照，稍后随时可一键还原）')) return;
     try {

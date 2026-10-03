@@ -29,14 +29,42 @@ if (!fs.existsSync(asarPath)) {
   process.exit(1);
 }
 
-const asarOrigBak = path.join(resDir, 'app.asar.orig.bak');
-if (fs.existsSync(asarPath) && !fs.existsSync(asarOrigBak)) {
-  console.log('[0/5] 正在创建官方原版 app.asar 物理防丢失备份...');
+function isAsarPatched(filePath) {
+  if (!fs.existsSync(filePath)) return false;
   try {
-    fs.copyFileSync(asarPath, asarOrigBak);
-    console.log(`✓ 官方原版核心物理备份创建成功: ${asarOrigBak}`);
+    const fd = fs.openSync(filePath, 'r');
+    const buf = Buffer.alloc(32768);
+    const read = fs.readSync(fd, buf, 0, 32768, 0);
+    fs.closeSync(fd);
+    return buf.toString('utf8', 0, read).includes('media_server.js');
   } catch(e) {
-    console.warn('⚠️ 物理备份创建提示:', e.message);
+    return false;
+  }
+}
+
+const asarOrigBak = path.join(resDir, 'app.asar.orig.bak');
+const asarIsPatched = isAsarPatched(asarPath);
+
+if (fs.existsSync(asarPath)) {
+  if (!fs.existsSync(asarOrigBak)) {
+    console.log('[0/5] 正在创建官方原版 app.asar 物理防丢失备份...');
+    try {
+      fs.copyFileSync(asarPath, asarOrigBak);
+      console.log(`✓ 官方原版核心物理备份创建成功: ${asarOrigBak}`);
+    } catch(e) {
+      console.warn('⚠️ 物理备份创建提示:', e.message);
+    }
+  } else if (!asarIsPatched) {
+    // 检测到当前 app.asar 是官方刚更新的原生文件，自动同步官方出厂备份
+    try {
+      const asarStat = fs.statSync(asarPath);
+      const bakStat = fs.statSync(asarOrigBak);
+      if (asarStat.size !== bakStat.size || asarStat.mtimeMs > bakStat.mtimeMs + 2000) {
+        console.log('[0/5] ✨ 检测到 Google 官方更新了原生核心！正在建立新版本的官方出厂备份...');
+        fs.copyFileSync(asarPath, asarOrigBak);
+        console.log(`✓ 最新版本官方核心已安全备份: ${asarOrigBak}`);
+      }
+    } catch(e) {}
   }
 }
 
@@ -58,7 +86,12 @@ if (fs.existsSync(asarUnpacked) && !fs.existsSync(origBakUnpacked)) {
   } catch (e) {}
 }
 
-const sourceAsar = (fs.existsSync(asarOrigBak) && fs.statSync(asarOrigBak).size > 1000000) ? asarOrigBak : asarPath;
+// 提取源：如果当前 app.asar 是官方原生未修改文件，直接从最新的 app.asar 解包；若已有补丁则从官方原版备份解包以避免二次污染
+let sourceAsar = asarPath;
+if (asarIsPatched && fs.existsSync(asarOrigBak) && fs.statSync(asarOrigBak).size > 1000000) {
+  sourceAsar = asarOrigBak;
+}
+
 try {
   execSync(`${npxCmd} --yes asar extract "${sourceAsar}" "${appDir}"`, { stdio: 'inherit' });
 } catch (extractErr) {

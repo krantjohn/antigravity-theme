@@ -207,17 +207,21 @@
     <section class="bento-card spotlight-card" id="card-safety">
       <div class="card-header">
         <div class="card-title-group">
-          <span class="section-tag">SAFETY CENTER</span>
-          <h3>🛡️ 官方原版还原</h3>
+          <span class="section-tag">SAFETY & INJECTION</span>
+          <h3>🛡️ 注入与安全中心</h3>
         </div>
+        <span class="badge" id="patch-badge">检测中...</span>
       </div>
 
-      <div class="backup-status-banner" id="backup-banner">
-        <span class="backup-dot"></span>
-        <span id="backup-text">官方原版出厂备份已在列</span>
+      <div class="backup-status-banner" id="patch-banner">
+        <span class="backup-dot" id="patch-dot"></span>
+        <span id="patch-text">正在检测核心补丁状态...</span>
       </div>
 
       <div class="safety-actions">
+        <button class="btn btn-primary btn-block" id="btn-install-patch">
+          ⚡ 一键注入 / 安装美化底层
+        </button>
         <button class="btn btn-secondary btn-block" id="btn-vanilla">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           一键恢复官方原版纯净模式
