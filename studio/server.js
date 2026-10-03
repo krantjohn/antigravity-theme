@@ -85,13 +85,25 @@ function checkMediaServerStatus() {
 function openNativeFileDialog() {
   return new Promise((resolve) => {
     const exePath = path.join(__dirname, '..', 'bin', 'file_dialog.exe');
+    const resultFile = path.join(__dirname, '.selected_file.txt');
+    try { if (fs.existsSync(resultFile)) fs.unlinkSync(resultFile); } catch (e) {}
+
+    // Read last directory memory if exists
+    let lastDir = '';
+    const memoryFile = path.join(__dirname, '.last_browse_dir.txt');
+    if (fs.existsSync(memoryFile)) {
+      try { lastDir = fs.readFileSync(memoryFile, 'utf8').trim(); } catch (e) {}
+    }
+
     if (fs.existsSync(exePath)) {
-      exec(`"${exePath}"`, { encoding: 'utf8' }, (err, stdout) => {
-        if (!err && stdout && stdout.trim()) {
-          resolve(stdout.trim());
-        } else {
-          resolve('');
+      const args = (lastDir && fs.existsSync(lastDir)) ? `"${lastDir}"` : '';
+      exec(`"${exePath}" ${args}`, { encoding: 'utf8', windowsHide: true }, (err, stdout) => {
+        let selected = stdout ? stdout.trim() : '';
+        if (!selected && fs.existsSync(resultFile)) {
+          try { selected = fs.readFileSync(resultFile, 'utf8').trim(); } catch (e) {}
         }
+        try { if (fs.existsSync(resultFile)) fs.unlinkSync(resultFile); } catch (e) {}
+        resolve(selected);
       });
       return;
     }
@@ -103,20 +115,21 @@ function openNativeFileDialog() {
       '$d = New-Object System.Windows.Forms.OpenFileDialog',
       '$d.Filter = "媒体与视频文件 (*.mp4;*.webm;*.jpg;*.png;*.webp)|*.mp4;*.webm;*.jpg;*.png;*.webp|所有文件 (*.*)|*.*"',
       '$d.Title = "🌸 选择要作为 Antigravity 壁纸的素材文件"',
-      '$d.RestoreDirectory = $true',
+      '$d.RestoreDirectory = $false',
+      (lastDir && fs.existsSync(lastDir)) ? `$d.InitialDirectory = "${lastDir.replace(/\\/g, '\\\\')}"` : '',
       'if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {',
       '    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
       '    Write-Host -NoNewline $d.FileName',
       '}'
-    ].join("\r\n");
+    ].filter(Boolean).join("\r\n");
 
     const b64 = Buffer.from(psScript, 'utf16le').toString('base64');
-    exec(`powershell -NoProfile -Sta -EncodedCommand ${b64}`, { encoding: 'utf8' }, (err, stdout) => {
-      if (err) {
-        resolve('');
-      } else {
-        resolve(stdout ? stdout.trim() : '');
+    exec(`powershell -NoProfile -Sta -EncodedCommand ${b64}`, { encoding: 'utf8', windowsHide: true }, (err, stdout) => {
+      let chosen = stdout ? stdout.trim() : '';
+      if (chosen) {
+        try { fs.writeFileSync(memoryFile, path.dirname(chosen), 'utf8'); } catch (e) {}
       }
+      resolve(chosen);
     });
   });
 }
