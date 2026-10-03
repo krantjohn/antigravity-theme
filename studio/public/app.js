@@ -788,7 +788,10 @@ function setupEvents() {
           showToast('❌ 注入失败: ' + (data.error || '未知错误'), 4000);
         }
       } catch (e) {
-        showToast('❌ 注入失败: ' + e.message, 4000);
+        const msg = (e.message && e.message.includes('fetch'))
+          ? '控制台服务未连接，请先双击运行桌面「AntigravityThemeStudio.exe」或根目录「一键注入美化补丁.bat」'
+          : e.message;
+        showToast('❌ 注入失败: ' + msg, 5000);
       } finally {
         btnInstallPatch.disabled = false;
         btnInstallPatch.textContent = originalText;
@@ -924,4 +927,10 @@ window.addEventListener('DOMContentLoaded', () => {
   fetchStatus();
   // Poll every 3.5s for live status updates
   setInterval(fetchStatus, 3500);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      fetchStatus();
+    }
+  });
 });

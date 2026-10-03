@@ -5107,7 +5107,9 @@ async function installPatch() {
   } catch(e) {}
 
   // 3. 启动流媒体服务
-  ensureMediaServerRunning();
+  try {
+    await ensureMediaServer(wallpapersDir, DEFAULT_PORT);
+  } catch(e) {}
 
   // 4. 尝试热重载 (如果客户端当前已在线)
   try {

@@ -127,6 +127,9 @@ let lastClientHeartbeat = Date.now();
 let hasEverHeartbeated = false;
 
 const server = http.createServer(async (req, res) => {
+  lastClientHeartbeat = Date.now();
+  hasEverHeartbeated = true;
+
   // CORS preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
@@ -464,14 +467,14 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log('=======================================================');
 });
 
-// Watchdog: auto-terminate if client was once connected and has ceased communicating for 30s
+// Watchdog: auto-terminate if client was once connected and has ceased communicating for 10 minutes
 setInterval(() => {
-  if (hasEverHeartbeated && (Date.now() - lastClientHeartbeat > 30000)) {
-    console.log('[Studio] 客户端已断开超 30 秒，安全释放后台服务 (零后台残留)...');
+  if (hasEverHeartbeated && (Date.now() - lastClientHeartbeat > 600000)) {
+    console.log('[Studio] 客户端已断开超 10 分钟，安全释放后台服务 (零后台残留)...');
     try { server.close(); } catch(e) {}
     process.exit(0);
   }
-}, 5000);
+}, 15000);
 
 server.PORT = PORT;
 server.server = server;
