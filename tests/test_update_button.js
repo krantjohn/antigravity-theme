@@ -39,25 +39,39 @@ async function main() {
     });
   }
 
-  async function evaluate(expression, awaitPromise = false) {
-    const res = await sendCdp('Runtime.evaluate', {
+  const contexts = [];
+  ws.addEventListener('message', (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.method === 'Runtime.executionContextCreated') {
+      contexts.push(msg.params.context);
+    }
+  });
+
+  await sendCdp('Runtime.enable');
+  await new Promise(r => setTimeout(r, 200));
+
+  async function evaluate(expression, awaitPromise = false, contextId = null) {
+    const params = {
       expression,
       awaitPromise,
       returnByValue: true
-    });
+    };
+    if (contextId != null) params.contextId = contextId;
+    const res = await sendCdp('Runtime.evaluate', params);
     if (res && res.result) {
       return res.result.value;
     }
     return res;
   }
 
-  // 1. Inject latest preload update handler into live page and clean any existing modal
+  // 1. Inject latest preload update handler into all live execution contexts
   await evaluate(`
     (() => {
       const old = document.getElementById('antigravity-update-modal-overlay');
       if (old) old.remove();
     })()
   `);
+
   const preloadCode = fs.readFileSync(path.join(__dirname, '..', 'preload.js'), 'utf8');
   const startMarker = '// ================= Antigravity Update Button & Interactive Modal Handler =================';
   const endMarker = '// =========================================================================';
@@ -65,8 +79,13 @@ async function main() {
     preloadCode.indexOf(startMarker),
     preloadCode.indexOf(endMarker)
   );
+
+  for (const ctx of contexts) {
+    await evaluate(snippet, false, ctx.id);
+  }
+  // Also evaluate in default context in case contexts list was empty
   await evaluate(snippet);
-  console.log('✓ [Test 1] Preload update handler verified active in live context');
+  console.log(`✓ [Test 1] Preload update handler verified active across ${contexts.length || 1} live execution contexts`);
 
   // Ensure titlebar button is clean and ready
   await evaluate(`
@@ -131,11 +150,16 @@ async function main() {
   assert.strictEqual(btnInfo.appRegion, 'no-drag', 'Button must have no-drag appRegion');
   assert.strictEqual(btnInfo.pointerEvents, 'auto', 'Button must have auto pointer-events');
 
+  // Helper for real mouse click via CDP
+  async function dispatchRealClick(x, y) {
+    await sendCdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+    await sendCdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+    await sendCdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+  }
+
   // 3. Simulate human mouse click via CDP Input.dispatchMouseEvent
   console.log('   Simulating click on update button coordinates (' + Math.round(btnInfo.x) + ', ' + Math.round(btnInfo.y) + ')...');
-  await sendCdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: btnInfo.x, y: btnInfo.y });
-  await sendCdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: btnInfo.x, y: btnInfo.y, button: 'left', clickCount: 1 });
-  await sendCdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: btnInfo.x, y: btnInfo.y, button: 'left', clickCount: 1 });
+  await dispatchRealClick(btnInfo.x, btnInfo.y);
 
   // Wait for modal animation
   await new Promise(r => setTimeout(r, 400));
@@ -165,6 +189,7 @@ async function main() {
   assert(modalInfo.boxText.includes('v2.19.1') || modalInfo.boxText.includes('目标版本'), 'Modal must show target version');
   console.log('✓ [Test 3] Interactive update modal successfully opened via real click:');
   console.log('   Buttons present:', modalInfo.buttons.map(b => b.id || b.text).join(', '));
+  assert(modalInfo.buttons.some(b => b.id === 'ag-modal-btn-cancel'), 'Modal must contain ag-modal-btn-cancel');
 
   async function waitForModalClose(timeout = 1500) {
     const start = Date.now();
@@ -187,60 +212,116 @@ async function main() {
     return false;
   }
 
-  // 5. Test close button '✕'
-  console.log('   Testing close button [✕]...');
-  const closeResult = await evaluate(`
+  // 5. Test close button '✕' via REAL mouse click coordinates
+  console.log('   Testing close button [✕] via real mouse click...');
+  const closeBtnCoords = await evaluate(`
     (() => {
-      const closeBtn = document.getElementById('ag-modal-close-x');
-      const overlay = document.getElementById('antigravity-update-modal-overlay');
-      if (!closeBtn) return { found: false, hasOverlay: !!overlay };
-      if (closeBtn.onclick) {
-        closeBtn.onclick();
-      } else {
-        closeBtn.click();
-      }
-      return { found: true };
+      const btn = document.getElementById('ag-modal-close-x');
+      if (!btn) return null;
+      const r = btn.getBoundingClientRect();
+      const style = window.getComputedStyle(btn);
+      return {
+        x: r.left + r.width / 2,
+        y: r.top + r.height / 2,
+        width: r.width,
+        height: r.height,
+        appRegion: style.webkitAppRegion,
+        pointerEvents: style.pointerEvents
+      };
     })()
   `);
-  console.log('closeResult:', closeResult);
-  assert(closeResult && closeResult.found, 'Close button must exist and be clickable');
+  assert(closeBtnCoords, 'Close button [✕] must exist');
+  assert(closeBtnCoords.width >= 32 && closeBtnCoords.height >= 32, 'Close button hitbox must be at least 32x32px');
+  assert.strictEqual(closeBtnCoords.appRegion, 'no-drag', 'Close button must be no-drag');
+  assert.strictEqual(closeBtnCoords.pointerEvents, 'auto', 'Close button must have pointer-events auto');
+
+  await dispatchRealClick(closeBtnCoords.x, closeBtnCoords.y);
   const isClosed1 = await waitForModalClose();
-  assert(isClosed1, 'Modal must close after clicking [✕]');
+  assert(isClosed1, 'Modal must close after real mouse click on [✕]');
+  console.log('✓ [Test 4] Modal closed successfully via real mouse click on [✕]');
 
-  console.log('✓ [Test 4] Modal closed successfully via [✕]');
+  // 6. Test reopening and closing via "取消 / 关闭" button via REAL mouse click
+  console.log('   Testing "取消 / 关闭" button via real mouse click...');
+  await new Promise(r => setTimeout(r, 300));
+  await evaluate('window.showThemeUpdateModal()', true);
+  await new Promise(r => setTimeout(r, 300));
+  const cancelBtnCoords = await evaluate(`
+    (() => {
+      const btn = document.getElementById('ag-modal-btn-cancel');
+      if (!btn) return null;
+      const r = btn.getBoundingClientRect();
+      const style = window.getComputedStyle(btn);
+      return {
+        x: r.left + r.width / 2,
+        y: r.top + r.height / 2,
+        text: btn.innerText.trim(),
+        appRegion: style.webkitAppRegion,
+        pointerEvents: style.pointerEvents
+      };
+    })()
+  `);
+  assert(cancelBtnCoords, 'Cancel button must exist');
+  assert(cancelBtnCoords.text.includes('取消') || cancelBtnCoords.text.includes('关闭'), 'Cancel button text must indicate cancel/close');
+  assert.strictEqual(cancelBtnCoords.appRegion, 'no-drag', 'Cancel button must be no-drag');
+  await dispatchRealClick(cancelBtnCoords.x, cancelBtnCoords.y);
+  const isClosed2 = await waitForModalClose();
+  assert(isClosed2, 'Modal must close after real mouse click on "取消 / 关闭" button');
+  console.log('✓ [Test 5] Modal closed successfully via "取消 / 关闭" button');
 
-  // 6. Test opening modal and closing via Escape key
-  console.log('   Testing Escape key modal dismissal...');
+  // 7. Test backdrop click outside modal box via REAL mouse click
+  console.log('   Testing backdrop click outside modal box...');
+  await new Promise(r => setTimeout(r, 300));
+  await evaluate('window.showThemeUpdateModal()', true);
+  await new Promise(r => setTimeout(r, 300));
+  const backdropCoords = await evaluate(`
+    (() => {
+      const overlay = document.getElementById('antigravity-update-modal-overlay');
+      const box = document.getElementById('antigravity-update-modal-box');
+      if (!overlay || !box) return null;
+      const boxRect = box.getBoundingClientRect();
+      return {
+        x: Math.max(10, boxRect.left / 2),
+        y: Math.max(10, boxRect.top / 2)
+      };
+    })()
+  `);
+  assert(backdropCoords, 'Backdrop coordinates must be calculated');
+  await dispatchRealClick(backdropCoords.x, backdropCoords.y);
+  const isClosed3 = await waitForModalClose();
+  assert(isClosed3, 'Modal must close after real mouse click on backdrop outside box');
+  console.log('✓ [Test 6] Modal closed successfully via backdrop click');
+
+  // 8. Test Escape key modal dismissal via REAL key event
+  console.log('   Testing Escape key modal dismissal via real key event...');
+  await new Promise(r => setTimeout(r, 300));
   await evaluate('window.showThemeUpdateModal()', true);
   await new Promise(r => setTimeout(r, 300));
   const isOpenedAgain = await evaluate('!!document.getElementById("antigravity-update-modal-overlay")');
   assert(isOpenedAgain, 'Modal must reopen via showThemeUpdateModal()');
 
-  await evaluate('document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))');
-  const isClosed2 = await waitForModalClose();
-  assert(isClosed2, 'Modal must close when pressing Escape');
-  console.log('✓ [Test 5] Modal closed successfully via Escape key');
+  await sendCdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+  await sendCdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+  const isClosed4 = await waitForModalClose();
+  assert(isClosed4, 'Modal must close when pressing Escape');
+  console.log('✓ [Test 7] Modal closed successfully via Escape key');
 
-  // 7. Test "稍后提醒 / 隐藏更新按钮"
+  // 9. Test "稍后提醒 / 隐藏更新按钮"
   console.log('   Testing dismiss and hide button...');
   await new Promise(r => setTimeout(r, 350));
   await evaluate('window.showThemeUpdateModal()', true);
   await new Promise(r => setTimeout(r, 350));
-  const dismissClicked = await evaluate(`
+  const dismissCoords = await evaluate(`
     (() => {
       const btn = document.getElementById('ag-modal-btn-dismiss');
-      if (!btn) return false;
-      if (btn.onclick) {
-        btn.onclick();
-      } else {
-        btn.click();
-      }
-      return true;
+      if (!btn) return null;
+      const r = btn.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     })()
   `);
-  assert(dismissClicked, 'Dismiss button must exist and be clickable');
-  await waitForModalClose();
-
+  assert(dismissCoords, 'Dismiss button must exist');
+  await dispatchRealClick(dismissCoords.x, dismissCoords.y);
+  const isClosed5 = await waitForModalClose();
+  assert(isClosed5, 'Modal must close after clicking dismiss button');
 
   const hiddenCheck = await evaluate(`
     (() => {
@@ -254,9 +335,9 @@ async function main() {
   `);
   assert.strictEqual(hiddenCheck.display, 'none', 'Update button must be hidden after clicking dismiss');
   assert.strictEqual(hiddenCheck.sessionStorageVal, '1', 'sessionStorage ag_hide_update must be set to 1');
-  console.log('✓ [Test 6] "稍后提醒 / 隐藏更新按钮" successfully hid update button from titlebar');
+  console.log('✓ [Test 8] "稍后提醒 / 隐藏更新按钮" successfully hid update button from titlebar');
 
-  // 8. Restore button state so user has normal UI
+  // 10. Restore button state so user has normal UI
   await evaluate(`
     (() => {
       sessionStorage.removeItem('ag_hide_update');
@@ -275,12 +356,12 @@ async function main() {
     })()
   `);
   assert.notStrictEqual(restoredCheck, 'none', 'Update button must be restored');
-  console.log('✓ [Test 7] UI state restored cleanly to normal');
+  console.log('✓ [Test 9] UI state restored cleanly to normal');
 
   ws.close();
 
   console.log('=======================================================');
-  console.log('✨ All 7 Update Button & Modal tests PASSED successfully!');
+  console.log('✨ All 9 Update Button & Modal tests PASSED successfully!');
   console.log('=======================================================');
 }
 

@@ -177,6 +177,12 @@ if (!preloadContent.includes('downloadUpdate:')) {
     "applyUpdate: () => electron_1.ipcRenderer.invoke('updater:apply'),\n    downloadUpdate: () => electron_1.ipcRenderer.invoke('updater:download'),"
   );
 }
+if (!preloadContent.includes('showThemeUpdateModal:')) {
+  preloadContent = preloadContent.replace(
+    "getState: () => electron_1.ipcRenderer.invoke('updater:get-state'),",
+    "getState: () => electron_1.ipcRenderer.invoke('updater:get-state'),\n    showThemeUpdateModal: (ver) => { if (typeof window !== 'undefined' && window.showThemeUpdateModal) return window.showThemeUpdateModal(ver); },"
+  );
+}
 
 const slotsConfigPath = path.join(antigravityDir, 'slots_config.json');
 let initialSlotsConfig = null;

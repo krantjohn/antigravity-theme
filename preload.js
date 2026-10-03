@@ -22,6 +22,7 @@ const updaterAPI = {
     quitAndInstall: () => electron_1.ipcRenderer.invoke('updater:quit-and-install'),
     checkForUpdates: () => electron_1.ipcRenderer.invoke('updater:check-for-updates'),
     getState: () => electron_1.ipcRenderer.invoke('updater:get-state'),
+    showThemeUpdateModal: (ver) => { if (typeof window !== 'undefined' && window.showThemeUpdateModal) return window.showThemeUpdateModal(ver); },
 };
 const dialogAPI = {
     showOpenDialog: () => electron_1.ipcRenderer.invoke('dialog:open-workspace'),
@@ -1178,21 +1179,32 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 (function() {
   function findUpdateTarget(el) {
     if (!el) return null;
+    // CRITICAL: Any element inside the update modal (#antigravity-update-modal-overlay)
+    // or modal box (#antigravity-update-modal-box) MUST NEVER be matched as an update trigger!
+    if (typeof el.closest === 'function') {
+      if (el.closest('#antigravity-update-modal-overlay') || el.closest('#antigravity-update-modal-box')) {
+        return null;
+      }
+    }
     let curr = el;
     let depth = 0;
     while (curr && curr !== document.body && depth < 6) {
+      if (curr.id === 'antigravity-update-modal-overlay' || curr.id === 'antigravity-update-modal-box') {
+        return null;
+      }
       if (curr.getAttribute) {
         const testId = curr.getAttribute('data-testid') || '';
         const ariaLabel = curr.getAttribute('aria-label') || '';
-        const text = (curr.innerText || '').trim();
         if (
           testId === 'app-update-button' ||
-          testId === 'manual-update-button' ||
-          testId.toLowerCase().includes('update') ||
-          ariaLabel.toLowerCase().includes('update') ||
-          text.includes('Update Available') ||
-          text.includes('Restart to Update') ||
-          text.includes('Install Update')
+          testId === 'manual-update-button'
+        ) {
+          return curr;
+        }
+        const text = (curr.innerText || '').trim();
+        if (
+          (testId.toLowerCase().includes('update') || ariaLabel.toLowerCase().includes('update')) &&
+          (text.includes('Update Available') || text.includes('Restart to Update') || text.includes('Install Update'))
         ) {
           return curr;
         }
@@ -1272,6 +1284,10 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       'opacity: 0',
       'transition: opacity 0.15s ease-out',
       'user-select: none',
+      '-webkit-app-region: no-drag !important',
+      'app-region: no-drag !important',
+      'pointer-events: auto !important',
+      'cursor: default',
       'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     ].join(';');
 
@@ -1287,56 +1303,71 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       'box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06)',
       'color: #f4f4f5',
       'transform: scale(0.95) translateY(4px)',
-      'transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)'
+      'transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+      '-webkit-app-region: no-drag !important',
+      'app-region: no-drag !important',
+      'pointer-events: auto !important',
+      'cursor: default'
     ].join(';');
 
     box.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; -webkit-app-region: no-drag !important;">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 18px;">✨</span>
           <span style="font-size: 16px; font-weight: 600; letter-spacing: -0.2px;">发现新版本 (Update Available)</span>
         </div>
-        <button id="ag-modal-close-x" style="background: transparent; border: none; color: #a1a1aa; font-size: 16px; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='#fff'" onmouseout="this.style.background='transparent'; this.style.color='#a1a1aa'">✕</button>
+        <button id="ag-modal-close-x" aria-label="关闭" title="关闭 (Esc)" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); color: #a1a1aa; font-size: 18px; width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-app-region: no-drag !important; app-region: no-drag !important; pointer-events: auto !important; transition: all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='#a1a1aa'">✕</button>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px; -webkit-app-region: no-drag !important;">
         <span style="background: rgba(255, 255, 255, 0.07); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08); color: #a1a1aa;">当前版本: <b id="ag-modal-cur-ver" style="color: #e4e4e7;">v${curVer}</b></span>
         <span style="color: #71717a;">➔</span>
         <span style="background: rgba(59, 130, 246, 0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-weight: 600;">目标版本: <b id="ag-modal-target-ver">v${newVer}</b></span>
       </div>
 
-      <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; font-size: 12px; line-height: 1.55; color: #fbbf24;">
+      <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; font-size: 12px; line-height: 1.55; color: #fbbf24; -webkit-app-region: no-drag !important;">
         🛡️ <b>主题保护提示</b>：当前客户端已开启 Antigravity Master Theme 增强渲染与动态壁纸引擎。为防止官方更新静默覆盖您的个性化配置与壁纸，自动更新已设为手动确认模式。
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <button id="ag-modal-btn-primary" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; border: none; border-radius: 10px; padding: 11px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); transition: all 0.15s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 18px rgba(37, 99, 235, 0.45)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(37, 99, 235, 0.35)'">
+      <div style="display: flex; flex-direction: column; gap: 8px; -webkit-app-region: no-drag !important;">
+        <button id="ag-modal-btn-primary" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; border: none; border-radius: 10px; padding: 11px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); -webkit-app-region: no-drag !important; app-region: no-drag !important; pointer-events: auto !important; transition: all 0.15s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 18px rgba(37, 99, 235, 0.45)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(37, 99, 235, 0.35)'">
           ⬇️ 开始后台下载更新
         </button>
 
-        <div style="display: flex; gap: 8px;">
-          <button id="ag-modal-btn-download" style="flex: 1; background: rgba(255, 255, 255, 0.07); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 9px 12px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">
+        <div style="display: flex; gap: 8px; -webkit-app-region: no-drag !important;">
+          <button id="ag-modal-btn-download" style="flex: 1; background: rgba(255, 255, 255, 0.07); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 9px 12px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px; -webkit-app-region: no-drag !important; app-region: no-drag !important; pointer-events: auto !important;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">
             📥 下载官方安装包 (.exe)
           </button>
-          <button id="ag-modal-btn-changelog" style="flex: 1; background: rgba(255, 255, 255, 0.07); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 9px 12px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">
+          <button id="ag-modal-btn-changelog" style="flex: 1; background: rgba(255, 255, 255, 0.07); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 9px 12px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px; -webkit-app-region: no-drag !important; app-region: no-drag !important; pointer-events: auto !important;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">
             🌐 前往官网 / 更新日志
           </button>
         </div>
 
-        <button id="ag-modal-btn-dismiss" style="margin-top: 2px; background: transparent; color: #94a3b8; border: none; border-radius: 8px; padding: 7px 10px; font-size: 12px; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.color='#cbd5e1'; this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.color='#94a3b8'; this.style.background='transparent'">
-          稍后提醒 / 隐藏更新按钮
-        </button>
+        <div style="display: flex; gap: 8px; margin-top: 4px; -webkit-app-region: no-drag !important;">
+          <button id="ag-modal-btn-cancel" style="flex: 1; background: rgba(255, 255, 255, 0.08); color: #e4e4e7; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 9px; padding: 9px 14px; font-size: 12.5px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; -webkit-app-region: no-drag !important; app-region: no-drag !important; pointer-events: auto !important; transition: all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.14)'; this.style.borderColor='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'">
+            ✕ 取消 / 关闭
+          </button>
+          <button id="ag-modal-btn-dismiss" style="flex: 1; background: transparent; color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px; padding: 9px 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; -webkit-app-region: no-drag !important; app-region: no-drag !important; pointer-events: auto !important; transition: all 0.15s;" onmouseover="this.style.color='#cbd5e1'; this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.color='#94a3b8'; this.style.background='transparent'">
+            稍后提醒 / 隐藏更新
+          </button>
+        </div>
       </div>
     `;
 
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
+    let isClosing = false;
     const closeModal = () => {
-      try { document.removeEventListener('keydown', onKeyDown); } catch(e) {}
-      overlay.style.opacity = '0';
-      overlay.style.pointerEvents = 'none';
-      box.style.transform = 'scale(0.94) translateY(6px)';
+      if (isClosing) return;
+      isClosing = true;
+      try { window.removeEventListener('keydown', onKeyDown, true); } catch(e) {}
+      try { document.removeEventListener('keydown', onKeyDown, true); } catch(e) {}
+      try {
+        overlay.style.opacity = '0';
+        overlay.style.pointerEvents = 'none';
+        box.style.transform = 'scale(0.94) translateY(6px)';
+      } catch(e) {}
       setTimeout(() => {
         try {
           overlay.remove();
@@ -1345,7 +1376,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
           } catch(e2) {}
         }
-      }, 100);
+      }, 120);
     };
     overlay.closeModal = closeModal;
 
@@ -1354,82 +1385,123 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       box.style.transform = 'scale(1) translateY(0)';
     });
 
-    overlay.querySelector('#ag-modal-close-x').onclick = closeModal;
-    overlay.onclick = (e) => {
-      if (e.target === overlay) closeModal();
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        closeModal();
+      }
     };
+    window.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keydown', onKeyDown, true);
 
-    overlay.querySelector('#ag-modal-btn-download').onclick = () => {
-      closeModal();
-      openExternalUrl(downloadUrl);
-    };
+    const closeBtn = overlay.querySelector('#ag-modal-close-x');
+    if (closeBtn) {
+      closeBtn.onclick = (e) => {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        closeModal();
+      };
+    }
 
-    overlay.querySelector('#ag-modal-btn-changelog').onclick = () => {
-      closeModal();
-      openExternalUrl(officialUrl);
-    };
+    const cancelBtn = overlay.querySelector('#ag-modal-btn-cancel');
+    if (cancelBtn) {
+      cancelBtn.onclick = (e) => {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        closeModal();
+      };
+    }
 
-    overlay.querySelector('#ag-modal-btn-dismiss').onclick = () => {
-      closeModal();
-      sessionStorage.setItem('ag_hide_update', '1');
-      hideUpdateButton();
-    };
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeModal();
+      }
+    });
+    box.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    const downloadBtn = overlay.querySelector('#ag-modal-btn-download');
+    if (downloadBtn) {
+      downloadBtn.onclick = (e) => {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        closeModal();
+        openExternalUrl(downloadUrl);
+      };
+    }
+
+    const changelogBtn = overlay.querySelector('#ag-modal-btn-changelog');
+    if (changelogBtn) {
+      changelogBtn.onclick = (e) => {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        closeModal();
+        openExternalUrl(officialUrl);
+      };
+    }
+
+    const dismissBtn = overlay.querySelector('#ag-modal-btn-dismiss');
+    if (dismissBtn) {
+      dismissBtn.onclick = (e) => {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        closeModal();
+        sessionStorage.setItem('ag_hide_update', '1');
+        hideUpdateButton();
+      };
+    }
 
     const primaryBtn = overlay.querySelector('#ag-modal-btn-primary');
-    primaryBtn.onclick = async () => {
-      if (isReady) {
-        closeModal();
-        try {
-          if (window.electronUpdater && window.electronUpdater.quitAndInstall) {
-            await window.electronUpdater.quitAndInstall();
-            return;
-          }
-        } catch(err) {}
-        try {
-          await fetch('http://127.0.0.1:8315/api/updater/apply', { method: 'POST' });
-        } catch(err) {}
-      } else if (isDownloading) {
-        closeModal();
-      } else {
-        primaryBtn.style.opacity = '0.85';
-        primaryBtn.style.pointerEvents = 'none';
-        primaryBtn.innerHTML = '<span>⏳ 正在启动后台更新下载...</span>';
+    if (primaryBtn) {
+      primaryBtn.onclick = async (e) => {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        if (isReady) {
+          closeModal();
+          try {
+            if (window.electronUpdater && window.electronUpdater.quitAndInstall) {
+              await window.electronUpdater.quitAndInstall();
+              return;
+            }
+          } catch(err) {}
+          try {
+            await fetch('http://127.0.0.1:8315/api/updater/apply', { method: 'POST' });
+          } catch(err) {}
+        } else if (isDownloading) {
+          closeModal();
+        } else {
+          primaryBtn.style.opacity = '0.85';
+          primaryBtn.style.pointerEvents = 'none';
+          primaryBtn.innerHTML = '<span>⏳ 正在启动后台更新下载...</span>';
 
-        let triggered = false;
-        try {
-          if (window.electronUpdater && window.electronUpdater.downloadUpdate) {
-            await window.electronUpdater.downloadUpdate();
-            triggered = true;
-          } else if (window.electronUpdater && window.electronUpdater.applyUpdate) {
-            await window.electronUpdater.applyUpdate();
-            triggered = true;
-          }
-        } catch(err) {}
+          let triggered = false;
+          try {
+            if (window.electronUpdater && window.electronUpdater.downloadUpdate) {
+              await window.electronUpdater.downloadUpdate();
+              triggered = true;
+            } else if (window.electronUpdater && window.electronUpdater.applyUpdate) {
+              await window.electronUpdater.applyUpdate();
+              triggered = true;
+            }
+          } catch(err) {}
 
-        try {
-          const resp = await fetch('http://127.0.0.1:8315/api/updater/download', { method: 'POST' });
-          if (resp.ok) triggered = true;
-        } catch(err) {}
+          try {
+            const resp = await fetch('http://127.0.0.1:8315/api/updater/download', { method: 'POST' });
+            if (resp.ok) triggered = true;
+          } catch(err) {}
 
-        setTimeout(() => {
-          if (triggered) {
-            primaryBtn.innerHTML = '<span>✓ 已启动后台静默下载，完成后可重启生效</span>';
-            setTimeout(closeModal, 1500);
-          } else {
-            primaryBtn.innerHTML = '<span>📥 正在打开官方安装包直接下载...</span>';
-            openExternalUrl(downloadUrl);
-            setTimeout(closeModal, 1200);
-          }
-        }, 600);
-      }
-    };
-
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        closeModal();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
+          setTimeout(() => {
+            if (triggered) {
+              primaryBtn.innerHTML = '<span>✓ 已启动后台静默下载，完成后可重启生效</span>';
+              setTimeout(closeModal, 1500);
+            } else {
+              primaryBtn.innerHTML = '<span>📥 正在打开官方安装包直接下载...</span>';
+              openExternalUrl(downloadUrl);
+              setTimeout(closeModal, 1200);
+            }
+          }, 600);
+        }
+      };
+    }
 
     // Asynchronously update version info and state in background
     (async () => {
@@ -1477,6 +1549,13 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     window.showThemeUpdateModal = showThemeUpdateModal;
     window.hideThemeUpdateButton = hideUpdateButton;
   }
+  try {
+    const { contextBridge } = require('electron');
+    if (contextBridge && typeof contextBridge.exposeInMainWorld === 'function') {
+      contextBridge.exposeInMainWorld('showThemeUpdateModal', (ver) => showThemeUpdateModal(ver));
+      contextBridge.exposeInMainWorld('hideThemeUpdateButton', () => hideUpdateButton());
+    }
+  } catch(e) {}
 
   // Check if previously dismissed in this session
   try {
@@ -1487,6 +1566,9 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
   const onPointerDown = (e) => {
     try {
+      if (e.target && typeof e.target.closest === 'function' && e.target.closest('#antigravity-update-modal-overlay')) {
+        return;
+      }
       const updateBtn = findUpdateTarget(e.target);
       if (updateBtn) {
         let el = updateBtn;
@@ -1503,6 +1585,9 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
   const onClick = (e) => {
     try {
+      if (e.target && typeof e.target.closest === 'function' && e.target.closest('#antigravity-update-modal-overlay')) {
+        return;
+      }
       const updateBtn = findUpdateTarget(e.target);
       if (updateBtn) {
         e.preventDefault();
@@ -1542,6 +1627,14 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             -webkit-app-region: no-drag !important;
             app-region: no-drag !important;
             cursor: pointer !important;
+          }
+          #antigravity-update-modal-overlay,
+          #antigravity-update-modal-overlay *,
+          #antigravity-update-modal-box,
+          #antigravity-update-modal-box * {
+            -webkit-app-region: no-drag !important;
+            app-region: no-drag !important;
+            pointer-events: auto !important;
           }
         `;
         document.head.appendChild(st);
