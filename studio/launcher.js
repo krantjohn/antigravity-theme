@@ -44,7 +44,7 @@ if (browserExe) {
   const profileDir = path.join(os.tmpdir(), 'antigravity_studio_profile');
   const child = spawn(browserExe, [
     `--app=${appUrl}`,
-    '--window-size=1280,860',
+    '--window-size=1480,920',
     `--user-data-dir=${profileDir}`,
     '--no-first-run',
     '--no-default-browser-check'

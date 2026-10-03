@@ -236,6 +236,85 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // 1.1. GET /api/we/list - Return scanned Steam Wallpaper Engine items
+  if (req.method === 'GET' && pathname === '/api/we/list') {
+    try {
+      const items = themeEngine.listWallpaperEngineWallpapers ? themeEngine.listWallpaperEngineWallpapers() : [];
+      return sendJson(res, 200, { success: true, count: items.length, items });
+    } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message, items: [] });
+    }
+  }
+
+  // 1.2. GET /api/preview-file - Stream any local media file for in-app preview
+  if (req.method === 'GET' && pathname === '/api/preview-file') {
+    try {
+      let rawPath = parsedUrl.searchParams.get('path');
+      if (!rawPath) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+        return res.end('File path is required');
+      }
+
+      const wallpapersDir = themeEngine.WALLPAPERS_DIR || path.join(os.homedir(), '.gemini', 'antigravity', 'wallpapers');
+      if (!path.isAbsolute(rawPath) || !fs.existsSync(rawPath)) {
+        const inWallpapers = path.join(wallpapersDir, path.basename(rawPath));
+        if (fs.existsSync(inWallpapers)) {
+          rawPath = inWallpapers;
+        }
+      }
+
+      if (!fs.existsSync(rawPath)) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+        return res.end('File not found: ' + rawPath);
+      }
+      const stat = fs.statSync(rawPath);
+      if (!stat.isFile()) {
+        res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+        return res.end('Target is not a file');
+      }
+
+      const ext = path.extname(rawPath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      const range = req.headers.range;
+
+      if (range) {
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+        if (start >= stat.size || end >= stat.size) {
+          res.writeHead(416, {
+            'Content-Range': `bytes */${stat.size}`,
+            'Access-Control-Allow-Origin': '*'
+          });
+          return res.end();
+        }
+        const chunksize = (end - start) + 1;
+        const fileStream = fs.createReadStream(rawPath, { start, end });
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize,
+          'Content-Type': contentType,
+          'Access-Control-Allow-Origin': '*'
+        });
+        fileStream.pipe(res);
+      } else {
+        res.writeHead(200, {
+          'Content-Length': stat.size,
+          'Content-Type': contentType,
+          'Accept-Ranges': 'bytes',
+          'Access-Control-Allow-Origin': '*'
+        });
+        fs.createReadStream(rawPath).pipe(res);
+      }
+      return;
+    } catch (err) {
+      console.error('[Studio] 预览文件流异常:', err);
+      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+      return res.end(err.message);
+    }
+  }
+
   // 1.5. POST /api/upload - Stream upload wallpaper directly from browser
   if (req.method === 'POST' && pathname === '/api/upload') {
     try {
@@ -430,6 +509,42 @@ const server = http.createServer(async (req, res) => {
       const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
       return sendJson(res, 200, { success: isOk });
     } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 8.5. POST /api/theme/apply-draft - Batch apply drafted theme changes to Antigravity
+  if (req.method === 'POST' && pathname === '/api/theme/apply-draft') {
+    try {
+      const body = await parseBody(req);
+      const { draftConfig, fontColor } = body;
+      if (!draftConfig || typeof draftConfig !== 'object') {
+        return sendJson(res, 400, { success: false, error: 'draftConfig is required' });
+      }
+
+      console.log('[Studio] 收到正式应用草稿指令，正在批量装配并固化配置...');
+      for (const slotKey of ['left', 'mid', 'right', 'bottom', 'settings']) {
+        const slotData = draftConfig[slotKey];
+        if (slotData) {
+          if (slotData.stagedFilePath && fs.existsSync(slotData.stagedFilePath)) {
+            await themeEngine.swapWallpaper(slotKey, slotData.stagedFilePath);
+          }
+          if (slotData.position) {
+            const [x, y] = slotData.position.split(' ');
+            await themeEngine.setPosition(slotKey, x || 'center', y || 'center');
+          }
+        }
+      }
+
+      if (fontColor) {
+        const fKey = typeof fontColor === 'string' ? fontColor : (fontColor.id || fontColor.primary);
+        if (fKey) await themeEngine.setFontColor(fKey);
+      }
+
+      const activeConfig = themeEngine.loadSlotsConfig();
+      return sendJson(res, 200, { success: true, slotsConfig: activeConfig });
+    } catch (err) {
+      console.error('[Studio] 批量应用草稿失败:', err);
       return sendJson(res, 500, { success: false, error: err.message });
     }
   }

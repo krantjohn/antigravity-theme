@@ -3,31 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Antigravity Theme Studio</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Antigravity Theme Studio —— 实时预览与全景工坊</title>
+  <link rel="stylesheet" href="style.css?v=3.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="ambient-glow"></div>
 
-  <!-- Header Bar -->
+  <!-- Header Bar with Segmented Navigation -->
   <header class="app-header">
-    <div class="brand">
-      <div class="brand-icon">🌸</div>
-      <div class="brand-info">
-        <h1>Antigravity Theme Studio</h1>
-        <span class="badge badge-subtle">v1.0 便携版 · 零后台常驻</span>
+    <div class="header-left">
+      <div class="brand">
+        <div class="brand-icon">🌸</div>
+        <div class="brand-info">
+          <h1>Antigravity Theme Studio</h1>
+          <span class="badge badge-subtle">v3.0 实时预览工坊 · 零后台常驻</span>
+        </div>
       </div>
     </div>
 
+    <!-- Center: Main Navigation Tabs -->
+    <nav class="nav-segmented" id="app-nav">
+      <button class="nav-tab active" data-tab="view-preview" id="nav-tab-preview">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <span>实时装配预览</span>
+      </button>
+      <button class="nav-tab" data-tab="view-presets" id="nav-tab-presets">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <span>预设保险库</span>
+      </button>
+      <button class="nav-tab" data-tab="view-we" id="nav-tab-we">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span>Steam 创意工坊</span>
+        <span class="nav-badge" id="nav-we-count">0</span>
+      </button>
+      <button class="nav-tab" data-tab="view-safety" id="nav-tab-safety">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>底层与安全</span>
+      </button>
+    </nav>
+
+    <!-- Right: Telemetry & Controls -->
     <div class="header-status">
-      <div class="status-pill" id="cdp-status">
+      <div class="status-pill" id="cdp-status" title="CDP 8314 热重载通道">
         <span class="status-dot"></span>
         <span class="status-text">正在探测 CDP...</span>
       </div>
-      <div class="status-pill" id="media-status">
+      <div class="status-pill" id="media-status" title="动态壁纸本地流媒体加速通道">
         <span class="status-dot"></span>
         <span class="status-text">流媒体 8315</span>
       </div>
@@ -46,62 +70,58 @@
     </div>
   </header>
 
-  <!-- Main Bento Grid -->
-  <main class="bento-container">
-
-    <!-- Bento 1: 5 Slots Visual Assembly Matrix (Hero 2x2) -->
-    <section class="bento-card bento-hero spotlight-card" id="card-slots">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="section-tag">SLOTS MATRIX</span>
-          <h2>🎨 5 大核心槽位装配矩阵</h2>
-        </div>
-        <div class="card-header-actions">
-          <button class="btn btn-secondary btn-sm" id="btn-reset-baseline" title="一键将 5 大槽位恢复为初版黄金基线全套">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-            恢复全套黄金基线
-          </button>
-        </div>
-        <div class="slot-pills" id="slot-selector">
-          <button class="slot-pill active" data-slot="left">主对话底座 (left)</button>
-          <button class="slot-pill" data-slot="mid">活跃终端 (mid)</button>
-          <button class="slot-pill" data-slot="right">右侧抽屉 (right)</button>
-          <button class="slot-pill" data-slot="bottom">提问输入框 (bottom)</button>
-          <button class="slot-pill" data-slot="settings">设置弹窗 (settings)</button>
-        </div>
-      </div>
-
-      <div class="slot-content-layout">
-        <!-- Left: Drag and Drop Upload Area -->
-        <div class="drop-zone" id="drop-zone">
-          <input type="file" id="file-input" accept=".mp4,.webm,.jpg,.jpeg,.png,.webp" style="display:none;">
-          <div class="drop-zone-inner">
-            <div class="drop-icon">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="4" ry="4"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-            </div>
-            <div class="drop-title">点击浏览 或 拖拽壁纸到此处</div>
-            <div class="drop-actions">
-              <button class="btn btn-secondary btn-sm" id="btn-browse-native">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                浏览本地文件...
-              </button>
-            </div>
+  <!-- View 1: 🖥️ 工作区与 1:1 动态实时仿真预览 -->
+  <section class="view-panel active" id="view-preview">
+    <div class="workspace-container">
+      
+      <!-- Left Column: Inspector & Customizer -->
+      <aside class="inspector-panel spotlight-card">
+        
+        <!-- Draft Commit Actions Toolbar -->
+        <div class="draft-action-bar">
+          <div class="draft-status-wrap">
+            <span class="draft-indicator synced" id="draft-indicator"></span>
+            <span class="draft-status-text" id="draft-status-text">与当前客户端同步</span>
+          </div>
+          <div class="draft-btn-group">
+            <button class="btn btn-primary btn-sm btn-glow" id="btn-commit-draft" title="将当前实时预览的全部槽位壁纸、位置对齐与字体正式应用至 Antigravity">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
+              正式应用到客户端
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-discard-draft" title="放弃当前未应用的预览调节，还原为客户端当前生效配置">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              还原
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-draft-save-preset" title="将当前实时预览的方案另存为新预设">
+              💾 另存
+            </button>
           </div>
         </div>
 
-        <!-- Right: Current Configuration & Position Controls -->
-        <div class="slot-details">
+        <!-- Slot Selector Pills -->
+        <div class="inspector-section">
+          <div class="section-title-row">
+            <span class="section-tag">SLOT SELECTOR</span>
+            <span class="active-focus-label" id="inspector-focus-label">正在调节：左主对话底座</span>
+          </div>
+          <div class="slot-pills" id="slot-selector">
+            <button class="slot-pill active" data-slot="left">主对话 (左)</button>
+            <button class="slot-pill" data-slot="mid">活跃终端 (中)</button>
+            <button class="slot-pill" data-slot="right">独立侧栏 (右)</button>
+            <button class="slot-pill" data-slot="bottom">提问框 (底)</button>
+            <button class="slot-pill" data-slot="settings">设置弹窗</button>
+          </div>
+        </div>
+
+        <!-- Material Uploader & Info -->
+        <div class="inspector-section">
           <div class="info-card">
             <div class="info-row">
-              <span class="info-label">当前活跃槽位</span>
-              <span class="info-val highlight-val" id="active-slot-name">主对话界面 / 全局底图</span>
+              <span class="info-label">槽位目标</span>
+              <span class="info-val highlight-val" id="active-slot-name">AI主对话界面 / 全局底图</span>
             </div>
             <div class="info-row">
-              <span class="info-label">素材文件</span>
+              <span class="info-label">当前素材</span>
               <span class="info-val font-mono" id="active-slot-file">正在获取...</span>
             </div>
             <div class="info-row">
@@ -112,14 +132,40 @@
             </div>
           </div>
 
-          <div class="slot-quick-actions">
-            <button class="btn btn-secondary btn-sm" id="btn-reset-slot" title="将当前选中的槽位壁纸恢复为初始默认素材">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-              恢复当前槽位默认壁纸
-            </button>
+          <div class="drop-zone" id="drop-zone">
+            <input type="file" id="file-input" accept=".mp4,.webm,.jpg,.jpeg,.png,.webp" style="display:none;">
+            <div class="drop-zone-inner">
+              <div class="drop-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="4" ry="4"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              </div>
+              <div class="drop-title">拖拽视频/图片到此处，或点击浏览</div>
+              <div class="drop-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-browse-native">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                  选择本地素材...
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-reset-slot" title="重置当前槽位为默认官方壁纸">
+                  重置素材
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Position & Alignment Control -->
+        <div class="inspector-section">
+          <div class="section-title-row">
+            <span class="section-tag">ALIGNMENT & POSITION</span>
+            <div class="quick-pos-actions">
+              <button class="btn-text-action" id="btn-reset-pos" title="重置当前槽位对齐位置">重置当前对齐</button>
+              <button class="btn-text-action" id="btn-reset-all-pos" title="重置全部槽位对齐位置">重置全部</button>
+            </div>
           </div>
 
-          <!-- Position Adjustment Controls -->
           <div class="pos-control-group">
             <div class="slider-row">
               <div class="slider-label-line">
@@ -137,129 +183,354 @@
               <input type="range" class="range-slider" id="slider-pos-y" min="0" max="100" value="50">
             </div>
 
-            <div class="pos-btn-row">
-              <button class="btn btn-secondary btn-sm" id="btn-reset-pos" title="重置当前槽位对齐位置为默认值">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-                重置当前对齐
-              </button>
-              <button class="btn btn-secondary btn-sm" id="btn-reset-all-pos" title="重置所有 5 个槽位的对齐位置为默认值">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-                重置全部对齐
-              </button>
+            <!-- 3x3 Quick Alignment Grid -->
+            <div class="quick-align-grid">
+              <button class="btn-align-cell" data-align="0% 0%" title="左上对齐">↖</button>
+              <button class="btn-align-cell" data-align="50% 0%" title="中上对齐">↑</button>
+              <button class="btn-align-cell" data-align="100% 0%" title="右上对齐">↗</button>
+              <button class="btn-align-cell" data-align="0% 50%" title="左中对齐">←</button>
+              <button class="btn-align-cell" data-align="50% 50%" title="居中对齐">⊙</button>
+              <button class="btn-align-cell" data-align="100% 50%" title="右中对齐">→</button>
+              <button class="btn-align-cell" data-align="0% 100%" title="左下对齐">↙</button>
+              <button class="btn-align-cell" data-align="50% 100%" title="中下对齐">↓</button>
+              <button class="btn-align-cell" data-align="100% 100%" title="右下对齐">↘</button>
             </div>
           </div>
+        </div>
 
-          <div class="slot-footer-action">
-            <button class="btn btn-primary btn-block" id="btn-apply-slot">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              立即应用微调 (0.3s 热重载)
+        <!-- Typography & High Contrast Presets -->
+        <div class="inspector-section">
+          <div class="section-title-row">
+            <span class="section-tag">TYPOGRAPHY CONTRAST</span>
+            <button class="btn-text-action" id="btn-reset-font" title="重置字体配色为默认纯白高对比">重置纯白</button>
+          </div>
+
+          <div class="font-presets-grid" id="font-presets">
+            <!-- Injected via JS -->
+          </div>
+
+          <div class="custom-color-row">
+            <input type="color" id="font-color-picker" value="#ffffff">
+            <input type="text" id="font-hex-input" class="input-text font-mono" placeholder="#ffffff" maxlength="7">
+            <button class="btn btn-secondary btn-sm" id="btn-apply-font">设定制色</button>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- Right Column: 1:1 Antigravity Interactive Live Mockup Canvas -->
+      <main class="preview-stage spotlight-card">
+        <div class="stage-header">
+          <div class="stage-title-wrap">
+            <span class="section-tag">1:1 LIVE SIMULATION</span>
+            <h2>Antigravity 界面仿真视窗</h2>
+          </div>
+          <div class="stage-actions">
+            <span class="hint-pill">💡 点击画面任意区域即可直接切换调节该槽位</span>
+            <button class="btn btn-secondary btn-sm" id="btn-toggle-mock-settings" title="打开/收起设置弹窗外观仿真">
+              ⚙️ 预览设置弹窗
             </button>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- Bento 2: Font Color & Rec. 601 Adaptive (1x1) -->
-    <section class="bento-card spotlight-card" id="card-font">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="section-tag">TYPOGRAPHY</span>
-          <h3>🔤 字体配色</h3>
+        <!-- The Antigravity Mockup Window Frame -->
+        <div class="mockup-window" id="ag-mockup">
+          
+          <!-- Mock Window Titlebar -->
+          <div class="mock-titlebar">
+            <div class="mock-traffic-lights">
+              <span class="mock-dot dot-close"></span>
+              <span class="mock-dot dot-min"></span>
+              <span class="mock-dot dot-max"></span>
+            </div>
+            <div class="mock-titlebar-title">
+              <span class="mock-app-name">Google Antigravity</span>
+              <span class="mock-model-pill">✨ Gemini 3.8 Flash High</span>
+              <span class="mock-update-pill">Update Available →</span>
+            </div>
+            <div class="mock-win-controls">
+              <span>—</span>
+              <span>□</span>
+              <span>✕</span>
+            </div>
+          </div>
+
+          <!-- Mock Window Body -->
+          <div class="mock-body">
+            
+            <!-- Global Left Slot Background Layer -->
+            <div class="mock-slot-bg mock-bg-left" id="mock-slot-left" data-slot="left" title="点击调节【左主对话底座】">
+              <video class="mock-media-video" id="mock-video-left" autoplay muted loop playsinline></video>
+              <img class="mock-media-img" id="mock-img-left" alt="">
+              <div class="slot-focus-indicator">左主对话底座 (left)</div>
+            </div>
+
+            <!-- Mock Left Sidebar -->
+            <aside class="mock-sidebar" data-slot="left">
+              <div class="mock-sidebar-top">
+                <button class="mock-new-chat-btn">
+                  <span>+</span>
+                  <span>New Conversation</span>
+                </button>
+              </div>
+              <div class="mock-history-list">
+                <div class="mock-history-item active">
+                  <span class="item-icon">💬</span>
+                  <span class="item-text">Antigravity 动态主题工坊</span>
+                </div>
+                <div class="mock-history-item">
+                  <span class="item-icon">💬</span>
+                  <span class="item-text">Agentic Workflow 开发</span>
+                </div>
+                <div class="mock-history-item">
+                  <span class="item-icon">💬</span>
+                  <span class="item-text">4K 60FPS 极速渲染流</span>
+                </div>
+                <div class="mock-history-item">
+                  <span class="item-icon">💬</span>
+                  <span class="item-text">Steam 创意工坊直通车</span>
+                </div>
+              </div>
+              <div class="mock-sidebar-bottom">
+                <button class="mock-settings-btn" id="mock-sidebar-settings-btn">
+                  <span>⚙️</span>
+                  <span>Settings</span>
+                </button>
+              </div>
+            </aside>
+
+            <!-- Mock Main Working Area -->
+            <div class="mock-main-content">
+              
+              <!-- Upper: Chat & Terminal Split -->
+              <div class="mock-upper-split">
+                
+                <!-- Chat Area -->
+                <div class="mock-chat-pane" data-slot="left" title="点击调节【左主对话底座】">
+                  <div class="mock-bubble user-bubble">
+                    <div class="bubble-content" id="mock-user-text">
+                      帮我配置一套极致震撼的高对比动态壁纸！
+                    </div>
+                  </div>
+
+                  <div class="mock-bubble ai-bubble">
+                    <div class="ai-avatar">🌸</div>
+                    <div class="bubble-content" id="mock-ai-text">
+                      <p><strong>Antigravity Theme Studio v3.0</strong> 实时仿真已激活！</p>
+                      <p>当前字体轮廓与阴影已根据 Rec. 601 动态自适应，文字清晰透亮，杜绝眩光卡顿。</p>
+                      <pre class="mock-code-box"><code>// 0.3s CDP 极速热更新就绪
+antigravity.applyTheme({ 
+  fps: 60, 
+  hardwareAccelerated: true 
+});</code></pre>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Terminal / Aux Area (Mid & Right Slots) -->
+                <div class="mock-terminal-pane" id="mock-slot-mid" data-slot="mid" title="点击调节【中活跃终端】">
+                  <!-- Mid Slot Background Layer -->
+                  <div class="mock-slot-bg">
+                    <video class="mock-media-video" id="mock-video-mid" autoplay muted loop playsinline></video>
+                    <img class="mock-media-img" id="mock-img-mid" alt="">
+                    <div class="slot-focus-indicator">活跃终端 (mid)</div>
+                  </div>
+                  
+                  <div class="mock-terminal-header">
+                    <div class="mock-term-tab active">bash</div>
+                    <div class="mock-term-tab">zsh</div>
+                    <div class="mock-term-tab">+</div>
+                  </div>
+                  <div class="mock-terminal-body" id="mock-term-body">
+                    <div class="term-line"><span class="term-prompt">Administrator@ANTIGRAVITY:~$</span> agy theme --status</div>
+                    <div class="term-line term-ok">✓ Engine: Online (CDP 8314 & Media 8315)</div>
+                    <div class="term-line term-dim">✓ FastStart Moov: Optimized (0ms keyframe)</div>
+                    <div class="term-line"><span class="term-prompt">Administrator@ANTIGRAVITY:~$</span> <span class="term-cursor">▌</span></div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Bottom Input Box (Slot: bottom) -->
+              <div class="mock-input-pane" id="mock-slot-bottom" data-slot="bottom" title="点击调节【底部输入框】">
+                <div class="mock-slot-bg">
+                  <video class="mock-media-video" id="mock-video-bottom" autoplay muted loop playsinline></video>
+                  <img class="mock-media-img" id="mock-img-bottom" alt="">
+                  <div class="slot-focus-indicator">提问输入框 (bottom)</div>
+                </div>
+
+                <div class="mock-input-card">
+                  <div class="mock-input-placeholder" id="mock-input-text">
+                    Ask anything, @ to mention, / for actions...
+                  </div>
+                  <div class="mock-input-actions">
+                    <span class="mock-input-pill">Gemini 3.8 Flash High ⚡</span>
+                    <span class="mock-input-icon">🎤</span>
+                    <span class="mock-input-icon send-icon">➔</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Settings Dialog Overlay Simulation (Slot: settings) -->
+            <div class="mock-settings-overlay" id="mock-settings-overlay">
+              <div class="mock-settings-modal" id="mock-slot-settings" data-slot="settings" title="点击调节【设置弹窗】">
+                <div class="mock-slot-bg">
+                  <video class="mock-media-video" id="mock-video-settings" autoplay muted loop playsinline></video>
+                  <img class="mock-media-img" id="mock-img-settings" alt="">
+                  <div class="slot-focus-indicator">设置弹窗 (settings)</div>
+                </div>
+                <div class="mock-modal-header">
+                  <h3>⚙️ Settings</h3>
+                  <button class="mock-modal-close" id="btn-close-mock-settings">✕</button>
+                </div>
+                <div class="mock-modal-body">
+                  <div class="mock-setting-row">
+                    <span>Appearance & Wallpapers</span>
+                    <span class="badge badge-accent">Custom Theme Active</span>
+                  </div>
+                  <div class="mock-setting-row">
+                    <span>CDP Remote Debugging</span>
+                    <span class="badge badge-subtle">Port 8314</span>
+                  </div>
+                  <div class="mock-setting-row">
+                    <span>Hardware Video Acceleration</span>
+                    <span class="badge badge-accent">D3D11 Enabled</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
-        <div class="card-header-actions">
-          <button class="btn btn-secondary btn-sm" id="btn-reset-font" title="重置字体配色为默认纯白高对比">
+
+      </main>
+
+    </div>
+  </section>
+
+  <!-- View 2: 📦 预设保险库 (Dedicated Presets Management) -->
+  <section class="view-panel" id="view-presets">
+    <div class="page-container">
+      <div class="page-header">
+        <div class="page-title-wrap">
+          <span class="section-tag">PRESET VAULT</span>
+          <h2>💾 预设保险库</h2>
+          <p class="section-desc">管理、存储并一键装配您的全套视觉配置预设（包含 5 大槽位壁纸、对齐坐标与专属字体配色）。</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm" id="btn-reset-baseline-presets" title="恢复为初版黄金基线全套配置">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-            重置默认纯白
+            恢复初版黄金基线
+          </button>
+          <button class="btn btn-primary btn-sm btn-glow" id="btn-open-save-modal">
+            + 另存当前为新预设
           </button>
         </div>
       </div>
 
-      <div class="font-presets-grid" id="font-presets">
+      <div class="preset-search-bar">
+        <input type="text" id="preset-search-input" class="input-text" placeholder="🔍 快速过滤预设名称...">
+      </div>
+
+      <div class="presets-gallery-grid" id="preset-list">
         <!-- Injected via JS -->
       </div>
+    </div>
+  </section>
 
-      <div class="custom-color-row">
-        <input type="color" id="font-color-picker" value="#ffffff">
-        <input type="text" id="font-hex-input" class="input-text font-mono" placeholder="#ffffff" maxlength="7">
-        <button class="btn btn-secondary btn-sm" id="btn-apply-font">设定字体色</button>
-      </div>
-
-      <div class="preview-text-box" id="font-preview-box">
-        <div class="preview-title" id="preview-text">Antigravity Coding Assistant</div>
-        <div class="preview-sub">代码编辑器 · 终端流光 · 智能侧栏</div>
-      </div>
-    </section>
-
-    <!-- Bento 3: Preset Vault (1x1) -->
-    <section class="bento-card spotlight-card" id="card-presets">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="section-tag">PRESET VAULT</span>
-          <h3>💾 预设保险库</h3>
+  <!-- View 3: 🎮 Steam Wallpaper Engine 创意工坊直通车 -->
+  <section class="view-panel" id="view-we">
+    <div class="page-container">
+      <div class="page-header">
+        <div class="page-title-wrap">
+          <span class="section-tag">WALLPAPER ENGINE BRIDGE</span>
+          <h2>🎮 Steam 创意工坊素材库</h2>
+          <p class="section-desc">直接读取您本地 Steam 安装的 Wallpaper Engine 创意工坊壁纸，一键载入工作区预览或装配至指定槽位。</p>
         </div>
-        <button class="btn btn-primary-ghost btn-sm" id="btn-open-save-modal">
-          + 另存为新预设
-        </button>
+        <div class="page-header-actions">
+          <span class="badge badge-accent" id="we-badge">检测中...</span>
+          <span class="badge badge-subtle" id="we-count-badge">0 项素材</span>
+        </div>
       </div>
 
-      <div class="preset-list" id="preset-list">
+      <div class="we-filter-bar">
+        <input type="text" id="we-search-input" class="input-text" placeholder="🔍 搜索创意工坊壁纸标题或 ID...">
+      </div>
+
+      <div class="we-gallery-grid" id="we-grid">
         <!-- Injected via JS -->
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- Bento 4: Safety & Vanilla Center (1x1) -->
-    <section class="bento-card spotlight-card" id="card-safety">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="section-tag">SAFETY & INJECTION</span>
-          <h3>🛡️ 注入与安全中心</h3>
-        </div>
-        <span class="badge" id="patch-badge">检测中...</span>
-      </div>
-
-      <div class="backup-status-banner" id="patch-banner">
-        <span class="backup-dot" id="patch-dot"></span>
-        <span id="patch-text">正在检测核心补丁状态...</span>
-      </div>
-
-      <div class="safety-actions">
-        <button class="btn btn-primary btn-block" id="btn-install-patch">
-          ⚡ 一键注入 / 安装美化底层
-        </button>
-        <button class="btn btn-warning-ghost btn-block" id="btn-restart-app-card">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-          🔄 一键重启 Antigravity 客户端
-        </button>
-        <button class="btn btn-secondary btn-block" id="btn-vanilla">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-          一键恢复官方原版纯净模式
-        </button>
-        <button class="btn btn-danger-ghost btn-block" id="btn-uninstall">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          彻底物理卸载出厂还原
-        </button>
-      </div>
-    </section>
-
-    <!-- Bento 5: Steam Wallpaper Engine Bridge (1x1) -->
-    <section class="bento-card spotlight-card" id="card-we">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="section-tag">WALLPAPER ENGINE</span>
-          <h3>🎮 Steam 创意工坊直连</h3>
-        </div>
-        <span class="badge badge-accent" id="we-badge">检测中...</span>
-      </div>
-
-      <div class="we-info-box">
-        <div class="we-stat">
-          <span class="we-stat-num" id="we-count">127</span>
-          <span class="we-stat-label">套创意工坊素材就绪</span>
+  <!-- View 4: 🛡️ 底层与系统安全中心 -->
+  <section class="view-panel" id="view-safety">
+    <div class="page-container">
+      <div class="page-header">
+        <div class="page-title-wrap">
+          <span class="section-tag">CORE ENGINE & SAFETY</span>
+          <h2>🛡️ 底层核心与安全维护中心</h2>
+          <p class="section-desc">检测 Antigravity 官方原生文件注入状态、CDP 通信与流媒体健康度，支持出厂还原与一键重启。</p>
         </div>
       </div>
-    </section>
 
-  </main>
+      <!-- Telemetry Bento Grid -->
+      <div class="safety-telemetry-grid">
+        <div class="telemetry-card spotlight-card">
+          <div class="card-title-group">
+            <span class="section-tag">PATCH STATUS</span>
+            <h3>核心注入环境</h3>
+          </div>
+          <div class="backup-status-banner" id="patch-banner">
+            <span class="backup-dot" id="patch-dot"></span>
+            <span id="patch-text">正在检测核心补丁状态...</span>
+          </div>
+          <button class="btn btn-primary btn-block" id="btn-install-patch">
+            ⚡ 一键注入 / 安装美化底层
+          </button>
+        </div>
+
+        <div class="telemetry-card spotlight-card">
+          <div class="card-title-group">
+            <span class="section-tag">CLIENT CONTROL</span>
+            <h3>客户端控制</h3>
+          </div>
+          <p class="telemetry-desc">当官方更新后或底层补丁注入后，点击一键全自动重启客户端，激活 8314 热重载通道。</p>
+          <button class="btn btn-warning-ghost btn-block" id="btn-restart-app-card">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            🔄 一键重启 Antigravity 客户端
+          </button>
+        </div>
+
+        <div class="telemetry-card spotlight-card">
+          <div class="card-title-group">
+            <span class="section-tag">VANILLA RESTORE</span>
+            <h3>官方原版纯净模式</h3>
+          </div>
+          <p class="telemetry-desc">一键恢复 Google 官方原生界面风格（当前壁纸自动保存为快照预设，稍后随时可还原）。</p>
+          <button class="btn btn-secondary btn-block" id="btn-vanilla">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            一键恢复官方原版纯净模式
+          </button>
+        </div>
+
+        <div class="telemetry-card spotlight-card">
+          <div class="card-title-group">
+            <span class="section-tag">PHYSICAL UNINSTALL</span>
+            <h3>出厂物理卸载</h3>
+          </div>
+          <p class="telemetry-desc">完全还原官方出厂 app.asar 镜像，彻底移除所有注入模块，完全恢复出厂状态。</p>
+          <button class="btn btn-danger-ghost btn-block" id="btn-uninstall">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            彻底物理卸载出厂还原
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
 
   <!-- Modal: Save Preset -->
   <div class="modal-overlay" id="save-preset-modal">
@@ -284,6 +555,6 @@
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="app.js?v=2.3"></script>
+  <script src="app.js?v=3.0"></script>
 </body>
 </html>
