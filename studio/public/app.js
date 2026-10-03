@@ -191,7 +191,13 @@ function initTabs() {
       } else if (targetViewId === 'view-presets') {
         renderPresetsList();
       } else if (targetViewId === 'view-preview') {
+        renderSlotInspector();
         renderMockupPreview();
+        document.querySelectorAll('.mockup-window video.mock-media-video.visible').forEach(vid => {
+          if (state.isVideoPlaying && vid.paused) {
+            vid.play().catch(() => {});
+          }
+        });
       }
     });
   });
@@ -430,20 +436,31 @@ function renderMockupPreview() {
     // Apply Media Sources and toggle classes
     if (mediaUrl) {
       if (isVideo) {
-        if (videoEl.dataset.currentSrc !== mediaUrl) {
+        const srcChanged = videoEl.dataset.currentSrc !== mediaUrl;
+        if (srcChanged) {
           videoEl.dataset.currentSrc = mediaUrl;
           videoEl.src = mediaUrl;
-        }
-        if (state.isVideoPlaying) {
-          videoEl.play().catch(() => {});
-        } else {
-          videoEl.pause();
+          videoEl.load();
         }
         videoEl.classList.add('visible');
         imgEl.classList.remove('visible');
         imgEl.removeAttribute('src');
+        imgEl.dataset.currentSrc = '';
+
+        if (state.isVideoPlaying) {
+          const playPromise = videoEl.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(() => {
+              videoEl.muted = true;
+              videoEl.play().catch(() => {});
+            });
+          }
+        } else {
+          videoEl.pause();
+        }
       } else {
-        if (imgEl.src !== mediaUrl) {
+        if (imgEl.dataset.currentSrc !== mediaUrl) {
+          imgEl.dataset.currentSrc = mediaUrl;
           imgEl.src = mediaUrl;
         }
         imgEl.classList.add('visible');
@@ -459,6 +476,7 @@ function renderMockupPreview() {
       videoEl.removeAttribute('src');
       videoEl.dataset.currentSrc = '';
       imgEl.removeAttribute('src');
+      imgEl.dataset.currentSrc = '';
     }
 
     // Interactive target highlight
@@ -925,9 +943,8 @@ function stageSlotFilePath(slot, filePath) {
   }
 
   setDraftDirty(true);
-  renderSlotInspector();
-  renderMockupPreview();
-  showToast(`已在工作区装载素材预览，在视窗可直接鼠标拖拽对齐！`);
+  selectSlot(slot);
+  showToast(`✨ 已成功装配【${state.draftConfig[slot].stagedFileName}】到【${slot}】槽位并实时预览！`);
 }
 
 // =========================================================================
@@ -1629,9 +1646,15 @@ function renderWeGallery() {
       </div>
     `;
 
-    card.querySelector('.btn-we-preview').onclick = () => {
-      stageSlotFilePath('left', item.mediaPath);
+    card.onclick = () => {
       switchTab('view-preview');
+      stageSlotFilePath('left', item.mediaPath);
+    };
+
+    card.querySelector('.btn-we-preview').onclick = (e) => {
+      e.stopPropagation();
+      switchTab('view-preview');
+      stageSlotFilePath('left', item.mediaPath);
     };
 
     card.querySelector('.btn-we-more').onclick = (e) => {
@@ -1645,9 +1668,8 @@ function renderWeGallery() {
         if (slotKey === '4' || slotKey === '侧栏') slotKey = 'right';
 
         if (['mid', 'bottom', 'settings', 'right'].includes(slotKey)) {
-          stageSlotFilePath(slotKey, item.mediaPath);
-          selectSlot(slotKey);
           switchTab('view-preview');
+          stageSlotFilePath(slotKey, item.mediaPath);
         } else {
           alert('未知槽位，请输入 mid, bottom, settings 或 right');
         }

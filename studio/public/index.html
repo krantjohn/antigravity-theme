@@ -426,9 +426,9 @@
             </aside>
 
             <!-- 2. Main Conversation Area (Slot: left base + chat stream) -->
-            <div class="mock-chat-workspace">
+            <div class="mock-chat-workspace" id="mock-slot-left" data-slot="left" title="点击调节【AI主对话底座 left】">
               <!-- Global Left Slot Background Layer -->
-              <div class="mock-slot-bg mock-bg-left" id="mock-slot-left" data-slot="left" title="点击调节【AI主对话底座 left】">
+              <div class="mock-slot-bg mock-bg-left">
                 <video class="mock-media-video" id="mock-video-left" autoplay muted loop playsinline></video>
                 <img class="mock-media-img" id="mock-img-left" alt="">
                 <div class="slot-focus-indicator">主对话底座 (left)</div>
@@ -460,7 +460,7 @@
               </div>
 
               <!-- Chat Message Stream (1:1 matching user conversation) -->
-              <div class="mock-chat-scroll" data-slot="left">
+              <div class="mock-chat-scroll">
                 <!-- User Message -->
                 <div class="mock-msg-user">
                   <div class="user-bubble-box" id="mock-user-text">
