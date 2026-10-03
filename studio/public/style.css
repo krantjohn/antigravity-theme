@@ -505,6 +505,18 @@ body {
   color: #fff;
 }
 
+.btn-warning-ghost {
+  background: rgba(245, 158, 11, 0.09);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.btn-warning-ghost:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #fff;
+}
+
 .btn-sm {
   padding: 5px 12px;
   font-size: 12px;

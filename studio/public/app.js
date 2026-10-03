@@ -58,6 +58,8 @@ const patchBanner = document.getElementById('patch-banner');
 const patchDot = document.getElementById('patch-dot');
 const patchText = document.getElementById('patch-text');
 const btnInstallPatch = document.getElementById('btn-install-patch');
+const btnRestartApp = document.getElementById('btn-restart-app');
+const btnRestartAppCard = document.getElementById('btn-restart-app-card');
 
 // 1. Raycast Spotlight Border Effect
 function initSpotlightEffect() {
@@ -809,6 +811,28 @@ function setupEvents() {
       }
     };
   }
+
+  // Restart Antigravity Client
+  async function handleRestartAntigravity() {
+    if (!confirm('确定要重启 Antigravity 客户端吗？\n（将加载全新注入的底层架构并激活 8314 免重启极速热重载）')) return;
+    showToast('⚡ 正在重启 Antigravity 客户端，请稍候...', 5000);
+    try {
+      const res = await fetch('/api/app/restart', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('✨ 重启指令已发送！客户端正在重新启动并连接 8314...', 4000);
+        setTimeout(fetchStatus, 2500);
+        setTimeout(fetchStatus, 5000);
+      } else {
+        showToast('❌ 重启失败: ' + (data.error || '未知错误'), 4000);
+      }
+    } catch (e) {
+      showToast('❌ 请求重启失败: ' + e.message, 4000);
+    }
+  }
+
+  if (btnRestartApp) btnRestartApp.onclick = handleRestartAntigravity;
+  if (btnRestartAppCard) btnRestartAppCard.onclick = handleRestartAntigravity;
 
   btnVanilla.onclick = async () => {
     if (!confirm('确定要恢复为 Antigravity 官方原版纯净模式吗？\n（当前壁纸将自动保存为快照，稍后随时可一键还原）')) return;

@@ -95,6 +95,36 @@ function checkAntigravityProcess() {
   });
 }
 
+// Helper: restart Antigravity client
+function restartAntigravity() {
+  return new Promise((resolve, reject) => {
+    const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+    const exePath = path.join(localAppData, 'Programs', 'antigravity', 'Antigravity.exe');
+    if (!fs.existsSync(exePath)) {
+      return reject(new Error('未找到 Antigravity.exe: ' + exePath));
+    }
+
+    console.log('[Studio] 正在重启 Antigravity 客户端...');
+    const psScript = [
+      '$p = Get-Process Antigravity -ErrorAction SilentlyContinue',
+      'if ($p) {',
+      '  $p | Stop-Process -Force -ErrorAction SilentlyContinue',
+      '  Start-Sleep -Milliseconds 800',
+      '}',
+      `Start-Process -FilePath "${exePath.replace(/\\/g, '\\\\')}"`
+    ].join("\r\n");
+
+    const b64 = Buffer.from(psScript, 'utf16le').toString('base64');
+    exec(`powershell -NoProfile -Sta -EncodedCommand ${b64}`, { windowsHide: true }, (err) => {
+      if (err) {
+        console.error('[Studio] 执行重启失败:', err);
+        return reject(err);
+      }
+      resolve(true);
+    });
+  });
+}
+
 // Helper: Open native Windows file dialog using PowerShell Base64 EncodedCommand
 function openNativeFileDialog() {
   return new Promise((resolve) => {
@@ -433,6 +463,17 @@ const server = http.createServer(async (req, res) => {
       const selectedPath = await openNativeFileDialog();
       return sendJson(res, 200, { success: true, filePath: selectedPath });
     } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 10.5. POST /api/app/restart - Restart Antigravity client
+  if (req.method === 'POST' && pathname === '/api/app/restart') {
+    try {
+      await restartAntigravity();
+      return sendJson(res, 200, { success: true, message: '正在重启 Antigravity 客户端...' });
+    } catch (err) {
+      console.error('[Studio] 重启 Antigravity 失败:', err);
       return sendJson(res, 500, { success: false, error: err.message });
     }
   }
