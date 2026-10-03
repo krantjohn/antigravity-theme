@@ -3666,6 +3666,48 @@ async function resetPosition(slotInput) {
   return setPosition(slotInput, defaultPos);
 }
 
+/**
+ * 将指定槽位的壁纸恢复为初始黄金基线默认素材，并重置其对齐位置。
+ * 若 slotInput 为 'all'，则执行 revertToBaseline() 恢复全套基线。
+ */
+async function resetSlotWallpaper(slotInput) {
+  const norm = String(slotInput || 'all').toLowerCase().trim();
+  if (norm === 'all' || norm === '全部' || norm === 'baseline' || norm === '基线' || norm === '*') {
+    const ok = await revertToBaseline();
+    return { ok: Boolean(ok), slot: 'all' };
+  }
+
+  const slotKey = SLOT_ALIASES[norm];
+  if (!slotKey || !SLOTS_META[slotKey]) {
+    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置, 或 all (全部)`);
+    return false;
+  }
+
+  const meta = SLOTS_META[slotKey];
+  let sourceDir = null;
+  const repoWallpapers = path.join(__dirname, '..', 'wallpapers');
+  const baselineWallpapers = path.join(baselineDir, 'wallpapers');
+
+  if (fs.existsSync(baselineWallpapers) && fs.existsSync(path.join(baselineWallpapers, meta.defaultFile))) {
+    sourceDir = baselineWallpapers;
+  } else if (fs.existsSync(repoWallpapers) && fs.existsSync(path.join(repoWallpapers, meta.defaultFile))) {
+    sourceDir = repoWallpapers;
+  }
+
+  if (!sourceDir) {
+    console.error(`❌ 无法找到槽位 [${slotKey}] 的默认基线素材文件: ${meta.defaultFile}`);
+    return false;
+  }
+
+  const defaultFilePath = path.join(sourceDir, meta.defaultFile);
+  console.log(`[ThemeEngine] 正在将槽位 [${slotKey}] 重置为初始默认素材: ${meta.defaultFile}`);
+  const ok = await swapWallpaper(slotKey, defaultFilePath);
+  if (ok) {
+    await setPosition(slotKey, meta.defaultPosition || 'center center');
+  }
+  return { ok: Boolean(ok), slot: slotKey, file: meta.defaultFile };
+}
+
 async function setFontColor(colorOrPreset) {
   if (!colorOrPreset) {
     console.error('❌ 请输入有效的预设名称或 Hex 颜色值 (例如: pure-white, obsidian-black, #ffffff, #1a1a2e)');
@@ -4834,6 +4876,16 @@ if (require.main === module) {
       console.error(err);
       process.exit(1);
     });
+  } else if (
+    args[0] === '--reset-slot' || args[0] === '--reset-wallpaper' ||
+    args[0] === 'reset-slot' || args[0] === 'reset-wallpaper'
+  ) {
+    resetSlotWallpaper(args[1] || 'all').then(res => {
+      if (!res) process.exit(1);
+    }).catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
   } else if (args[0] === '--set-left' && args[1]) {
     swapWallpaper('左', args[1]);
   } else if (args[0] === '--set-mid' && args[1]) {
@@ -4931,6 +4983,7 @@ module.exports = {
   setPosition,
   adjustPosition,
   resetPosition,
+  resetSlotWallpaper,
   parsePosition,
   getSlotPosition,
   parseCoordinate,

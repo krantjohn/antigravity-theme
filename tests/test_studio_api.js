@@ -126,10 +126,35 @@ async function runStudioTests() {
     const delRes = await request('POST', '/api/presets/delete', { name: testPresetName });
     assert.strictEqual(delRes.status, 200);
     assert.strictEqual(delRes.json.success, true);
-    console.log(`   ✓ 预设安全删除成功`);
+    // 8. API: /api/slots/reset-pos
+    console.log('[Test 8] 校验槽位对齐位置重置接口 (/api/slots/reset-pos)...');
+    const resetPosRes = await request('POST', '/api/slots/reset-pos', { slot: 'left' });
+    assert.strictEqual(resetPosRes.status, 200);
+    assert.strictEqual(resetPosRes.json.success, true);
+    console.log('   ✓ 单槽位对齐重置测试通过');
+
+    const resetAllPosRes = await request('POST', '/api/slots/reset-pos', { slot: 'all' });
+    assert.strictEqual(resetAllPosRes.status, 200);
+    assert.strictEqual(resetAllPosRes.json.success, true);
+    console.log('   ✓ 全槽位对齐重置测试通过');
+
+    // 9. API: /api/font/reset
+    console.log('[Test 9] 校验字体颜色重置默认纯白接口 (/api/font/reset)...');
+    const resetFontRes = await request('POST', '/api/font/reset', {});
+    assert.strictEqual(resetFontRes.status, 200);
+    assert.strictEqual(resetFontRes.json.success, true);
+    assert.strictEqual(resetFontRes.json.color, '#ffffff');
+    console.log('   ✓ 默认纯白字体重置测试通过');
+
+    // 10. API: /api/slots/reset-slot
+    console.log('[Test 10] 校验当前槽位恢复默认初始壁纸接口 (/api/slots/reset-slot)...');
+    const resetSlotRes = await request('POST', '/api/slots/reset-slot', { slot: 'mid' });
+    assert.strictEqual(resetSlotRes.status, 200);
+    assert.strictEqual(resetSlotRes.json.success, true);
+    console.log('   ✓ 单槽位默认壁纸素材恢复测试通过');
 
     console.log('\n=======================================================');
-    console.log('✨ 恭喜！Antigravity Theme Studio 方案二所有核心接口与功能 100% 验证通过！');
+    console.log('✨ 恭喜！Antigravity Theme Studio 方案二所有重置与预设接口 100% 验证通过！');
     console.log('=======================================================');
 
     // Clean exit

@@ -252,6 +252,43 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // 3.1. POST /api/slots/reset-pos - Reset slot position (or all slots)
+  if (req.method === 'POST' && pathname === '/api/slots/reset-pos') {
+    try {
+      const body = await parseBody(req);
+      const slot = body.slot || 'all';
+      const ok = await themeEngine.resetPosition(slot);
+      const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
+      return sendJson(res, 200, { success: isOk, slot });
+    } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 3.2. POST /api/slots/reset-slot - Reset slot wallpaper and position to baseline default
+  if (req.method === 'POST' && pathname === '/api/slots/reset-slot') {
+    try {
+      const body = await parseBody(req);
+      const slot = body.slot || 'left';
+      const ok = await themeEngine.resetSlotWallpaper(slot);
+      const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
+      return sendJson(res, 200, { success: isOk, slot });
+    } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 3.3. POST /api/theme/baseline - Revert all 5 slots and font to initial Baseline V1
+  if (req.method === 'POST' && pathname === '/api/theme/baseline') {
+    try {
+      const ok = await themeEngine.revertToBaseline();
+      const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
+      return sendJson(res, 200, { success: isOk });
+    } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
   // 4. POST /api/set-font - Update font color
   if (req.method === 'POST' && pathname === '/api/set-font') {
     try {
@@ -264,6 +301,17 @@ const server = http.createServer(async (req, res) => {
       const ok = await themeEngine.setFontColor(color);
       const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
       return sendJson(res, 200, { success: isOk, color });
+    } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 4.1. POST /api/font/reset - Reset font to default pure-white
+  if (req.method === 'POST' && pathname === '/api/font/reset') {
+    try {
+      const ok = await themeEngine.setFontColor('pure-white');
+      const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
+      return sendJson(res, 200, { success: isOk, color: '#ffffff' });
     } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message });
     }

@@ -49,6 +49,12 @@
           <h2>🎨 5 大核心槽位装配矩阵</h2>
           <p class="section-desc">支持拖拽 MP4/JPG/PNG 立即装配，精细微调对齐轴，0.3 秒无感热重载生效</p>
         </div>
+        <div class="card-header-actions">
+          <button class="btn btn-secondary btn-sm" id="btn-reset-baseline" title="一键将 5 大槽位恢复为初版黄金基线全套">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            恢复全套黄金基线
+          </button>
+        </div>
         <div class="slot-pills" id="slot-selector">
           <button class="slot-pill active" data-slot="left">主对话底座 (left)</button>
           <button class="slot-pill" data-slot="mid">活跃终端 (mid)</button>
@@ -100,6 +106,13 @@
             </div>
           </div>
 
+          <div class="slot-quick-actions">
+            <button class="btn btn-secondary btn-sm" id="btn-reset-slot" title="将当前选中的槽位壁纸恢复为初始默认素材">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+              恢复当前槽位默认壁纸
+            </button>
+          </div>
+
           <!-- Position Adjustment Controls -->
           <div class="pos-control-group">
             <div class="slider-row">
@@ -116,6 +129,17 @@
                 <span class="slider-val-tag" id="val-pos-y">50%</span>
               </div>
               <input type="range" class="range-slider" id="slider-pos-y" min="0" max="100" value="50">
+            </div>
+
+            <div class="pos-btn-row">
+              <button class="btn btn-secondary btn-sm" id="btn-reset-pos" title="重置当前槽位对齐位置为默认值">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                重置当前对齐
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-reset-all-pos" title="重置所有 5 个槽位的对齐位置为默认值">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                重置全部对齐
+              </button>
             </div>
           </div>
 
@@ -135,6 +159,12 @@
         <div class="card-title-group">
           <span class="section-tag">TYPOGRAPHY</span>
           <h3>🔤 字体配色与亮度自适应</h3>
+        </div>
+        <div class="card-header-actions">
+          <button class="btn btn-secondary btn-sm" id="btn-reset-font" title="重置字体配色为默认纯白高对比">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            重置默认纯白
+          </button>
         </div>
       </div>
       <p class="section-desc">基于 Rec. 601 加权公式，浅色背景自动附带双重白辉光，深色背景施加暗影保护</p>

@@ -25,6 +25,10 @@ const sliderPosY = document.getElementById('slider-pos-y');
 const valPosX = document.getElementById('val-pos-x');
 const valPosY = document.getElementById('val-pos-y');
 const btnApplySlot = document.getElementById('btn-apply-slot');
+const btnResetBaseline = document.getElementById('btn-reset-baseline');
+const btnResetSlot = document.getElementById('btn-reset-slot');
+const btnResetPos = document.getElementById('btn-reset-pos');
+const btnResetAllPos = document.getElementById('btn-reset-all-pos');
 const btnBrowseNative = document.getElementById('btn-browse-native');
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -32,6 +36,7 @@ const fontPresetsGrid = document.getElementById('font-presets');
 const fontColorPicker = document.getElementById('font-color-picker');
 const fontHexInput = document.getElementById('font-hex-input');
 const btnApplyFont = document.getElementById('btn-apply-font');
+const btnResetFont = document.getElementById('btn-reset-font');
 const previewText = document.getElementById('preview-text');
 const presetListEl = document.getElementById('preset-list');
 const btnOpenSaveModal = document.getElementById('btn-open-save-modal');
@@ -239,47 +244,189 @@ async function applyFontColor(color) {
 // 7. Render Presets List
 function renderPresetsList() {
   presetListEl.innerHTML = '';
-  if (!state.presets || state.presets.length === 0) {
-    presetListEl.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:8px 0;">暂无已保存预设</div>';
-    return;
-  }
 
-  state.presets.forEach(p => {
-    const item = document.createElement('div');
-    item.className = 'preset-item';
-    item.innerHTML = `
-      <div class="preset-info">
-        <h4>${p.name}</h4>
-        <div class="preset-meta">${p.filesCount || 0} 个素材 · ${(p.totalSizeMb || 0)} MB · ${p.desc || '独立预设'}</div>
+  // 1. System Preset: Baseline V1 (初版黄金基线全套)
+  const baselineCard = document.createElement('div');
+  baselineCard.className = 'preset-card system-preset';
+  baselineCard.innerHTML = `
+    <div class="preset-header">
+      <div class="preset-title-wrap">
+        <h4>🌟 初版黄金基线 (Baseline V1)</h4>
+        <span class="preset-badge-system">系统基线</span>
       </div>
-      <div class="preset-actions">
-        <button class="btn btn-primary btn-sm btn-apply-p" data-name="${p.name}">应用</button>
-        <button class="btn btn-danger-ghost btn-sm btn-del-p" data-name="${p.name}">删除</button>
-      </div>
-    `;
-
-    item.querySelector('.btn-apply-p').onclick = () => applyPreset(p.name);
-
-    item.querySelector('.btn-del-p').onclick = async () => {
-      if (!confirm(`确定要删除预设【${p.name}】吗？`)) return;
-      try {
-        const res = await fetch('/api/presets/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: p.name })
-        });
-        const data = await res.json();
-        if (data.success) {
-          showToast(`预设【${p.name}】已安全删除`);
-          await fetchStatus();
-        }
-      } catch (e) {
-        showToast('删除预设失败: ' + e.message);
+      <span class="preset-date">官方初始美化</span>
+    </div>
+    <div class="preset-meta-tags">
+      <span class="preset-tag">💾 完整保底壁纸</span>
+      <span class="preset-tag">📦 5 核心槽位</span>
+      <span class="preset-tag">🔤 纯白高对比</span>
+      <span class="preset-tag">🛡️ 稳定首选</span>
+    </div>
+    <div class="preset-slots-preview">
+      <span class="slot-pill-tag">主对话: 图像</span>
+      <span class="slot-pill-tag">活跃终端: 图像</span>
+      <span class="slot-pill-tag">右侧抽屉: 图像</span>
+      <span class="slot-pill-tag">提问输入: 图像</span>
+      <span class="slot-pill-tag">设置弹窗: 图像</span>
+    </div>
+    <div class="preset-desc">
+      官方完整 5 槽位初始壁纸底座，经过精心调试的居中基准对齐，最稳定的出厂美化基线。
+    </div>
+    <div class="preset-actions-bar">
+      <button class="btn btn-sm btn-apply-preset" id="btn-apply-baseline-preset">
+        🚀 立即应用预设
+      </button>
+    </div>
+  `;
+  baselineCard.querySelector('#btn-apply-baseline-preset').onclick = async () => {
+    try {
+      showToast('正在应用【初版黄金基线】全套配置...', 3000);
+      const res = await fetch('/api/theme/baseline', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('✨ 已成功应用【初版黄金基线】！0.3s 热重载生效');
+        await fetchStatus();
+      } else {
+        showToast('应用基线失败: ' + (data.error || '未知错误'));
       }
-    };
+    } catch (e) {
+      showToast('应用基线失败: ' + e.message);
+    }
+  };
+  presetListEl.appendChild(baselineCard);
 
-    presetListEl.appendChild(item);
-  });
+  // 2. System Preset: Vanilla (官方原版纯净模式)
+  const vanillaCard = document.createElement('div');
+  vanillaCard.className = 'preset-card system-preset';
+  vanillaCard.innerHTML = `
+    <div class="preset-header">
+      <div class="preset-title-wrap">
+        <h4>🛡️ 官方原版 (Vanilla Pure)</h4>
+        <span class="preset-badge-system" style="background:rgba(255,255,255,0.08);color:#e2e8f0;border-color:rgba(255,255,255,0.16);">官方纯净</span>
+      </div>
+      <span class="preset-date">出厂原生极简</span>
+    </div>
+    <div class="preset-meta-tags">
+      <span class="preset-tag">💾 0 MB 素材</span>
+      <span class="preset-tag">🔤 原生黑白配</span>
+      <span class="preset-tag">⚡ 零背景消耗</span>
+    </div>
+    <div class="preset-slots-preview">
+      <span class="slot-pill-tag">主对话: 无壁纸</span>
+      <span class="slot-pill-tag">活跃终端: 无壁纸</span>
+      <span class="slot-pill-tag">提问输入: 无壁纸</span>
+    </div>
+    <div class="preset-desc">
+      移除所有外置壁纸与注入背景，彻底还原 Antigravity 官方原生纯黑极简代码编辑器风格。
+    </div>
+    <div class="preset-actions-bar">
+      <button class="btn btn-sm btn-apply-preset" id="btn-apply-vanilla-preset">
+        🚀 立即应用预设
+      </button>
+    </div>
+  `;
+  vanillaCard.querySelector('#btn-apply-vanilla-preset').onclick = async () => {
+    if (!confirm('确定要切换为官方原版纯净模式吗？\n（当前美化状态将自动暂存为独立快照）')) return;
+    try {
+      showToast('正在还原官方原版纯净模式...', 3000);
+      const res = await fetch('/api/theme/vanilla', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('✨ 已成功切换为官方原版纯净模式！');
+        await fetchStatus();
+      } else {
+        showToast('还原原版失败: ' + (data.error || '未知错误'));
+      }
+    } catch (e) {
+      showToast('还原原版失败: ' + e.message);
+    }
+  };
+  presetListEl.appendChild(vanillaCard);
+
+  // 3. User Custom Presets
+  if (state.presets && state.presets.length > 0) {
+    state.presets.forEach(p => {
+      const userCard = document.createElement('div');
+      userCard.className = 'preset-card';
+
+      // Slot tags
+      const slotChineseMap = {
+        left: '主对话',
+        mid: '活跃终端',
+        right: '右侧抽屉',
+        bottom: '提问输入',
+        settings: '设置弹窗'
+      };
+      const slotTagsHtml = [];
+      if (p.slotsConfig) {
+        for (const [sKey, sConf] of Object.entries(p.slotsConfig)) {
+          if (sKey === 'fontColor' || sKey === 'isOriginal' || !sConf || typeof sConf !== 'object') continue;
+          const label = slotChineseMap[sKey] || sKey;
+          const isVid = sConf.type === 'video';
+          const typeStr = isVid ? '视频' : '图像';
+          slotTagsHtml.push(`<span class="slot-pill-tag ${isVid ? 'video' : ''}">${label}: ${typeStr}</span>`);
+        }
+      }
+
+      const sizeStr = p.totalSizeFormatted || (p.totalSize ? (p.totalSize / 1024 / 1024).toFixed(1) + ' MB' : '独立预设');
+      const countStr = `${p.fileCount || (p.files ? p.files.length : '全槽位')} 个素材`;
+      const fontName = p.slotsConfig?.fontColor?.name || p.slotsConfig?.fontColor?.id || '高对比字体';
+      const timeStr = p.createdAtFormatted || (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '已归档');
+      const descStr = p.description || p.desc || '已保存的完整 5 槽位壁纸与字体配置';
+
+      userCard.innerHTML = `
+        <div class="preset-header">
+          <div class="preset-title-wrap">
+            <h4>📦 ${p.name}</h4>
+            <span class="preset-badge-user">用户预设</span>
+          </div>
+          <span class="preset-date">${timeStr}</span>
+        </div>
+        <div class="preset-meta-tags">
+          <span class="preset-tag">💾 ${sizeStr}</span>
+          <span class="preset-tag">📦 ${countStr}</span>
+          <span class="preset-tag">🔤 ${fontName}</span>
+        </div>
+        <div class="preset-slots-preview">
+          ${slotTagsHtml.join('')}
+        </div>
+        <div class="preset-desc">
+          ${descStr}
+        </div>
+        <div class="preset-actions-bar">
+          <button class="btn btn-sm btn-apply-preset btn-apply-user-p" data-name="${p.name}">
+            🚀 立即应用预设
+          </button>
+          <button class="btn btn-danger-ghost btn-sm btn-del-p" data-name="${p.name}">
+            🗑️ 删除
+          </button>
+        </div>
+      `;
+
+      userCard.querySelector('.btn-apply-user-p').onclick = () => applyPreset(p.name);
+      userCard.querySelector('.btn-del-p').onclick = async () => {
+        if (!confirm(`确定要删除预设【${p.name}】吗？`)) return;
+        try {
+          const res = await fetch('/api/presets/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: p.name })
+          });
+          const data = await res.json();
+          if (data.success) {
+            showToast(`预设【${p.name}】已安全删除`);
+            await fetchStatus();
+          } else {
+            showToast('删除失败: ' + (data.error || '未知错误'));
+          }
+        } catch (e) {
+          showToast('删除预设失败: ' + e.message);
+        }
+      };
+
+      presetListEl.appendChild(userCard);
+    });
+  }
 }
 
 async function applyPreset(name) {
@@ -366,6 +513,113 @@ function setupEvents() {
       showToast('更新对齐坐标失败: ' + e.message);
     }
   };
+
+  // Reset Actions across all beautification areas
+  if (btnResetBaseline) {
+    btnResetBaseline.onclick = async () => {
+      if (!confirm('确定要将全部 5 大核心槽位和字体恢复为初始黄金基线吗？\n（将加载初版完整壁纸矩阵与纯白高对比字体）')) return;
+      try {
+        showToast('正在恢复初版黄金基线...', 3000);
+        const res = await fetch('/api/theme/baseline', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('✨ 已成功恢复为初版黄金基线！0.3s 热重载生效');
+          await fetchStatus();
+        } else {
+          showToast('恢复基线失败: ' + (data.error || '未知错误'));
+        }
+      } catch (e) {
+        showToast('恢复基线失败: ' + e.message);
+      }
+    };
+  }
+
+  if (btnResetSlot) {
+    btnResetSlot.onclick = async () => {
+      const slot = state.activeSlot;
+      const meta = state.slotsMeta[slot] || {};
+      const slotName = meta.desc || slot;
+      if (!confirm(`确定要将当前槽位 [${slotName}] 恢复为初始默认壁纸吗？`)) return;
+      try {
+        showToast(`正在重置槽位 [${slot}] 的壁纸...`, 3000);
+        const res = await fetch('/api/slots/reset-slot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slot })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✨ 槽位 [${slotName}] 壁纸已恢复为初始默认值，热重载已生效！`);
+          await fetchStatus();
+        } else {
+          showToast('恢复默认壁纸失败: ' + (data.error || '未知错误'));
+        }
+      } catch (e) {
+        showToast('恢复默认壁纸失败: ' + e.message);
+      }
+    };
+  }
+
+  if (btnResetPos) {
+    btnResetPos.onclick = async () => {
+      const slot = state.activeSlot;
+      try {
+        const res = await fetch('/api/slots/reset-pos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slot })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✨ 槽位 [${slot}] 对齐位置已重置为默认值！`);
+          await fetchStatus();
+        } else {
+          showToast('重置位置失败: ' + (data.error || '未知错误'));
+        }
+      } catch (e) {
+        showToast('重置位置失败: ' + e.message);
+      }
+    };
+  }
+
+  if (btnResetAllPos) {
+    btnResetAllPos.onclick = async () => {
+      if (!confirm('确定要将所有 5 个槽位的对齐位置重置为默认基准值吗？')) return;
+      try {
+        const res = await fetch('/api/slots/reset-pos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slot: 'all' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('✨ 全部 5 大槽位对齐位置已重置为默认值！');
+          await fetchStatus();
+        } else {
+          showToast('重置位置失败: ' + (data.error || '未知错误'));
+        }
+      } catch (e) {
+        showToast('重置位置失败: ' + e.message);
+      }
+    };
+  }
+
+  if (btnResetFont) {
+    btnResetFont.onclick = async () => {
+      try {
+        const res = await fetch('/api/font/reset', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('✨ 字体配色已重置为默认纯白高对比 (#ffffff)！');
+          await fetchStatus();
+        } else {
+          showToast('重置字体失败: ' + (data.error || '未知错误'));
+        }
+      } catch (e) {
+        showToast('重置字体失败: ' + e.message);
+      }
+    };
+  }
 
   // Browse Native File Dialog
   btnBrowseNative.onclick = (e) => {
