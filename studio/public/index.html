@@ -272,6 +272,19 @@
           </div>
 
           <div class="toolbar-right-group">
+            <!-- Dynamic Auto-Fit & Zoom Controls -->
+            <div class="preview-zoom-controls">
+              <button class="btn-zoom-pill active" id="btn-auto-fit" title="全自适应缩放 (开箱即全景完整呈现，杜绝裁剪)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                <span>自适应填满</span>
+              </button>
+              <span class="zoom-divider"></span>
+              <button class="btn-zoom-step" id="btn-zoom-out" title="缩小预览视窗">-</button>
+              <span class="zoom-level-text" id="zoom-level-label">100%</span>
+              <button class="btn-zoom-step" id="btn-zoom-in" title="放大预览视窗">+</button>
+              <button class="btn-zoom-reset" id="btn-zoom-100" title="还原 100% 原始尺寸">100%</button>
+            </div>
+
             <!-- Video & Audio Controls -->
             <div class="media-controls-pill">
               <button class="btn-media-ctrl" id="btn-toggle-play" title="播放 / 暂停所有动态视频壁纸">
@@ -295,410 +308,490 @@
           </div>
         </div>
 
-        <!-- The Antigravity Mockup Window Frame (100% Authentic Native UI) -->
-        <div class="mockup-window" id="ag-mockup">
-          <div id="drag-coord-hud" class="drag-coord-hud">🎯 X: 50% · Y: 50%</div>
-          
-          <!-- Mock Window Titlebar (Windows Native Style) -->
-          <div class="mock-titlebar">
-            <div class="mock-menu-bar">
-              <span class="mock-menu-item font-semibold">Antigravity</span>
-              <span class="mock-menu-item">File</span>
-              <span class="mock-menu-item">View</span>
-              <span class="mock-menu-item">Window</span>
-            </div>
-            <div class="mock-titlebar-center">
-              <span class="mock-titlebar-title">更改壁纸 - Outside of Project - Antigravity</span>
-            </div>
-            <div class="mock-win-controls">
-              <span class="mock-win-btn" title="最小化">—</span>
-              <span class="mock-win-btn" title="最大化">▢</span>
-              <span class="mock-win-btn mock-win-close" title="关闭">✕</span>
-            </div>
-          </div>
-
-          <!-- Mock Window Body -->
-          <div class="mock-body">
+        <!-- The Antigravity Mockup Viewport & Scaler Container -->
+        <div class="mockup-viewport" id="mockup-viewport">
+          <div class="mockup-scaler" id="mockup-scaler">
             
-            <!-- 1. Left Navigation Sidebar -->
-            <aside class="mock-sidebar">
-              <div class="mock-sidebar-top-icons">
-                <div class="mock-brand-icon" title="Antigravity">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13.5h-13L12 6.5z"/>
-                  </svg>
+            <!-- The Antigravity Mockup Window Frame (100% Authentic Native UI) -->
+            <div class="mockup-window" id="ag-mockup">
+              <div id="drag-coord-hud" class="drag-coord-hud">🎯 X: 50% · Y: 50%</div>
+              
+              <!-- Mock Window Titlebar (Windows Native Style) -->
+              <div class="mock-titlebar">
+                <div class="mock-menu-bar">
+                  <span class="mock-menu-item font-semibold">Antigravity</span>
+                  <span class="mock-menu-item">File</span>
+                  <span class="mock-menu-item">View</span>
+                  <span class="mock-menu-item">Window</span>
                 </div>
-                <button class="mock-icon-btn" title="收起/展开侧边栏">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="9" y1="3" x2="9" y2="21"></line>
-                  </svg>
-                </button>
-                <div class="mock-nav-arrows">
-                  <button class="mock-icon-btn nav-arrow" title="后退">←</button>
-                  <button class="mock-icon-btn nav-arrow" title="前进">→</button>
+                <div class="mock-titlebar-center">
+                  <span class="mock-titlebar-title">更改壁纸 - Outside of Project - Antigravity</span>
+                </div>
+                <div class="mock-win-controls">
+                  <span class="mock-win-btn" title="最小化">
+                    <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+                  </span>
+                  <span class="mock-win-btn" title="最大化">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="9" height="9"/></svg>
+                  </span>
+                  <span class="mock-win-btn mock-win-close" title="关闭">
+                    <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.2"><line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/></svg>
+                  </span>
                 </div>
               </div>
 
-              <button class="mock-new-chat-btn">
-                <span class="plus-icon">+</span>
-                <span>New Conversation</span>
-              </button>
-
-              <div class="mock-sidebar-scroll">
-                <div class="mock-nav-section">
-                  <div class="mock-nav-item">
-                    <span class="nav-item-icon">🕒</span>
-                    <span class="nav-item-text">Conversation History</span>
-                  </div>
-                  <div class="mock-nav-item">
-                    <span class="nav-item-icon">⏱️</span>
-                    <span class="nav-item-text">Scheduled Tasks</span>
-                  </div>
-                </div>
-
-                <div class="mock-section-divider">
-                  <div class="mock-section-title">
-                    <span>Projects</span>
-                    <div class="mock-section-actions">
-                      <span class="mock-action-icon">▼</span>
-                      <span class="mock-action-icon">+</span>
+              <!-- Mock Window Body -->
+              <div class="mock-body">
+                
+                <!-- 1. Left Navigation Sidebar -->
+                <aside class="mock-sidebar">
+                  <div class="mock-sidebar-top-icons">
+                    <div class="mock-brand-icon" title="Antigravity">
+                      <svg viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg" width="22" height="22">
+                        <path d="M144.248 149.062C151.748 154.688 162.998 150.938 152.685 140.625C121.748 110.625 128.31 28.125 89.8727 28.125C51.4352 28.125 57.9977 110.625 27.0602 140.625C15.8102 151.875 27.9977 154.688 35.4977 149.062C64.5602 129.375 62.6852 94.6875 89.8727 94.6875C117.06 94.6875 115.185 129.375 144.248 149.062Z" fill="currentColor"></path>
+                      </svg>
                     </div>
-                  </div>
-                </div>
-
-                <div class="mock-section-divider">
-                  <div class="mock-section-title">
-                    <span>Conversations</span>
-                    <div class="mock-section-actions">
-                      <span class="mock-action-icon">+</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="mock-conversations-list">
-                  <div class="mock-conv-item active">
-                    <span class="conv-title">更改壁纸</span>
-                    <span class="conv-time">27m</span>
-                  </div>
-                  <div class="mock-conv-item">
-                    <span class="conv-title">Software Performance Trou...</span>
-                    <span class="conv-time">3h</span>
-                  </div>
-                  <div class="mock-conv-item">
-                    <span class="conv-title">矢量图绘制</span>
-                    <span class="conv-time">4h</span>
-                  </div>
-                  <div class="mock-conv-item">
-                    <span class="conv-title">诗歌八全</span>
-                    <span class="conv-time">2d</span>
-                  </div>
-                  <div class="mock-conv-item">
-                    <span class="conv-title">服务器</span>
-                    <span class="conv-time">2d</span>
-                  </div>
-                  <div class="mock-conv-item">
-                    <span class="conv-title">Help With Homework</span>
-                    <span class="conv-time">5d</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mock-sidebar-footer">
-                <button class="mock-settings-btn" id="mock-sidebar-settings-btn">
-                  <span class="settings-icon">⚙️</span>
-                  <span>Settings</span>
-                </button>
-              </div>
-            </aside>
-
-            <!-- 2. Main Conversation Area (Slot: left base + chat stream) -->
-            <div class="mock-chat-workspace" id="mock-slot-left" data-slot="left" title="点击调节【AI主对话底座 left】">
-              <!-- Global Left Slot Background Layer -->
-              <div class="mock-slot-bg mock-bg-left">
-                <video class="mock-media-video" id="mock-video-left" autoplay muted loop playsinline></video>
-                <img class="mock-media-img" id="mock-img-left" alt="">
-                <div class="slot-focus-indicator">主对话底座 (left)</div>
-              </div>
-
-              <!-- Top Chat Header -->
-              <div class="mock-chat-header">
-                <div class="mock-chat-title">
-                  <span class="chat-title-text">更改壁纸</span>
-                </div>
-                <div class="mock-chat-header-actions">
-                  <button class="mock-hdr-btn" title="更多选项">⋮</button>
-                  <button class="mock-hdr-pill-btn" title="Install IDE">
-                    <span class="ide-icon">▲</span>
-                    <span>Install IDE</span>
-                  </button>
-                  <div class="mock-hdr-icons-group">
-                    <button class="mock-hdr-icon" title="分屏布局">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/></svg>
+                    <button class="mock-icon-btn" title="Toggle Sidebar">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor">
+                        <path d="M212.31-140q-29.92,0-51.11-21.19T140-212.31V-747.69q0-29.92 21.19-51.11T212.31-820H747.69q29.92,0 51.11,21.19T820-747.69v535.38q0,29.92-21.19,51.11T747.69-140H212.31ZM320-200V-760H212.31q-4.62,0-8.46,3.85T200-747.69v535.38q0,4.62 3.85,8.46t8.46,3.85H320Zm60,0H747.69q4.62,0 8.46-3.85t3.85-8.46V-747.69q0-4.62-3.85-8.46T747.69-760H380v560Zm-60,0H212.31q-4.62,0-8.46,0T200-200q0,0 3.85,0t8.46,0H320Z"></path>
+                      </svg>
                     </button>
-                    <button class="mock-hdr-icon" title="多面板视图">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    </button>
-                    <button class="mock-hdr-icon" title="新建分栏">+</button>
-                    <button class="mock-hdr-icon" title="最大化视窗">⤢</button>
-                    <button class="mock-hdr-icon" id="btn-toggle-chat-visibility" title="隐藏/显示对话文字 (纯净壁纸观赏)">👁️</button>
-                    <button class="mock-hdr-icon active" id="btn-toggle-aux-pane" title="展开/收起右侧副栏">◨</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Chat Message Stream (Clean, minimal & realistic preview) -->
-              <div class="mock-chat-scroll" id="mock-chat-scroll">
-                <!-- User Message -->
-                <div class="mock-msg-user">
-                  <div class="user-bubble-box" id="mock-user-text">
-                    你好，请帮我分析代码并优化界面
-                  </div>
-                </div>
-
-                <!-- Assistant Markdown Response Card -->
-                <div class="mock-msg-assistant">
-                  <div class="assistant-content-card" id="mock-ai-text">
-                    <p class="msg-desc">你好！代码已为你优化完成，半透明毛玻璃与字体阴影已实时对齐。</p>
-                  </div>
-                </div>
-
-                <!-- Spacer for floating input bar -->
-                <div class="mock-bottom-spacer"></div>
-              </div>
-
-              <!-- Floating Bottom Input Box (Slot: bottom) -->
-              <div class="mock-floating-input-wrap" id="mock-slot-bottom" data-slot="bottom" title="点击调节【底部提问框 bottom】">
-                <!-- Bottom Slot Background Layer -->
-                <div class="mock-slot-bg">
-                  <video class="mock-media-video" id="mock-video-bottom" autoplay muted loop playsinline></video>
-                  <img class="mock-media-img" id="mock-img-bottom" alt="">
-                  <div class="slot-focus-indicator">底部提问框 (bottom)</div>
-                </div>
-
-                <div class="mock-input-inner-card">
-                  <div class="mock-input-textarea-area">
-                    <span class="mock-placeholder-text" id="mock-input-text">Ask anything, @ to mention, / for workflows...</span>
-                  </div>
-                  <div class="mock-input-bottom-bar">
-                    <div class="input-bar-left">
-                      <button class="btn-input-icon plus-btn" title="添加附件/上下文">+</button>
-                      <div class="model-selector-pill">
-                        <span class="model-name">Gemini 3.8 Flash High</span>
-                        <span class="model-bolt">⚡</span>
-                      </div>
-                    </div>
-                    <div class="input-bar-right">
-                      <button class="btn-input-icon mic-btn" title="语音输入">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                    <div class="mock-nav-arrows">
+                      <button class="mock-icon-btn nav-arrow" title="Go Back">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
+                          <path d="M294.92-450L522.77-222.15L480-180L180-480L480-780l42.77,42.15L294.92-510H780v60H294.92Z"></path>
+                        </svg>
                       </button>
-                      <button class="btn-send-round" title="发送">➔</button>
+                      <button class="mock-icon-btn nav-arrow disabled" title="Go Forward">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
+                          <path d="M665.08-450H180v-60H665.08L437.23-737.85L480-780L780-480L480-180l-42.77-42.15L665.08-450Z"></path>
+                        </svg>
+                      </button>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
 
-            <!-- 3. Right Auxiliary Pane (Slot: right / mid) -->
-            <aside class="mock-right-pane" id="mock-right-pane">
-              <!-- Top Switcher Header -->
-              <div class="mock-pane-header">
-                <div class="mock-pane-tabs">
-                  <button class="mock-pane-tab active" id="tab-pane-subagents" data-target="subagents">
-                    <span>Subagents</span>
-                    <span class="pane-badge">7 ▼</span>
+                  <button class="mock-new-chat-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" class="plus-icon">
+                      <path d="M450-450H220v-60H450V-740h60v230H740v60H510v230H450V-450Z"></path>
+                    </svg>
+                    <span>New Conversation</span>
                   </button>
-                  <button class="mock-pane-tab" id="tab-pane-terminal" data-target="terminal">
-                    <span>Terminal</span>
-                    <span class="pane-badge font-mono">mid</span>
-                  </button>
-                </div>
-                <div class="mock-pane-actions">
-                  <button class="pane-action-icon" id="btn-pane-split" title="分屏对比 (同时预览任务与终端)">🪟</button>
-                </div>
-              </div>
 
-              <!-- Content 1: Subagents & Context Pane (Slot: right) -->
-              <div class="mock-pane-content mock-subagents-view active" id="mock-slot-right" data-slot="right" title="点击调节【副侧栏/任务 right】">
-                <!-- Slot: right Background Layer -->
-                <div class="mock-slot-bg">
-                  <video class="mock-media-video" id="mock-video-right" autoplay muted loop playsinline></video>
-                  <img class="mock-media-img" id="mock-img-right" alt="">
-                  <div class="slot-focus-indicator">副侧栏/任务 (right)</div>
-                </div>
+                  <div class="mock-sidebar-scroll">
+                    <div class="mock-nav-section">
+                      <div class="mock-nav-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" class="nav-item-icon-svg">
+                          <path d="M479.23-140q-129.92,0-226.46-85.54T141.62-440h61.23Q218-336.38 296.12-268.19T479.23-200q117,0 198.5-81.5T759.23-480t-81.5-198.5T479.23-760q-65.54,0-122.85,29.12t-98.69,80.11H362.31v60H159.23V-793.85h60v94.77q48.69-57.46 116.61-89.19T479.23-820q70.77,0 132.61,26.77t107.85,72.77t72.77,107.85T819.23-480T792.46-347.39T719.69-239.54T611.85-166.77T479.23-140ZM599.31-318.92L450.39-467.85V-680h60v187.85L641.46-361.08l-42.15,42.15Z"></path>
+                        </svg>
+                        <span class="nav-item-text">Conversation History</span>
+                      </div>
+                      <div class="mock-nav-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" class="nav-item-icon-svg">
+                          <path d="M618.92-298.92l42.15-42.15L510-492.16V-680H450v212.15L618.92-298.92ZM480.07-100q-78.84,0-148.2-29.92T211.18-211.13T129.93-331.76T100-479.93t29.92-148.2t81.21-120.68t120.63-81.25T479.93-860t148.2,29.92t120.68,81.21t81.25,120.63T860-480.07t-29.92,148.2T748.87-211.18T628.24-129.93T480.07-100ZM480-480Zm0,320q133,0 226.5-93.5T800-480T706.5-706.5T480-800T253.5-706.5T160-480t93.5,226.5T480-160Z"></path>
+                        </svg>
+                        <span class="nav-item-text">Scheduled Tasks</span>
+                      </div>
+                    </div>
 
-                <div class="mock-subagents-scroll">
-                  <!-- Subagent List -->
-                  <div class="pane-section">
-                    <div class="subagent-cards-list">
-                      <div class="subagent-card">
-                        <div class="subagent-info">
-                          <span class="subagent-role">Lead Full-Stack Engineer <span class="sub-count">(1 subagent) &gt;</span></span>
-                          <span class="subagent-meta">Worked for 12m</span>
+                    <div class="mock-section-divider">
+                      <div class="mock-section-title">
+                        <span>Projects</span>
+                        <div class="mock-section-actions">
+                          <span class="mock-action-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 -960 960 960" fill="currentColor"><path d="M411.15-260v-60H548.46v60H411.15Zm-155-190v-60H703.46v60H256.16ZM140-640v-60H820v60H140Z"></path></svg>
+                          </span>
+                          <span class="mock-action-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 -960 960 960" fill="currentColor"><path d="M450-450H220v-60H450V-740h60v230H740v60H510v230H450V-450Z"></path></svg>
+                          </span>
                         </div>
-                        <span class="subagent-status-check">✓</span>
                       </div>
-                      <div class="subagent-card">
-                        <div class="subagent-info">
-                          <span class="subagent-role">Lead Debugger <span class="sub-count">(2 subagents) &gt;</span></span>
-                          <span class="subagent-meta">Worked for 22m</span>
+                    </div>
+
+                    <div class="mock-section-divider">
+                      <div class="mock-section-title">
+                        <span>Conversations</span>
+                        <div class="mock-section-actions">
+                          <span class="mock-action-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 -960 960 960" fill="currentColor"><path d="M450-450H220v-60H450V-740h60v230H740v60H510v230H450V-450Z"></path></svg>
+                          </span>
                         </div>
-                        <span class="subagent-status-check">✓</span>
                       </div>
-                      <div class="subagent-card">
-                        <div class="subagent-info">
-                          <span class="subagent-role">Lead Debugger <span class="sub-count">(2 subagents) &gt;</span></span>
-                          <span class="subagent-meta">Worked for 1h 5m</span>
+                    </div>
+
+                    <div class="mock-conversations-list">
+                      <div class="mock-conv-item active">
+                        <span class="conv-title">更改壁纸</span>
+                        <span class="conv-time">27m</span>
+                        <span class="conv-more-dots">⋯</span>
+                      </div>
+                      <div class="mock-conv-item">
+                        <span class="conv-title">Software Performance Trou...</span>
+                        <span class="conv-time">4h</span>
+                      </div>
+                      <div class="mock-conv-item">
+                        <span class="conv-title">矢量图绘制</span>
+                        <span class="conv-time">4h</span>
+                      </div>
+                      <div class="mock-conv-item">
+                        <span class="conv-title">诗歌八全</span>
+                        <span class="conv-time">2d</span>
+                      </div>
+                      <div class="mock-conv-item">
+                        <span class="conv-title">服务器</span>
+                        <span class="conv-time">2d</span>
+                      </div>
+                      <div class="mock-conv-item">
+                        <span class="conv-title">Help With Homework</span>
+                        <span class="conv-time">5d</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mock-sidebar-footer">
+                    <button class="mock-settings-btn" id="mock-sidebar-settings-btn">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -960 960 960" fill="currentColor" class="settings-svg">
+                        <path d="M387.69-100L372.46-221.85q-16.08-5.38-32.96-15.08t-30.19-20.77L196.46-210L104.16-370l97.61-73.77q-1.38-8.92-1.96-17.92t-0.58-17.92q0-8.54 0.58-17.35t1.96-19.27L104.16-590l92.31-159.23l112.46,47.31q14.46-11.46 30.89-20.96t32.27-15.27L387.69-860H572.31l15.23,122.23q18,6.54 32.58,15.27t29.42,20.58l114-47.31L855.84-590l-99.15,74.92q2.15,9.69 2.35,18.12T759.23-480q0,8.15-0.38,16.58t-2.77,19.27L854.46-370L762.15-210L649.54-258.08q-14.85,11.85-30.31,20.96t-31.69,14.88L572.31-100H387.69ZM440-160h78.62L533-267.15q30.62-8 55.96-22.73t48.88-37.88L737.23-286l39.38-68l-86.77-65.38q5-15.54 6.81-30.46T698.46-480q0-15.62-1.81-30.15t-6.81-29.69L777.38-606L738-674L637.46-631.62q-20.08-21.46-48.12-37.92t-56.73-23.31L520-800H440.62L427.38-693.23q-30.62,7.23-56.54,22.15t-49.46,38.46L222-674l-39.38,68L269-541.62q-5,14.23-7,29.62t-2,32.38Q260-464 262-449t6.62,29.62l-86,65.38L222-286l99-42q22.77,23.38 48.69,38.31T427-266.77L440-160Zm40.46-200q49.92,0 84.96-35.04T600.46-480t-35.04-84.96T480.46-600q-50.54,0-85.27,35.04T360.46-480t34.73,84.96T480.46-360ZM480-480Z"></path>
+                      </svg>
+                      <span>Settings</span>
+                    </button>
+                  </div>
+                </aside>
+
+                <!-- 2. Main Conversation Area (Slot: left base + chat stream) -->
+                <div class="mock-chat-workspace" id="mock-slot-left" data-slot="left" title="点击调节【AI主对话底座 left】">
+                  <!-- Global Left Slot Background Layer -->
+                  <div class="mock-slot-bg mock-bg-left">
+                    <video class="mock-media-video" id="mock-video-left" autoplay muted loop playsinline></video>
+                    <img class="mock-media-img" id="mock-img-left" alt="">
+                    <div class="slot-focus-indicator">主对话底座 (left)</div>
+                  </div>
+
+                  <!-- Top Chat Header -->
+                  <div class="mock-chat-header">
+                    <div class="mock-chat-title">
+                      <span class="chat-title-text">更改壁纸</span>
+                    </div>
+                    <div class="mock-chat-header-actions">
+                      <button class="mock-hdr-btn" title="更多选项">⋮</button>
+                      <button class="mock-hdr-pill-btn" title="Install IDE">
+                        <span class="ide-icon">▲</span>
+                        <span>Install IDE</span>
+                      </button>
+                      <div class="mock-hdr-icons-group">
+                        <button class="mock-hdr-icon" id="btn-toggle-chat-visibility" title="隐藏/显示对话文字 (纯净壁纸观赏)">👁️</button>
+                        <button class="mock-hdr-icon active" id="btn-toggle-aux-pane" title="展开/收起右侧副栏">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
+                            <path d="M212.31-140q-29.92,0-51.11-21.19T140-212.31V-747.69q0-29.92 21.19-51.11T212.31-820H747.69q29.92,0 51.11,21.19T820-747.69v535.38q0,29.92-21.19,51.11T747.69-140H212.31ZM640-200H747.69q4.62,0 8.46,0t3.85,0V-747.69q0-4.62-3.85-8.46T747.69-760H640v560Zm-60,0V-760H212.31q-4.62,0-8.46,3.85T200-747.69v535.38q0,4.62 3.85,8.46t8.46,3.85H580Zm60,0H747.69q4.62,0 8.46,0t3.85,0q0,0-3.85,0t-8.46,0H640Z"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Chat Message Stream (1:1 Replica of live Google Antigravity) -->
+                  <div class="mock-chat-scroll" id="mock-chat-scroll">
+                    <!-- User Message Bubble -->
+                    <div class="mock-msg-user">
+                      <div class="user-bubble-box" id="mock-user-text">
+                        <span class="user-lightning">⚡</span> boost 继续打磨这个预览界面，和正版还是差了不是一星半点，你可以通过对各个部分截图来复刻原版界面，另外继续优化软件界面排版，现在打开软件都不能完整预览整个界面，还得我自己拉大窗口
+                      </div>
+                    </div>
+
+                    <!-- Assistant Markdown Response Card -->
+                    <div class="mock-msg-assistant">
+                      <div class="assistant-content-card" id="mock-ai-text">
+                        <div class="thought-badge">Thought for 7s &gt;</div>
+                        <p class="msg-desc">I am executing the <strong>Delegation Routine</strong> to address this task.</p>
+                        <p class="msg-desc">I will delegate the work to the <strong>DeepCoder</strong> subagent to capture reference screenshots of the native Antigravity interface, refine every UI component for 1:1 pixel perfection, and overhaul the Theme Studio layout and launcher settings so the entire preview fits comfortably without requiring manual window resizing.</p>
+                        <div class="thought-badge">Worked for 13s &gt;</div>
+                        <p class="msg-desc">已启动 <strong>DeepCoder</strong> (高级 UI/UX 工程师) 子代理，针对正版 Antigravity 原生界面截图与 DOM 结构进行 1:1 细节复刻，并重构 Theme Studio 的启动视口与自适应缩放排版系统，确保开箱即完整呈现、无需手动拉大窗口。我将在子代理完成后进行核验与汇报。</p>
+                        
+                        <!-- Diff / Review pill -->
+                        <div class="msg-file-change-card">
+                          <div class="file-change-left">
+                            <span class="file-dot red-dot">◆</span>
+                            <span>5 files changed</span>
+                            <span class="diff-add">+889</span>
+                            <span class="diff-del">-98</span>
+                            <span class="file-arrow">&gt;</span>
+                          </div>
+                          <button class="btn-review-files">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <span>Review</span>
+                          </button>
                         </div>
-                        <span class="subagent-status-check">✓</span>
-                      </div>
-                      <div class="subagent-card">
-                        <div class="subagent-info">
-                          <span class="subagent-role">Senior Debugger <span class="sub-count">(2 subagents) &gt;</span></span>
-                          <span class="subagent-meta">Worked for 1h 26m</span>
+
+                        <!-- Reactions Bar -->
+                        <div class="msg-reaction-bar">
+                          <button class="rx-btn" title="Copy">📋</button>
+                          <button class="rx-btn" title="Good">👍</button>
+                          <button class="rx-btn" title="Bad">👎</button>
                         </div>
-                        <span class="subagent-status-check">✓</span>
                       </div>
-                      <div class="subagent-card">
-                        <div class="subagent-info">
-                          <span class="subagent-role">Performance Engineer <span class="sub-count">(2 subagents) &gt;</span></span>
-                          <span class="subagent-meta">Worked for 1h 11m</span>
+                    </div>
+
+                    <!-- Subagents Running Drawer (Live Status) -->
+                    <div class="mock-running-subagents-drawer">
+                      <div class="subagents-drawer-header">
+                        <span>2 subagents running</span>
+                        <svg width="14" height="14" viewBox="0 -960 960 960" fill="currentColor"><path d="M480-357.85L253.85-584 296-626.15l184 184 184-184L706.15-584 480-357.85Z"/></svg>
+                      </div>
+                      <div class="subagents-running-list">
+                        <div class="running-agent-item">
+                          <span class="spinner-dot animate-spin"></span>
+                          <span class="agent-name">Layer 0 Coding Worker</span>
                         </div>
-                        <span class="subagent-status-check">✓</span>
+                        <div class="running-agent-item">
+                          <span class="spinner-dot animate-spin"></span>
+                          <span class="agent-name">Lead UI/UX Engineer</span>
+                        </div>
                       </div>
                     </div>
-                    <div class="see-all-link">See all (7)</div>
+
+                    <!-- Spacer for floating input bar -->
+                    <div class="mock-bottom-spacer"></div>
                   </div>
 
-                  <!-- Files Changed -->
-                  <div class="pane-section">
-                    <div class="section-row-hdr">
-                      <span class="hdr-title">Files Changed</span>
-                      <span class="hdr-count">27 &gt;</span>
+                  <!-- Floating Bottom Input Box (Slot: bottom) -->
+                  <div class="mock-floating-input-wrap" id="mock-slot-bottom" data-slot="bottom" title="点击调节【底部提问框 bottom】">
+                    <!-- Bottom Slot Background Layer -->
+                    <div class="mock-slot-bg">
+                      <video class="mock-media-video" id="mock-video-bottom" autoplay muted loop playsinline></video>
+                      <img class="mock-media-img" id="mock-img-bottom" alt="">
+                      <div class="slot-focus-indicator">底部提问框 (bottom)</div>
                     </div>
-                    <div class="file-tree-list">
-                      <div class="file-tree-item">
-                        <span class="file-dot red-dot">◆</span>
-                        <span class="file-name">.gitignore</span>
-                        <span class="file-path">...ers\Administrator\antigravity-theme</span>
-                      </div>
-                      <div class="file-tree-item">
-                        <span class="file-dot orange-dot">JS</span>
-                        <span class="file-name">server.js</span>
-                        <span class="file-path">...dministrator\antigravity-theme\studio</span>
-                      </div>
-                      <div class="file-tree-item">
-                        <span class="file-dot yellow-dot">&lt;&gt;</span>
-                        <span class="file-name">index.html</span>
-                        <span class="file-path">...tor\antigravity-theme\studio\public</span>
-                      </div>
-                      <div class="file-tree-item">
-                        <span class="file-dot blue-dot">{}</span>
-                        <span class="file-name">style.css</span>
-                        <span class="file-path">...trator\antigravity-theme\studio\public</span>
-                      </div>
-                      <div class="file-tree-item">
-                        <span class="file-dot yellow-dot">JS</span>
-                        <span class="file-name">app.js</span>
-                        <span class="file-path">...nistrator\antigravity-theme\studio</span>
-                      </div>
-                    </div>
-                    <div class="see-all-link">See all (27)</div>
-                  </div>
 
-                  <!-- Artifacts -->
-                  <div class="pane-section">
-                    <div class="section-row-hdr">
-                      <span class="hdr-title">Artifacts</span>
-                      <span class="hdr-count">0 &gt;</span>
-                    </div>
-                  </div>
-
-                  <!-- Uploads -->
-                  <div class="pane-section">
-                    <div class="section-row-hdr">
-                      <span class="hdr-title">Uploads</span>
-                      <span class="hdr-count">11 &gt;</span>
-                    </div>
-                    <div class="uploads-list">
-                      <div class="upload-item">
-                        <span class="upload-icon">🖼️</span>
-                        <span class="upload-name">Media (Today 5:32 PM)</span>
+                    <div class="mock-input-inner-card">
+                      <div class="mock-input-textarea-area">
+                        <span class="mock-placeholder-text" id="mock-input-text">Ask anything, @ to mention, / for workflows...</span>
                       </div>
-                      <div class="upload-item">
-                        <span class="upload-icon">🖼️</span>
-                        <span class="upload-name">Media (Today 5:31 PM)</span>
+                      <div class="mock-input-bottom-bar">
+                        <div class="input-bar-left">
+                          <button class="btn-input-icon plus-btn" title="添加附件/上下文">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M450-450H220v-60H450V-740h60v230H740v60H510v230H450V-450Z"/></svg>
+                          </button>
+                          <div class="model-selector-pill">
+                            <span class="model-name">Gemini 3.8 Flash High</span>
+                            <span class="model-bolt">⚡</span>
+                            <svg width="12" height="12" viewBox="0 -960 960 960" fill="currentColor" class="model-chevron"><path d="M480-541.85l-184,184L253.85-400L480-626.15L706.15-400L664-357.85l-184-184Z"/></svg>
+                          </div>
+                        </div>
+                        <div class="input-bar-right">
+                          <button class="btn-input-icon mic-btn" title="语音输入">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 -960 960 960" fill="currentColor"><path d="M409.04-449.04Q380-478.08 380-520V-760q0-41.92 29.04-70.96T480-860t70.96,29.04T580-760v240q0,41.92-29.04,70.96T480-420t-70.96-29.04ZM480-640ZM450-130V-261.85q-99-11.31-164.5-84.92T220-520h60q0,83 58.5,141.5T480-320t141.5-58.5T680-520h60q0,99.61-65.5,173.23T510-261.85V-130H450Zm58.5-361.5Q520-503 520-520V-760q0-17-11.5-28.5T480-800t-28.5,11.5T440-760v240q0,17 11.5,28.5T480-480t28.5-11.5Z"/></svg>
+                          </button>
+                          <button class="btn-send-round" title="发送">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -960 960 960" fill="currentColor"><path d="M665.08-450H180v-60H665.08L437.23-737.85L480-780L780-480L480-180l-42.77-42.15L665.08-450Z"/></svg>
+                          </button>
+                        </div>
                       </div>
-                      <div class="upload-item">
-                        <span class="upload-icon">🖼️</span>
-                        <span class="upload-name">Media (Today 5:27 PM)</span>
-                      </div>
-                    </div>
-                    <div class="see-all-link">See all (11)</div>
-                  </div>
-
-                  <!-- Background Tasks -->
-                  <div class="pane-section">
-                    <div class="section-row-hdr">
-                      <span class="hdr-title">Background Tasks</span>
-                      <span class="hdr-count">0 &gt;</span>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Content 2: Active Terminal (Slot: mid) -->
-              <div class="mock-pane-content mock-terminal-view" id="mock-slot-mid" data-slot="mid" title="点击调节【活跃终端 mid】">
-                <!-- Slot: mid Background Layer -->
-                <div class="mock-slot-bg">
-                  <video class="mock-media-video" id="mock-video-mid" autoplay muted loop playsinline></video>
-                  <img class="mock-media-img" id="mock-img-mid" alt="">
-                  <div class="slot-focus-indicator">活跃终端 (mid)</div>
+                <!-- 3. Right Auxiliary Pane (Slot: right / mid) -->
+                <aside class="mock-right-pane" id="mock-right-pane">
+                  <!-- Top Switcher Header -->
+                  <div class="mock-pane-header">
+                    <div class="mock-pane-tabs">
+                      <button class="mock-pane-tab active" id="tab-pane-subagents" data-target="subagents">
+                        <span>Subagents</span>
+                        <span class="pane-badge">7 ▼</span>
+                      </button>
+                      <button class="mock-pane-tab" id="tab-pane-terminal" data-target="terminal">
+                        <span>Terminal</span>
+                        <span class="pane-badge font-mono">mid</span>
+                      </button>
+                    </div>
+                    <div class="mock-pane-actions">
+                      <button class="pane-action-icon" id="btn-pane-split" title="分屏对比 (同时预览任务与终端)">🪟</button>
+                    </div>
+                  </div>
+
+                  <!-- Content 1: Subagents & Context Pane (Slot: right) -->
+                  <div class="mock-pane-content mock-subagents-view active" id="mock-slot-right" data-slot="right" title="点击调节【副侧栏/任务 right】">
+                    <!-- Slot: right Background Layer -->
+                    <div class="mock-slot-bg">
+                      <video class="mock-media-video" id="mock-video-right" autoplay muted loop playsinline></video>
+                      <img class="mock-media-img" id="mock-img-right" alt="">
+                      <div class="slot-focus-indicator">副侧栏/任务 (right)</div>
+                    </div>
+
+                    <div class="mock-subagents-scroll">
+                      <!-- Subagent List -->
+                      <div class="pane-section">
+                        <div class="subagent-cards-list">
+                          <div class="subagent-card">
+                            <div class="subagent-info">
+                              <span class="subagent-role">Lead Full-Stack Engineer <span class="sub-count">(1 subagent) &gt;</span></span>
+                              <span class="subagent-meta">Worked for 12m</span>
+                            </div>
+                            <span class="subagent-status-check">✓</span>
+                          </div>
+                          <div class="subagent-card">
+                            <div class="subagent-info">
+                              <span class="subagent-role">Lead Debugger <span class="sub-count">(2 subagents) &gt;</span></span>
+                              <span class="subagent-meta">Worked for 22m</span>
+                            </div>
+                            <span class="subagent-status-check">✓</span>
+                          </div>
+                          <div class="subagent-card">
+                            <div class="subagent-info">
+                              <span class="subagent-role">Lead Debugger <span class="sub-count">(2 subagents) &gt;</span></span>
+                              <span class="subagent-meta">Worked for 1h 5m</span>
+                            </div>
+                            <span class="subagent-status-check">✓</span>
+                          </div>
+                          <div class="subagent-card">
+                            <div class="subagent-info">
+                              <span class="subagent-role">Senior Debugger <span class="sub-count">(2 subagents) &gt;</span></span>
+                              <span class="subagent-meta">Worked for 1h 26m</span>
+                            </div>
+                            <span class="subagent-status-check">✓</span>
+                          </div>
+                          <div class="subagent-card">
+                            <div class="subagent-info">
+                              <span class="subagent-role">Performance Engineer <span class="sub-count">(2 subagents) &gt;</span></span>
+                              <span class="subagent-meta">Worked for 1h 11m</span>
+                            </div>
+                            <span class="subagent-status-check">✓</span>
+                          </div>
+                        </div>
+                        <div class="see-all-link">See all (7)</div>
+                      </div>
+
+                      <!-- Files Changed -->
+                      <div class="pane-section">
+                        <div class="section-row-hdr">
+                          <span class="hdr-title">Files Changed</span>
+                          <span class="hdr-count">27 &gt;</span>
+                        </div>
+                        <div class="file-tree-list">
+                          <div class="file-tree-item">
+                            <span class="file-dot red-dot">◆</span>
+                            <span class="file-name">.gitignore</span>
+                            <span class="file-path">...ers\Administrator\antigravity-theme</span>
+                          </div>
+                          <div class="file-tree-item">
+                            <span class="file-dot orange-dot">JS</span>
+                            <span class="file-name">server.js</span>
+                            <span class="file-path">...dministrator\antigravity-theme\studio</span>
+                          </div>
+                          <div class="file-tree-item">
+                            <span class="file-dot yellow-dot">&lt;&gt;</span>
+                            <span class="file-name">index.html</span>
+                            <span class="file-path">...tor\antigravity-theme\studio\public</span>
+                          </div>
+                          <div class="file-tree-item">
+                            <span class="file-dot blue-dot">{}</span>
+                            <span class="file-name">style.css</span>
+                            <span class="file-path">...trator\antigravity-theme\studio\public</span>
+                          </div>
+                          <div class="file-tree-item">
+                            <span class="file-dot yellow-dot">JS</span>
+                            <span class="file-name">app.js</span>
+                            <span class="file-path">...nistrator\antigravity-theme\studio</span>
+                          </div>
+                        </div>
+                        <div class="see-all-link">See all (27)</div>
+                      </div>
+
+                      <!-- Artifacts -->
+                      <div class="pane-section">
+                        <div class="section-row-hdr">
+                          <span class="hdr-title">Artifacts</span>
+                          <span class="hdr-count">0 &gt;</span>
+                        </div>
+                      </div>
+
+                      <!-- Uploads -->
+                      <div class="pane-section">
+                        <div class="section-row-hdr">
+                          <span class="hdr-title">Uploads</span>
+                          <span class="hdr-count">11 &gt;</span>
+                        </div>
+                        <div class="uploads-list">
+                          <div class="upload-item">
+                            <span class="upload-icon">🖼️</span>
+                            <span class="upload-name">Media (Today 5:32 PM)</span>
+                          </div>
+                          <div class="upload-item">
+                            <span class="upload-icon">🖼️</span>
+                            <span class="upload-name">Media (Today 5:31 PM)</span>
+                          </div>
+                          <div class="upload-item">
+                            <span class="upload-icon">🖼️</span>
+                            <span class="upload-name">Media (Today 5:27 PM)</span>
+                          </div>
+                        </div>
+                        <div class="see-all-link">See all (11)</div>
+                      </div>
+
+                      <!-- Background Tasks -->
+                      <div class="pane-section">
+                        <div class="section-row-hdr">
+                          <span class="hdr-title">Background Tasks</span>
+                          <span class="hdr-count">0 &gt;</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Content 2: Active Terminal (Slot: mid) -->
+                  <div class="mock-pane-content mock-terminal-view" id="mock-slot-mid" data-slot="mid" title="点击调节【活跃终端 mid】">
+                    <!-- Slot: mid Background Layer -->
+                    <div class="mock-slot-bg">
+                      <video class="mock-media-video" id="mock-video-mid" autoplay muted loop playsinline></video>
+                      <img class="mock-media-img" id="mock-img-mid" alt="">
+                      <div class="slot-focus-indicator">活跃终端 (mid)</div>
+                    </div>
+
+                    <div class="mock-terminal-inner">
+                      <div class="mock-terminal-header">
+                        <div class="mock-term-tab active">bash</div>
+                        <div class="mock-term-tab">powershell</div>
+                        <div class="mock-term-tab">+</div>
+                      </div>
+                      <div class="mock-terminal-body" id="mock-term-body">
+                        <div class="term-line"><span class="term-prompt">Administrator@ANTIGRAVITY:~$</span> agy theme --status</div>
+                        <div class="term-line term-ok">✓ Engine: Online (CDP 8314 &amp; Media 8315)</div>
+                        <div class="term-line term-dim">✓ FastStart Moov: Optimized (0ms keyframe)</div>
+                        <div class="term-line term-ok">✓ Active Slot: mid (Active Terminal)</div>
+                        <div class="term-line"><span class="term-prompt">Administrator@ANTIGRAVITY:~$</span> <span class="term-cursor">▌</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+
+                <!-- 4. Settings Dialog Overlay Simulation (Slot: settings) -->
+                <div class="mock-settings-overlay" id="mock-settings-overlay">
+                  <div class="mock-settings-modal" id="mock-slot-settings" data-slot="settings" title="点击调节【设置弹窗 settings】">
+                    <div class="mock-slot-bg">
+                      <video class="mock-media-video" id="mock-video-settings" autoplay muted loop playsinline></video>
+                      <img class="mock-media-img" id="mock-img-settings" alt="">
+                      <div class="slot-focus-indicator">设置弹窗 (settings)</div>
+                    </div>
+                    <div class="mock-modal-header">
+                      <h3>⚙️ Settings</h3>
+                      <button class="mock-modal-close" id="btn-close-mock-settings">✕</button>
+                    </div>
+                    <div class="mock-modal-body">
+                      <div class="mock-setting-row">
+                        <span>Appearance &amp; Wallpapers</span>
+                        <span class="badge badge-accent">Custom Theme Active</span>
+                      </div>
+                      <div class="mock-setting-row">
+                        <span>CDP Remote Debugging</span>
+                        <span class="badge badge-subtle">Port 8314</span>
+                      </div>
+                      <div class="mock-setting-row">
+                        <span>Hardware Video Acceleration</span>
+                        <span class="badge badge-accent">D3D11 Enabled</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="mock-terminal-inner">
-                  <div class="mock-terminal-header">
-                    <div class="mock-term-tab active">bash</div>
-                    <div class="mock-term-tab">powershell</div>
-                    <div class="mock-term-tab">+</div>
-                  </div>
-                  <div class="mock-terminal-body" id="mock-term-body">
-                    <div class="term-line"><span class="term-prompt">Administrator@ANTIGRAVITY:~$</span> agy theme --status</div>
-                    <div class="term-line term-ok">✓ Engine: Online (CDP 8314 &amp; Media 8315)</div>
-                    <div class="term-line term-dim">✓ FastStart Moov: Optimized (0ms keyframe)</div>
-                    <div class="term-line term-ok">✓ Active Slot: mid (Active Terminal)</div>
-                    <div class="term-line"><span class="term-prompt">Administrator@ANTIGRAVITY:~$</span> <span class="term-cursor">▌</span></div>
-                  </div>
-                </div>
-              </div>
-            </aside>
-
-            <!-- 4. Settings Dialog Overlay Simulation (Slot: settings) -->
-            <div class="mock-settings-overlay" id="mock-settings-overlay">
-              <div class="mock-settings-modal" id="mock-slot-settings" data-slot="settings" title="点击调节【设置弹窗 settings】">
-                <div class="mock-slot-bg">
-                  <video class="mock-media-video" id="mock-video-settings" autoplay muted loop playsinline></video>
-                  <img class="mock-media-img" id="mock-img-settings" alt="">
-                  <div class="slot-focus-indicator">设置弹窗 (settings)</div>
-                </div>
-                <div class="mock-modal-header">
-                  <h3>⚙️ Settings</h3>
-                  <button class="mock-modal-close" id="btn-close-mock-settings">✕</button>
-                </div>
-                <div class="mock-modal-body">
-                  <div class="mock-setting-row">
-                    <span>Appearance &amp; Wallpapers</span>
-                    <span class="badge badge-accent">Custom Theme Active</span>
-                  </div>
-                  <div class="mock-setting-row">
-                    <span>CDP Remote Debugging</span>
-                    <span class="badge badge-subtle">Port 8314</span>
-                  </div>
-                  <div class="mock-setting-row">
-                    <span>Hardware Video Acceleration</span>
-                    <span class="badge badge-accent">D3D11 Enabled</span>
-                  </div>
-                </div>
               </div>
             </div>
 

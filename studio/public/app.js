@@ -26,7 +26,9 @@ let state = {
   isAudioMuted: true,    // 预览视频静音
   videoSpeed: 1.0,       // 预览视频倍速
   glassBlur: 16,         // 毛玻璃模糊度 (px)
-  glassDarkness: 70      // 卡片底色暗度 (%)
+  glassDarkness: 70,     // 卡片底色暗度 (%)
+  isAutoFit: true,       // 全自适应缩放模式 (默认开启，开箱完整铺满视口)
+  zoomLevel: 100         // 当前缩放百分比 (当退出 auto-fit 时为具体百分比)
 };
 
 // DOM Elements Cache
@@ -89,6 +91,15 @@ const btnToggleAudio = document.getElementById('btn-toggle-audio');
 const audioIcon = document.getElementById('audio-icon');
 const videoSpeedSelect = document.getElementById('video-speed-select');
 const btnPeekVanilla = document.getElementById('btn-peek-vanilla');
+
+// Viewport Auto-fit & Zoom Controls
+const mockupViewport = document.getElementById('mockup-viewport');
+const mockupScaler = document.getElementById('mockup-scaler');
+const btnAutoFit = document.getElementById('btn-auto-fit');
+const btnZoomIn = document.getElementById('btn-zoom-in');
+const btnZoomOut = document.getElementById('btn-zoom-out');
+const btnZoom100 = document.getElementById('btn-zoom-100');
+const zoomLevelLabel = document.getElementById('zoom-level-label');
 
 // Presets View Elements
 const presetListEl = document.getElementById('preset-list');
@@ -193,6 +204,9 @@ function initTabs() {
       } else if (targetViewId === 'view-preview') {
         renderSlotInspector();
         renderMockupPreview();
+        if (state.isAutoFit) {
+          setTimeout(updateMockupScale, 50);
+        }
         document.querySelectorAll('.mockup-window video.mock-media-video.visible').forEach(vid => {
           if (state.isVideoPlaying && vid.paused) {
             vid.play().catch(() => {});
@@ -890,6 +904,109 @@ function renderQuickPresetSelect() {
   }
 
   if (currentVal) quickPresetSelect.value = currentVal;
+}
+
+// =========================================================================
+// 10.1 Responsive Auto-Fit & Dynamic Zoom System
+// =========================================================================
+function updateMockupScale() {
+  if (!mockupViewport || !mockupScaler || !agMockup) return;
+  if (!state.isAutoFit) return;
+
+  const vpW = mockupViewport.clientWidth;
+  const vpH = mockupViewport.clientHeight;
+
+  if (!vpW || !vpH) return;
+
+  // Mockup base dimension is 1360 x 800 (100% authentic native Antigravity aspect ratio)
+  const baseW = 1360;
+  const baseH = 800;
+
+  // 24px total breathing margin (12px on each boundary)
+  const availW = Math.max(100, vpW - 24);
+  const availH = Math.max(100, vpH - 24);
+
+  const scale = Math.min(availW / baseW, availH / baseH);
+  // Clamp scale safely between 0.35 and 1.25
+  const fitScale = Math.max(0.35, Math.min(scale, 1.25));
+
+  state.zoomLevel = Math.round(fitScale * 100);
+
+  mockupScaler.style.transform = `scale(${fitScale})`;
+  if (zoomLevelLabel) {
+    zoomLevelLabel.textContent = `${state.zoomLevel}%`;
+  }
+  if (btnAutoFit) {
+    btnAutoFit.classList.add('active');
+  }
+}
+
+function setManualScale(zoomPercent) {
+  if (!mockupScaler) return;
+  state.isAutoFit = false;
+  state.zoomLevel = Math.max(30, Math.min(200, zoomPercent));
+  const scale = state.zoomLevel / 100;
+  mockupScaler.style.transform = `scale(${scale})`;
+  if (zoomLevelLabel) {
+    zoomLevelLabel.textContent = `${state.zoomLevel}%`;
+  }
+  if (btnAutoFit) {
+    btnAutoFit.classList.remove('active');
+  }
+}
+
+function initResponsiveAutoFit() {
+  if (btnAutoFit) {
+    btnAutoFit.onclick = () => {
+      state.isAutoFit = true;
+      btnAutoFit.classList.add('active');
+      updateMockupScale();
+      showToast('已开启全自适应缩放 (视口完整铺满)');
+    };
+  }
+
+  if (btnZoomIn) {
+    btnZoomIn.onclick = () => {
+      const next = Math.min(200, Math.round(state.zoomLevel / 10) * 10 + 10);
+      setManualScale(next);
+    };
+  }
+
+  if (btnZoomOut) {
+    btnZoomOut.onclick = () => {
+      const next = Math.max(30, Math.round(state.zoomLevel / 10) * 10 - 10);
+      setManualScale(next);
+    };
+  }
+
+  if (btnZoom100) {
+    btnZoom100.onclick = () => {
+      setManualScale(100);
+      showToast('已还原为 100% 原始尺寸');
+    };
+  }
+
+  // Window resize handler
+  window.addEventListener('resize', () => {
+    if (state.isAutoFit && state.activeTab === 'view-preview') {
+      updateMockupScale();
+    }
+  });
+
+  // ResizeObserver for container changes (e.g. Inspector drawer collapse)
+  if (window.ResizeObserver && mockupViewport) {
+    const ro = new ResizeObserver(() => {
+      if (state.isAutoFit && state.activeTab === 'view-preview') {
+        updateMockupScale();
+      }
+    });
+    ro.observe(mockupViewport);
+  }
+
+  // Initial scaling triggers
+  requestAnimationFrame(updateMockupScale);
+  setTimeout(updateMockupScale, 150);
+  setTimeout(updateMockupScale, 500);
 }
 
 // =========================================================================
@@ -1932,6 +2049,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initSpotlightEffect();
   initMockupInteractions();
   initPreviewToolbar();
+  initResponsiveAutoFit();
   initPositionControls();
   initFontControls();
   initWeQuickPicker();
