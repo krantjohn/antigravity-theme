@@ -829,19 +829,57 @@ function generateMasterCss(slotsConfig) {
   if (slotsConfig && slotsConfig.isOriginal) {
     return `/* ==========================================================================
    Antigravity Official Vanilla Theme (官方原版纯净样式)
-   恢复原版默认外观与性能，禁用自定义二次元壁纸与视频硬件解码
+   恢复原版默认外观与性能，彻底清除所有二次元壁纸、贴图与视频硬件解码
    ========================================================================== */
 
-body::before {
+/* 1. 主对话界面全局底图与视频彻底清除 */
+body::before,
+html::before {
   display: none !important;
+  background: none !important;
   background-image: none !important;
   opacity: 0 !important;
   content: "" !important;
 }
 
 .antigravity-slot-video,
-#antigravity-video-left {
+#antigravity-video-left,
+video.antigravity-slot-video {
   display: none !important;
+}
+
+/* 2. 底部输入框强制恢复官方原生深色卡片样式，消除所有残留海报与壁纸渐变 */
+[id="antigravity.agentSidePanelInputBox"] > div.bg-card,
+[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"],
+div.rounded-2xl.bg-card-border > div.bg-card,
+div.rounded-2xl.bg-card-border > div[class*="bg-card"],
+div[data-ag-positioned],
+[data-ag-positioned] {
+  background-image: none !important;
+  background-color: var(--color-card, #131722) !important;
+  background: var(--color-card, #131722) !important;
+}
+
+/* 3. 活跃终端界面背景彻底还原 */
+.terminal-wrapper,
+[data-panel="terminal"],
+div.terminal,
+div.xterm {
+  background-image: none !important;
+}
+
+/* 4. 右侧抽屉背景彻底还原 */
+[aria-label="Auxiliary Pane"],
+div[role="region"][aria-label="Terminal"],
+[class*="terminal-drawer"] {
+  background-image: none !important;
+}
+
+/* 5. 设置弹窗背景彻底还原 */
+[role="dialog"],
+div[data-state="open"]:has(div.bg-sidebar),
+div.settings-modal-container {
+  background-image: none !important;
 }
 `;
   }
@@ -2294,13 +2332,42 @@ function getClientVideoScript(config) {
           clearInterval(window.__antigravityInterval);
           window.__antigravityInterval = null;
         }
-        const vids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
+        // 1. 彻底暂停并销毁所有槽位视频与残留播放器
+        const vids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left, video');
         for (let i = 0; i < vids.length; i++) {
           try {
-            vids[i].pause();
-            vids[i].removeAttribute('src');
-            vids[i].load();
-            vids[i].remove();
+            if (vids[i].classList.contains('antigravity-slot-video') || vids[i].id === 'antigravity-video-left' || vids[i].dataset.slot) {
+              vids[i].pause();
+              vids[i].removeAttribute('src');
+              vids[i].load();
+              vids[i].remove();
+            }
+          } catch(e) {}
+        }
+        // 2. 清理所有 0ms 兜底海报与注入样式
+        const zeroStyle = document.getElementById('antigravity-zero-latency-style');
+        if (zeroStyle) {
+          try { zeroStyle.remove(); } catch(e) {}
+        }
+        // 3. 彻底清除所有容器（输入框、终端、侧栏、弹窗）的残留背景与定位属性
+        const allSlotContainers = document.querySelectorAll([
+          '[id*="InputBox"] > div',
+          'div.rounded-2xl.bg-card-border > div',
+          '[data-ag-positioned]',
+          '.terminal-wrapper',
+          '[data-panel="terminal"]',
+          '[role="dialog"]',
+          '[class*="terminal-drawer"]'
+        ].join(','));
+        for (let i = 0; i < allSlotContainers.length; i++) {
+          try {
+            const el = allSlotContainers[i];
+            el.style.setProperty('background-image', 'none', 'important');
+            el.style.setProperty('background-color', 'var(--color-card)', 'important');
+            el.style.removeProperty('overflow');
+            el.style.removeProperty('contain');
+            el.style.removeProperty('will-change');
+            delete el.dataset.agPositioned;
           } catch(e) {}
         }
       } catch(e) {}

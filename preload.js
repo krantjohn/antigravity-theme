@@ -744,6 +744,21 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           oldVids[i].load();
           oldVids[i].remove();
         }
+        if (config.isOriginal || (slotData && slotData.type === 'none')) {
+          for (let i = 0; i < selectors.length; i++) {
+            try {
+              const el = document.querySelector(selectors[i]);
+              if (el) {
+                el.style.setProperty('background-image', 'none', 'important');
+                el.style.setProperty('background-color', 'var(--color-card)', 'important');
+                el.style.removeProperty('overflow');
+                el.style.removeProperty('contain');
+                el.style.removeProperty('will-change');
+                delete el.dataset.agPositioned;
+              }
+            } catch(e) {}
+          }
+        }
       } else {
         // 1. Locate current valid targetContainer
         let targetContainer = null;
@@ -974,12 +989,8 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       if (e.data.config) {
         cachedConfig = e.data.config;
         window.__antigravityConfig = e.data.config;
-        if (cachedConfig.isOriginal) {
-          applyVideos();
-        } else {
-          applyTheme(true);
-          applyVideos();
-        }
+        applyTheme(true);
+        applyVideos();
       }
     }
   });
