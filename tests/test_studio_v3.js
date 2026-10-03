@@ -126,7 +126,9 @@ async function runTests() {
     console.error('❌ Test failed:', err);
     process.exitCode = 1;
   } finally {
-    server.close();
+    if (server.listening) {
+      server.close();
+    }
     process.exit(process.exitCode || 0);
   }
 }

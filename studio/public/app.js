@@ -1,5 +1,5 @@
 // =========================================================================
-// 🌸 Antigravity Theme Studio —— 实时预览与全景工坊 (Client Core Logic)
+// 🌸 Antigravity Theme Studio —— 实时预览与全景工坊 (Client Core Logic v3.1)
 // =========================================================================
 
 let state = {
@@ -18,7 +18,15 @@ let state = {
   isCdpOnline: false,
   isMediaOnline: false,
   isAntigravityRunning: false,
-  mockSettingsOpen: false
+  mockSettingsOpen: false,
+  
+  // v3.1 预览增强状态
+  viewMode: 'full',      // 'full' | 'compact' | 'focus'
+  isVideoPlaying: true,  // 预览视频播放/暂停
+  isAudioMuted: true,    // 预览视频静音
+  videoSpeed: 1.0,       // 预览视频倍速
+  glassBlur: 16,         // 毛玻璃模糊度 (px)
+  glassDarkness: 70      // 卡片底色暗度 (%)
 };
 
 // DOM Elements Cache
@@ -39,8 +47,18 @@ const btnResetSlot = document.getElementById('btn-reset-slot');
 const btnResetPos = document.getElementById('btn-reset-pos');
 const btnResetAllPos = document.getElementById('btn-reset-all-pos');
 const btnBrowseNative = document.getElementById('btn-browse-native');
+const btnOpenWePicker = document.getElementById('btn-open-we-picker');
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
+
+// Glassmorphism & Contrast Controls
+const sliderGlassBlur = document.getElementById('slider-glass-blur');
+const valGlassBlur = document.getElementById('val-glass-blur');
+const sliderGlassDarkness = document.getElementById('slider-glass-darkness');
+const valGlassDarkness = document.getElementById('val-glass-darkness');
+const btnResetGlass = document.getElementById('btn-reset-glass');
+
+// Typography Controls
 const fontPresetsGrid = document.getElementById('font-presets');
 const fontColorPicker = document.getElementById('font-color-picker');
 const fontHexInput = document.getElementById('font-hex-input');
@@ -56,10 +74,21 @@ const btnDraftSavePreset = document.getElementById('btn-draft-save-preset');
 
 // Mockup Elements
 const agMockup = document.getElementById('ag-mockup');
+const dragCoordHud = document.getElementById('drag-coord-hud');
 const btnToggleMockSettings = document.getElementById('btn-toggle-mock-settings');
 const mockSidebarSettingsBtn = document.getElementById('mock-sidebar-settings-btn');
 const mockSettingsOverlay = document.getElementById('mock-settings-overlay');
 const btnCloseMockSettings = document.getElementById('btn-close-mock-settings');
+
+// Preview Toolbar Elements
+const quickPresetSelect = document.getElementById('quick-preset-select');
+const viewModePills = document.getElementById('view-mode-pills');
+const btnTogglePlay = document.getElementById('btn-toggle-play');
+const playIcon = document.getElementById('play-icon');
+const btnToggleAudio = document.getElementById('btn-toggle-audio');
+const audioIcon = document.getElementById('audio-icon');
+const videoSpeedSelect = document.getElementById('video-speed-select');
+const btnPeekVanilla = document.getElementById('btn-peek-vanilla');
 
 // Presets View Elements
 const presetListEl = document.getElementById('preset-list');
@@ -72,12 +101,18 @@ const btnCancelSaveModal = document.getElementById('btn-cancel-save-modal');
 const btnConfirmSavePreset = document.getElementById('btn-confirm-save-preset');
 const newPresetNameInput = document.getElementById('new-preset-name');
 
-// Steam WE Elements
+// Steam WE View & Picker Elements
 const weBadge = document.getElementById('we-badge');
 const weCountBadge = document.getElementById('we-count-badge');
 const navWeCount = document.getElementById('nav-we-count');
 const weSearchInput = document.getElementById('we-search-input');
 const weGrid = document.getElementById('we-grid');
+const wePickerModal = document.getElementById('we-picker-modal');
+const wePickerCount = document.getElementById('we-picker-count');
+const wePickerSearchInput = document.getElementById('we-picker-search-input');
+const wePickerGrid = document.getElementById('we-picker-grid');
+const btnCloseWePicker = document.getElementById('btn-close-we-picker');
+const btnCancelWePicker = document.getElementById('btn-cancel-we-picker');
 
 // Safety Elements
 const patchBanner = document.getElementById('patch-banner');
@@ -134,11 +169,9 @@ function initTabs() {
       const targetViewId = tab.dataset.tab;
       if (!targetViewId) return;
 
-      // Update Nav Buttons
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
 
-      // Update Panels
       document.querySelectorAll('.view-panel').forEach(panel => {
         panel.classList.remove('active');
       });
@@ -149,7 +182,6 @@ function initTabs() {
 
       state.activeTab = targetViewId;
 
-      // Trigger lazy tab logic
       if (targetViewId === 'view-we') {
         if (!state.weList || state.weList.length === 0) {
           fetchWeList();
@@ -210,7 +242,6 @@ async function fetchStatus() {
       state.fontPresets = data.fontPresets || {};
       state.slotsMeta = data.slotsMeta || {};
 
-      // If user has not dirtied the draft, initialize draftConfig from live config
       if (!state.isDirty) {
         state.draftConfig = JSON.parse(JSON.stringify(state.slotsConfig));
         setDraftDirty(false);
@@ -221,6 +252,7 @@ async function fetchStatus() {
       renderFontPresets();
       renderMockupPreview();
       renderPresetsList();
+      renderQuickPresetSelect();
       renderWeStatus(data.weCount);
       renderPatchStatus(data.patchStatus, data.hasBackup, data.backupSize);
     }
@@ -323,6 +355,18 @@ function renderSlotInspector() {
       btn.classList.remove('active');
     }
   });
+
+  // Update Glassmorphism Sliders
+  if (sliderGlassBlur && valGlassBlur) {
+    const blurVal = state.draftConfig.glassBlur || state.glassBlur || 16;
+    sliderGlassBlur.value = blurVal;
+    valGlassBlur.textContent = `${blurVal}px`;
+  }
+  if (sliderGlassDarkness && valGlassDarkness) {
+    const darkVal = state.draftConfig.glassDarkness || state.glassDarkness || 70;
+    sliderGlassDarkness.value = darkVal;
+    valGlassDarkness.textContent = `${darkVal}%`;
+  }
 }
 
 function parsePositionString(pos) {
@@ -359,7 +403,6 @@ function renderMockupPreview() {
 
     const slotData = (state.draftConfig && state.draftConfig[slotKey]) || (state.slotsConfig && state.slotsConfig[slotKey]) || {};
     
-    // Determine media source URL and media type
     let mediaUrl = '';
     let isVideo = false;
 
@@ -380,13 +423,21 @@ function renderMockupPreview() {
     videoEl.style.objectPosition = pos;
     imgEl.style.objectPosition = pos;
 
+    // Apply Media playback properties
+    videoEl.muted = state.isAudioMuted;
+    videoEl.playbackRate = state.videoSpeed || 1.0;
+
     // Apply Media Sources and toggle classes
     if (mediaUrl) {
       if (isVideo) {
         if (videoEl.dataset.currentSrc !== mediaUrl) {
           videoEl.dataset.currentSrc = mediaUrl;
           videoEl.src = mediaUrl;
+        }
+        if (state.isVideoPlaying) {
           videoEl.play().catch(() => {});
+        } else {
+          videoEl.pause();
         }
         videoEl.classList.add('visible');
         imgEl.classList.remove('visible');
@@ -430,12 +481,10 @@ function renderMockupPreview() {
   let terminalShadow = '';
 
   if (lum < 128) {
-    // Dark font -> white glow stroke
     textShadow = '0 0 2px #fff, 0 1px 3px rgba(255, 255, 255, 0.95)';
     terminalColor = '#0f172a';
     terminalShadow = '0 0 2px #fff, 0 1px 2px rgba(255, 255, 255, 0.98)';
   } else {
-    // Light font -> deep dark drop shadow
     textShadow = '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)';
     terminalColor = '#ffffff';
     terminalShadow = '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)';
@@ -445,6 +494,21 @@ function renderMockupPreview() {
   agMockup.style.setProperty('--mock-font-shadow', textShadow);
   agMockup.style.setProperty('--mock-font-terminal', terminalColor);
   agMockup.style.setProperty('--mock-font-terminal-shadow', terminalShadow);
+
+  // Apply Glassmorphism & Darkness CSS variables
+  const currentBlur = state.draftConfig.glassBlur || state.glassBlur || 16;
+  const currentDarkness = state.draftConfig.glassDarkness || state.glassDarkness || 70;
+  agMockup.style.setProperty('--mock-glass-blur', `${currentBlur}px`);
+  agMockup.style.setProperty('--mock-glass-darkness', currentDarkness / 100);
+
+  // Update view mode classes on agMockup
+  if (state.viewMode === 'focus') {
+    agMockup.className = `mockup-window mode-focus-${state.activeSlot}`;
+  } else if (state.viewMode === 'compact') {
+    agMockup.className = 'mockup-window mode-compact';
+  } else {
+    agMockup.className = 'mockup-window';
+  }
 }
 
 function calculateLuminance(hex) {
@@ -465,43 +529,83 @@ function calculateLuminance(hex) {
 }
 
 // =========================================================================
-// 9. Interactive Mockup Canvas Slot Switching
+// 9. Interactive Mockup Canvas Slot Switching & Direct Drag-To-Pan
 // =========================================================================
+let isDragging = false;
+let dragSlot = 'left';
+let dragStartX = 0;
+let dragStartY = 0;
+let dragInitX = 50;
+let dragInitY = 50;
+let dragMoved = false;
+
 function initMockupInteractions() {
-  // Click on mock sidebar, chat pane, or left background focuses 'left'
-  const leftTargets = document.querySelectorAll('[data-slot="left"]');
-  leftTargets.forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      selectSlot('left');
-    });
+  const slotChineseMap = {
+    left: '主对话 (左)',
+    mid: '活跃终端 (中)',
+    right: '独立侧栏 (右)',
+    bottom: '提问输入框 (底)',
+    settings: '设置弹窗'
+  };
+
+  // Direct Canvas Drag-to-Position on mockup elements
+  agMockup.addEventListener('mousedown', (e) => {
+    // If clicking close button or controls, ignore drag
+    if (e.target.closest('.mock-modal-close') || e.target.closest('#mock-sidebar-settings-btn') || e.target.closest('.mock-traffic-lights') || e.target.closest('.mock-win-controls')) {
+      return;
+    }
+
+    const slotEl = e.target.closest('[data-slot]');
+    if (!slotEl) return;
+
+    dragSlot = slotEl.dataset.slot || 'left';
+    selectSlot(dragSlot);
+
+    isDragging = true;
+    dragMoved = false;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+
+    const currentPos = (state.draftConfig[dragSlot] && state.draftConfig[dragSlot].position) || '50% 50%';
+    const coords = parsePositionString(currentPos);
+    dragInitX = coords.x;
+    dragInitY = coords.y;
   });
 
-  // Click on terminal focuses 'mid'
-  const midTargets = document.querySelectorAll('[data-slot="mid"]');
-  midTargets.forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      selectSlot('mid');
-    });
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      dragMoved = true;
+      document.body.classList.add('is-dragging-slot');
+
+      const rect = agMockup.getBoundingClientRect();
+      const deltaXPercent = (dx / (rect.width * 0.45)) * 100;
+      const deltaYPercent = (dy / (rect.height * 0.45)) * 100;
+
+      const newX = Math.round(Math.max(0, Math.min(100, dragInitX + deltaXPercent)));
+      const newY = Math.round(Math.max(0, Math.min(100, dragInitY + deltaYPercent)));
+
+      updateActiveSlotPosition(newX, newY);
+
+      if (dragCoordHud) {
+        dragCoordHud.textContent = `🎯 【${slotChineseMap[dragSlot] || dragSlot}】X: ${newX}% · Y: ${newY}%`;
+        dragCoordHud.classList.add('visible');
+      }
+    }
   });
 
-  // Click on input box focuses 'bottom'
-  const bottomTargets = document.querySelectorAll('[data-slot="bottom"]');
-  bottomTargets.forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      selectSlot('bottom');
-    });
-  });
-
-  // Click on settings modal focuses 'settings'
-  const settingsTargets = document.querySelectorAll('[data-slot="settings"]');
-  settingsTargets.forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      selectSlot('settings');
-    });
+  window.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      document.body.classList.remove('is-dragging-slot');
+      if (dragCoordHud) {
+        dragCoordHud.classList.remove('visible');
+      }
+    }
   });
 
   // Toggle Mock Settings Dialog Overlay
@@ -541,7 +645,147 @@ function selectSlot(slotKey) {
 }
 
 // =========================================================================
-// 10. Material File Handling (Native Browse, Drag & Drop, Blob Preview)
+// 10. Preview Stage Toolbar Controls (View Modes, Video, Vanilla Peek, Quick Preset)
+// =========================================================================
+function initPreviewToolbar() {
+  // 1. View Mode Switcher (Full / Compact / Focus)
+  if (viewModePills) {
+    viewModePills.querySelectorAll('.btn-mode-pill').forEach(btn => {
+      btn.onclick = () => {
+        viewModePills.querySelectorAll('.btn-mode-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.viewMode = btn.dataset.mode;
+        renderMockupPreview();
+        showToast(`已切换视窗模式: ${btn.textContent.trim()}`);
+      };
+    });
+  }
+
+  // 2. Video Play / Pause Toggle
+  if (btnTogglePlay && playIcon) {
+    btnTogglePlay.onclick = () => {
+      state.isVideoPlaying = !state.isVideoPlaying;
+      playIcon.textContent = state.isVideoPlaying ? '⏸️' : '▶️';
+      agMockup.querySelectorAll('.mock-media-video').forEach(vid => {
+        if (state.isVideoPlaying) vid.play().catch(() => {});
+        else vid.pause();
+      });
+      showToast(state.isVideoPlaying ? '已恢复动态壁纸播放' : '已暂停动态壁纸 (方便进行像素级对齐)');
+    };
+  }
+
+  // 3. Audio Mute / Unmute Toggle (Listen to Wallpaper Engine BGM)
+  if (btnToggleAudio && audioIcon) {
+    btnToggleAudio.onclick = () => {
+      state.isAudioMuted = !state.isAudioMuted;
+      audioIcon.textContent = state.isAudioMuted ? '🔇' : '🔊';
+      agMockup.querySelectorAll('.mock-media-video').forEach(vid => {
+        vid.muted = state.isAudioMuted;
+      });
+      showToast(state.isAudioMuted ? '动态壁纸音频已静音' : '🔊 动态壁纸音频已开启 (正在试听素材原声音频)');
+    };
+  }
+
+  // 4. Video Speed Selector
+  if (videoSpeedSelect) {
+    videoSpeedSelect.onchange = () => {
+      state.videoSpeed = parseFloat(videoSpeedSelect.value) || 1.0;
+      agMockup.querySelectorAll('.mock-media-video').forEach(vid => {
+        vid.playbackRate = state.videoSpeed;
+      });
+      showToast(`动态壁纸播放倍速已设为 ${state.videoSpeed}x`);
+    };
+  }
+
+  // 5. "按住对比官方原版" (Hold to Peek Vanilla)
+  if (btnPeekVanilla) {
+    const startPeek = () => {
+      agMockup.classList.add('peek-vanilla');
+      btnPeekVanilla.classList.add('active');
+    };
+    const endPeek = () => {
+      agMockup.classList.remove('peek-vanilla');
+      btnPeekVanilla.classList.remove('active');
+    };
+
+    btnPeekVanilla.addEventListener('mousedown', startPeek);
+    btnPeekVanilla.addEventListener('mouseup', endPeek);
+    btnPeekVanilla.addEventListener('mouseleave', endPeek);
+    btnPeekVanilla.addEventListener('touchstart', startPeek);
+    btnPeekVanilla.addEventListener('touchend', endPeek);
+  }
+
+  // 6. Quick Preset Dropdown Switcher
+  if (quickPresetSelect) {
+    quickPresetSelect.onchange = () => {
+      const val = quickPresetSelect.value;
+      if (!val) return;
+
+      if (val === '__baseline__') {
+        state.draftConfig = {
+          left: { file: 'left_wallpaper.jpg', type: 'image', position: 'center center' },
+          mid: { file: 'mid_wallpaper.jpg', type: 'image', position: 'center 20%' },
+          right: { file: 'right_wallpaper.jpg', type: 'image', position: 'center 20%' },
+          bottom: { file: 'input_wallpaper.jpg', type: 'image', position: 'center 6%' },
+          settings: { file: 'settings_wallpaper.png', type: 'image', position: 'center 65%' },
+          fontColor: { primary: '#ffffff' }
+        };
+        cleanBlobUrls();
+        setDraftDirty(true);
+        renderSlotInspector();
+        renderMockupPreview();
+        showToast('已在工作区装配【初版黄金基线】预览！');
+      } else if (val === '__vanilla__') {
+        state.draftConfig = {
+          left: { file: '', type: 'vanilla', position: 'center center' },
+          mid: { file: '', type: 'vanilla', position: 'center center' },
+          right: { file: '', type: 'vanilla', position: 'center center' },
+          bottom: { file: '', type: 'vanilla', position: 'center center' },
+          settings: { file: '', type: 'vanilla', position: 'center center' },
+          fontColor: { primary: '#ffffff' }
+        };
+        cleanBlobUrls();
+        setDraftDirty(true);
+        renderSlotInspector();
+        renderMockupPreview();
+        showToast('已在工作区装配【官方原版纯净】预览！');
+      } else {
+        const p = state.presets.find(item => item.name === val);
+        if (p && p.slotsConfig) {
+          state.draftConfig = JSON.parse(JSON.stringify(p.slotsConfig));
+          cleanBlobUrls();
+          setDraftDirty(true);
+          renderSlotInspector();
+          renderMockupPreview();
+          showToast(`已在工作区装配预设【${p.name}】预览！`);
+        }
+      }
+    };
+  }
+}
+
+function renderQuickPresetSelect() {
+  if (!quickPresetSelect) return;
+  const currentVal = quickPresetSelect.value;
+  quickPresetSelect.innerHTML = '<option value="">(快速载入预设方案...)</option>';
+  
+  quickPresetSelect.innerHTML += '<option value="__baseline__">🌟 初版黄金基线</option>';
+  quickPresetSelect.innerHTML += '<option value="__vanilla__">🛡️ 官方原版纯净</option>';
+
+  if (state.presets && state.presets.length > 0) {
+    state.presets.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = `📦 ${p.name}`;
+      quickPresetSelect.appendChild(opt);
+    });
+  }
+
+  if (currentVal) quickPresetSelect.value = currentVal;
+}
+
+// =========================================================================
+// 11. Material File Handling (Native Browse, Drag & Drop, Blob Preview)
 // =========================================================================
 async function handleNativeBrowse() {
   try {
@@ -560,7 +804,6 @@ function handleBrowserFile(file) {
   if (!file) return;
   const slot = state.activeSlot;
   
-  // Revoke previous blob url if exists
   if (state.blobUrls[slot]) {
     try { URL.revokeObjectURL(state.blobUrls[slot]); } catch (_) {}
   }
@@ -576,7 +819,7 @@ function handleBrowserFile(file) {
   setDraftDirty(true);
   renderSlotInspector();
   renderMockupPreview();
-  showToast(`已装载本地素材 [${file.name}] 到工作区预览！满意后可点击正式应用`);
+  showToast(`已装载本地素材 [${file.name}] 到工作区预览！在视窗可直接鼠标拖拽对齐`);
 }
 
 function stageSlotFilePath(slot, filePath) {
@@ -585,7 +828,6 @@ function stageSlotFilePath(slot, filePath) {
   state.draftConfig[slot].stagedFileName = filePath.split(/[\\/]/).pop();
   state.draftConfig[slot].type = filePath.match(/\.(mp4|webm|mov)$/i) ? 'video' : 'image';
 
-  // Clear any conflicting blob
   if (state.blobUrls[slot]) {
     try { URL.revokeObjectURL(state.blobUrls[slot]); } catch (_) {}
     delete state.blobUrls[slot];
@@ -595,11 +837,87 @@ function stageSlotFilePath(slot, filePath) {
   setDraftDirty(true);
   renderSlotInspector();
   renderMockupPreview();
-  showToast(`已在工作区装载素材预览，点击上方「正式应用」即可生效！`);
+  showToast(`已在工作区装载素材预览，在视窗可直接鼠标拖拽对齐！`);
 }
 
 // =========================================================================
-// 11. Draft Actions (Commit & Discard)
+// 12. Steam Wallpaper Engine Quick In-Place Picker Modal
+// =========================================================================
+function initWeQuickPicker() {
+  if (btnOpenWePicker) {
+    btnOpenWePicker.onclick = async () => {
+      wePickerModal.classList.add('active');
+      if (!state.weList || state.weList.length === 0) {
+        await fetchWeList();
+      }
+      renderWePickerGrid();
+      if (wePickerSearchInput) {
+        wePickerSearchInput.value = '';
+        wePickerSearchInput.focus();
+      }
+    };
+  }
+
+  if (btnCloseWePicker) btnCloseWePicker.onclick = () => wePickerModal.classList.remove('active');
+  if (btnCancelWePicker) btnCancelWePicker.onclick = () => wePickerModal.classList.remove('active');
+
+  if (wePickerSearchInput) {
+    wePickerSearchInput.oninput = () => renderWePickerGrid();
+  }
+}
+
+function renderWePickerGrid() {
+  if (!wePickerGrid) return;
+  wePickerGrid.innerHTML = '';
+
+  const filterText = wePickerSearchInput ? wePickerSearchInput.value.trim().toLowerCase() : '';
+  const filtered = state.weList.filter(item => {
+    if (!filterText) return true;
+    return (item.title && item.title.toLowerCase().includes(filterText)) ||
+           (item.workshopId && item.workshopId.includes(filterText));
+  });
+
+  if (wePickerCount) {
+    wePickerCount.textContent = `${filtered.length} 项`;
+  }
+
+  if (filtered.length === 0) {
+    wePickerGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">未找到符合条件的壁纸</div>';
+    return;
+  }
+
+  filtered.slice(0, 80).forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'we-picker-item';
+
+    const thumbUrl = item.previewPath
+      ? `/api/preview-file?path=${encodeURIComponent(item.previewPath)}`
+      : `/api/preview-file?path=${encodeURIComponent(item.mediaPath)}`;
+    const isVid = item.mediaType === 'video';
+
+    card.innerHTML = `
+      <img class="we-picker-thumb" src="${thumbUrl}" alt="" loading="lazy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100\\' height=\\'60\\' fill=\\'%23111\\'><rect width=\\'100\\' height=\\'60\\'/></svg>'">
+      <div class="we-picker-info">
+        <div class="we-picker-title" title="${item.title}">${item.title}</div>
+        <div class="we-picker-meta">
+          <span>${isVid ? '🎬 视频' : '🖼️ 图像'}</span>
+          <span>${item.sizeMb || 0} MB</span>
+        </div>
+      </div>
+    `;
+
+    card.onclick = () => {
+      stageSlotFilePath(state.activeSlot, item.mediaPath);
+      wePickerModal.classList.remove('active');
+      showToast(`✨ 已装配壁纸【${item.title}】到【${state.activeSlot}】并在视窗 0ms 实时预览！`);
+    };
+
+    wePickerGrid.appendChild(card);
+  });
+}
+
+// =========================================================================
+// 13. Draft Actions (Commit & Discard)
 // =========================================================================
 async function commitDraftToAntigravity() {
   btnCommitDraft.disabled = true;
@@ -670,7 +988,7 @@ function discardDraftChanges() {
 }
 
 // =========================================================================
-// 12. Alignment & Position Controls
+// 14. Alignment & Position Controls
 // =========================================================================
 function updateActiveSlotPosition(x, y) {
   const slot = state.activeSlot;
@@ -750,10 +1068,53 @@ function initPositionControls() {
     renderMockupPreview();
     showToast(`槽位 [${meta.desc || slot}] 素材已重置为默认官方壁纸`);
   };
+
+  // Glassmorphism Sliders
+  if (sliderGlassBlur && valGlassBlur) {
+    sliderGlassBlur.oninput = () => {
+      const val = parseInt(sliderGlassBlur.value, 10);
+      valGlassBlur.textContent = `${val}px`;
+      state.glassBlur = val;
+      if (!state.draftConfig) state.draftConfig = {};
+      state.draftConfig.glassBlur = val;
+      setDraftDirty(true);
+      renderMockupPreview();
+    };
+  }
+
+  if (sliderGlassDarkness && valGlassDarkness) {
+    sliderGlassDarkness.oninput = () => {
+      const val = parseInt(sliderGlassDarkness.value, 10);
+      valGlassDarkness.textContent = `${val}%`;
+      state.glassDarkness = val;
+      if (!state.draftConfig) state.draftConfig = {};
+      state.draftConfig.glassDarkness = val;
+      setDraftDirty(true);
+      renderMockupPreview();
+    };
+  }
+
+  if (btnResetGlass) {
+    btnResetGlass.onclick = () => {
+      state.glassBlur = 16;
+      state.glassDarkness = 70;
+      if (sliderGlassBlur) sliderGlassBlur.value = 16;
+      if (valGlassBlur) valGlassBlur.textContent = '16px';
+      if (sliderGlassDarkness) sliderGlassDarkness.value = 70;
+      if (valGlassDarkness) valGlassDarkness.textContent = '70%';
+      if (state.draftConfig) {
+        state.draftConfig.glassBlur = 16;
+        state.draftConfig.glassDarkness = 70;
+      }
+      setDraftDirty(true);
+      renderMockupPreview();
+      showToast('毛玻璃与遮罩暗度已重置为默认基准');
+    };
+  }
 }
 
 // =========================================================================
-// 13. Typography & High-Contrast Presets
+// 15. Typography & High-Contrast Presets
 // =========================================================================
 function renderFontPresets() {
   fontPresetsGrid.innerHTML = '';
@@ -824,7 +1185,7 @@ function initFontControls() {
 }
 
 // =========================================================================
-// 14. Dedicated Presets Management (View 2)
+// 16. Dedicated Presets Management (View 2)
 // =========================================================================
 function renderPresetsList() {
   if (!presetListEl) return;
@@ -869,9 +1230,6 @@ function renderPresetsList() {
     baselineCard.querySelector('#btn-preview-baseline').onclick = async () => {
       showToast('正在工作区加载【初版黄金基线】预览...');
       try {
-        const res = await fetch('/api/status');
-        const data = await res.json();
-        // Fallback to baseline files
         state.draftConfig = {
           left: { file: 'left_wallpaper.jpg', type: 'image', position: 'center center' },
           mid: { file: 'mid_wallpaper.jpg', type: 'image', position: 'center 20%' },
@@ -1023,7 +1381,6 @@ function renderPresetsList() {
         </div>
       `;
 
-      // Preview preset in workspace
       userCard.querySelector('.btn-preview-user-p').onclick = () => {
         if (p.slotsConfig) {
           state.draftConfig = JSON.parse(JSON.stringify(p.slotsConfig));
@@ -1036,10 +1393,8 @@ function renderPresetsList() {
         }
       };
 
-      // Direct apply preset
       userCard.querySelector('.btn-apply-user-p').onclick = () => applyPresetDirectly(p.name);
 
-      // Delete preset
       userCard.querySelector('.btn-del-p').onclick = async () => {
         if (!confirm(`确定要删除预设【${p.name}】吗？`)) return;
         try {
@@ -1094,13 +1449,12 @@ async function applyPresetDirectly(name) {
   }
 }
 
-// Preset Filter listener
 if (presetSearchInput) {
   presetSearchInput.oninput = () => renderPresetsList();
 }
 
 // =========================================================================
-// 15. Steam Wallpaper Engine Bridge (View 3)
+// 17. Steam Wallpaper Engine Bridge (View 3)
 // =========================================================================
 function renderWeStatus(count) {
   if (navWeCount) navWeCount.textContent = count || 0;
@@ -1117,8 +1471,9 @@ function renderWeStatus(count) {
 }
 
 async function fetchWeList() {
-  if (!weGrid) return;
-  weGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">正在深度扫描 Steam Wallpaper Engine 素材库...</div>';
+  if (weGrid) {
+    weGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">正在深度扫描 Steam Wallpaper Engine 素材库...</div>';
+  }
 
   try {
     const res = await fetch('/api/we/list');
@@ -1127,11 +1482,14 @@ async function fetchWeList() {
       state.weList = data.items || [];
       renderWeStatus(state.weList.length);
       renderWeGallery();
-    } else {
+      renderWePickerGrid();
+    } else if (weGrid) {
       weGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--accent-rose);">扫描失败: ${data.error || '未知错误'}</div>`;
     }
   } catch (e) {
-    weGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--accent-rose);">连接素材库失败: ${e.message}</div>`;
+    if (weGrid) {
+      weGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--accent-rose);">连接素材库失败: ${e.message}</div>`;
+    }
   }
 }
 
@@ -1151,7 +1509,6 @@ function renderWeGallery() {
     return;
   }
 
-  // Render top 100 items to avoid DOM lag
   const displayItems = filtered.slice(0, 100);
 
   displayItems.forEach(item => {
@@ -1182,13 +1539,11 @@ function renderWeGallery() {
       </div>
     `;
 
-    // Preview to left slot
     card.querySelector('.btn-we-preview').onclick = () => {
       stageSlotFilePath('left', item.mediaPath);
       switchTab('view-preview');
     };
 
-    // More slots dropdown menu
     card.querySelector('.btn-we-more').onclick = (e) => {
       e.stopPropagation();
       const targetSlot = prompt(`请选择要装配壁纸【${item.title}】的目标槽位：\n1. mid (活跃终端)\n2. bottom (提问输入框)\n3. settings (设置弹窗)\n4. right (独立侧栏)`, 'mid');
@@ -1218,7 +1573,7 @@ if (weSearchInput) {
 }
 
 // =========================================================================
-// 16. Core Engine & Safety Center (View 4)
+// 18. Core Engine & Safety Center (View 4)
 // =========================================================================
 function renderPatchStatus(patchStatus, hasBackup, backupSize) {
   if (!patchBanner || !patchText) return;
@@ -1287,7 +1642,7 @@ async function handleRestartAntigravity() {
 }
 
 // =========================================================================
-// 17. Event Listeners Setup
+// 19. Event Listeners Setup
 // =========================================================================
 function setupEventListeners() {
   // Slot Pills in Inspector
@@ -1323,7 +1678,9 @@ function setupEventListeners() {
 
   // Drop zone click triggers file browse
   dropZone.onclick = (e) => {
-    if (e.target !== btnBrowseNative && !btnBrowseNative.contains(e.target)) {
+    if (e.target !== btnBrowseNative && !btnBrowseNative.contains(e.target) &&
+        e.target !== btnOpenWePicker && !btnOpenWePicker.contains(e.target) &&
+        e.target !== btnResetSlot && !btnResetSlot.contains(e.target)) {
       handleNativeBrowse();
     }
   };
@@ -1471,14 +1828,16 @@ function setupEventListeners() {
 }
 
 // =========================================================================
-// 18. Bootstrap
+// 20. Bootstrap
 // =========================================================================
 window.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initSpotlightEffect();
   initMockupInteractions();
+  initPreviewToolbar();
   initPositionControls();
   initFontControls();
+  initWeQuickPicker();
   setupEventListeners();
 
   fetchStatus();

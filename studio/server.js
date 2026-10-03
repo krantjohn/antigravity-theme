@@ -628,6 +628,14 @@ const server = http.createServer(async (req, res) => {
   res.end('404 Not Found');
 });
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`[Studio] 端口 ${PORT} 已有运行中的服务实例，沿用现有服务。`);
+  } else {
+    console.error('[Studio] 服务发生错误:', err);
+  }
+});
+
 server.listen(PORT, '127.0.0.1', () => {
   console.log('=======================================================');
   console.log('   🌸 Antigravity Theme Studio (Raycast / Linear Bento)');

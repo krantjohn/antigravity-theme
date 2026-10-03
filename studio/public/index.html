@@ -146,10 +146,13 @@
               <div class="drop-actions">
                 <button class="btn btn-secondary btn-sm" id="btn-browse-native">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  选择本地素材...
+                  本地文件...
+                </button>
+                <button class="btn btn-accent-ghost btn-sm" id="btn-open-we-picker" title="免切页面，直接在工作区挑选本地 Steam 创意工坊壁纸">
+                  🎮 创意工坊...
                 </button>
                 <button class="btn btn-secondary btn-sm" id="btn-reset-slot" title="重置当前槽位为默认官方壁纸">
-                  重置素材
+                  重置
                 </button>
               </div>
             </div>
@@ -198,6 +201,30 @@
           </div>
         </div>
 
+        <!-- Glassmorphism & Mask Control -->
+        <div class="inspector-section">
+          <div class="section-title-row">
+            <span class="section-tag">GLASS & CONTRAST</span>
+            <button class="btn-text-action" id="btn-reset-glass" title="重置毛玻璃与暗度">重置默认</button>
+          </div>
+          <div class="pos-control-group">
+            <div class="slider-row">
+              <div class="slider-label-line">
+                <span>界面毛玻璃模糊度</span>
+                <span class="slider-val-tag" id="val-glass-blur">16px</span>
+              </div>
+              <input type="range" class="range-slider" id="slider-glass-blur" min="0" max="36" value="16">
+            </div>
+            <div class="slider-row">
+              <div class="slider-label-line">
+                <span>卡片底色遮罩暗度</span>
+                <span class="slider-val-tag" id="val-glass-darkness">70%</span>
+              </div>
+              <input type="range" class="range-slider" id="slider-glass-darkness" min="10" max="95" value="70">
+            </div>
+          </div>
+        </div>
+
         <!-- Typography & High Contrast Presets -->
         <div class="inspector-section">
           <div class="section-title-row">
@@ -226,15 +253,57 @@
             <h2>Antigravity 界面仿真视窗</h2>
           </div>
           <div class="stage-actions">
-            <span class="hint-pill">💡 点击画面任意区域即可直接切换调节该槽位</span>
+            <span class="hint-pill">💡 画面支持直接点击聚焦 & 鼠标按住直接拖拽位移</span>
             <button class="btn btn-secondary btn-sm" id="btn-toggle-mock-settings" title="打开/收起设置弹窗外观仿真">
               ⚙️ 预览设置弹窗
             </button>
           </div>
         </div>
 
+        <!-- Interactive Preview Stage Toolbar -->
+        <div class="preview-toolbar">
+          <div class="toolbar-left-group">
+            <div class="quick-preset-wrap" title="工作区内快速载入预设方案">
+              <span class="toolbar-label">⚡ 快速预设:</span>
+              <select id="quick-preset-select" class="toolbar-select">
+                <option value="">(选择预设方案...)</option>
+              </select>
+            </div>
+            
+            <div class="view-mode-pills" id="view-mode-pills">
+              <button class="btn-mode-pill active" data-mode="full" title="完整 16:9 全景视窗">🖥️ 全景</button>
+              <button class="btn-mode-pill" data-mode="compact" title="16:10 紧凑笔记本视窗">💻 紧凑</button>
+              <button class="btn-mode-pill" data-mode="focus" title="特写放大当前正在调节的槽位">🔍 特写聚焦</button>
+            </div>
+          </div>
+
+          <div class="toolbar-right-group">
+            <!-- Video & Audio Controls -->
+            <div class="media-controls-pill">
+              <button class="btn-media-ctrl" id="btn-toggle-play" title="播放 / 暂停所有动态视频壁纸">
+                <span id="play-icon">⏸️</span>
+              </button>
+              <button class="btn-media-ctrl" id="btn-toggle-audio" title="开启 / 静音视频原声音频 (BGM试听)">
+                <span id="audio-icon">🔇</span>
+              </button>
+              <select id="video-speed-select" class="toolbar-select-sm" title="动态壁纸播放倍速">
+                <option value="1">1.0x</option>
+                <option value="0.5">0.5x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2.0x</option>
+              </select>
+            </div>
+
+            <!-- Peek Vanilla Comparison Button -->
+            <button class="btn btn-secondary btn-sm btn-peek-vanilla" id="btn-peek-vanilla" title="长按此按钮可即时透视对比 Google 官方原生纯净暗黑界面，松开还原">
+              👁️ 按住对比原版
+            </button>
+          </div>
+        </div>
+
         <!-- The Antigravity Mockup Window Frame -->
         <div class="mockup-window" id="ag-mockup">
+          <div id="drag-coord-hud" class="drag-coord-hud">🎯 X: 50% · Y: 50%</div>
           
           <!-- Mock Window Titlebar -->
           <div class="mock-titlebar">
@@ -548,6 +617,29 @@ antigravity.applyTheme({
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btn-cancel-save-modal">取消</button>
         <button class="btn btn-primary" id="btn-confirm-save-preset">确定保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Steam Wallpaper Engine Quick Picker (Workspace In-Place) -->
+  <div class="modal-overlay" id="we-picker-modal">
+    <div class="modal-box modal-box-lg">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h3>🎮 创意工坊素材快速装配</h3>
+          <span class="badge badge-accent" id="we-picker-count">127 项</span>
+        </div>
+        <button class="modal-close" id="btn-close-we-picker">✕</button>
+      </div>
+      <div class="we-picker-search-bar">
+        <input type="text" id="we-picker-search-input" class="input-text" placeholder="🔍 快速过滤壁纸标题或工坊ID...">
+      </div>
+      <div class="we-picker-grid" id="we-picker-grid">
+        <!-- Injected via JS -->
+      </div>
+      <div class="modal-footer we-picker-footer">
+        <span class="picker-hint">💡 点击任意壁纸即可直接装配到当前选中的槽位，并在视窗 0ms 实时预览</span>
+        <button class="btn btn-secondary" id="btn-cancel-we-picker">关闭</button>
       </div>
     </div>
   </div>
