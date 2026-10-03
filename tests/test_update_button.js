@@ -358,10 +358,102 @@ async function main() {
   assert.notStrictEqual(restoredCheck, 'none', 'Update button must be restored');
   console.log('✓ [Test 9] UI state restored cleanly to normal');
 
+  // 11. Test text selection / drag protection (mousedown inside box, mouseup on backdrop)
+  console.log('   Testing drag/selection protection across box boundary...');
+  await new Promise(r => setTimeout(r, 300));
+  await evaluate('window.showThemeUpdateModal()', true);
+  await new Promise(r => setTimeout(r, 300));
+  const boxCoords = await evaluate(`
+    (() => {
+      const box = document.getElementById('antigravity-update-modal-box');
+      if (!box) return null;
+      const r = box.getBoundingClientRect();
+      return { x: r.left + 50, y: r.top + 50 };
+    })()
+  `);
+  assert(boxCoords, 'Modal box must exist for drag test');
+  // mousedown inside box
+  await sendCdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: boxCoords.x, y: boxCoords.y });
+  await sendCdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: boxCoords.x, y: boxCoords.y, button: 'left', clickCount: 1 });
+  // mouseup outside box on backdrop
+  await sendCdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 20, y: 20 });
+  await sendCdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 20, y: 20, button: 'left', clickCount: 1 });
+  await new Promise(r => setTimeout(r, 300));
+  const stillOpen = await evaluate('!!document.getElementById("antigravity-update-modal-overlay")');
+  assert(stillOpen, 'Modal MUST NOT close when dragging/selecting text from box to backdrop');
+  console.log('✓ [Test 10] Text selection drag protection verified (modal remains open)');
+  await sendCdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+  await sendCdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+  await waitForModalClose();
+
+  // 12. Test Keyboard Focus & Enter key on cancel button
+  console.log('   Testing keyboard focus management & Enter key on cancel button...');
+  await new Promise(r => setTimeout(r, 200));
+  await evaluate('window.showThemeUpdateModal()', true);
+  await new Promise(r => setTimeout(r, 250));
+  const focusInfo = await evaluate(`
+    (() => {
+      const active = document.activeElement;
+      return {
+        activeId: active ? active.id : null,
+        activeTag: active ? active.tagName : null
+      };
+    })()
+  `);
+  console.log('   Current active element inside modal:', focusInfo);
+  assert.strictEqual(focusInfo.activeId, 'ag-modal-btn-cancel', 'Cancel button must receive initial keyboard focus');
+  // Send Enter key to active element (ag-modal-btn-cancel)
+  await sendCdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+  await sendCdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+  const isClosedKey = await waitForModalClose();
+  assert(isClosedKey, 'Modal must close when pressing Enter on active cancel button');
+  console.log('✓ [Test 11] Keyboard focus & Enter key dismissal verified');
+
+  // 13. Test rapid reopening during closing animation (race condition defense)
+  console.log('   Testing rapid reopening during fade-out animation...');
+  await evaluate('window.showThemeUpdateModal()', true);
+  await new Promise(r => setTimeout(r, 200));
+  // Start closing
+  await evaluate(`(() => {
+    const o = document.getElementById('antigravity-update-modal-overlay');
+    if (o && o.closeModal) o.closeModal();
+  })()`);
+  // Rapidly reopen at 50ms into 120ms fadeout
+  await new Promise(r => setTimeout(r, 50));
+  await evaluate('window.showThemeUpdateModal()', true);
+  // Wait past normal animation finish (250ms)
+  await new Promise(r => setTimeout(r, 250));
+  const isStillPresent = await evaluate(`(() => {
+    const o = document.getElementById('antigravity-update-modal-overlay');
+    return !!o && o.getAttribute('data-closing') !== 'true';
+  })()`);
+  assert(isStillPresent, 'Fresh modal must remain open after rapid reopen during closing animation');
+  // Clean up
+  await evaluate(`(() => {
+    const o = document.getElementById('antigravity-update-modal-overlay');
+    if (o && o.closeModal) o.closeModal();
+  })()`);
+  await waitForModalClose();
+  console.log('✓ [Test 12] Closing animation race condition defense verified');
+
+  // 14. Verify app.asar production bundle on disk contains all fixes
+  console.log('   Testing production app.asar integrity on disk...');
+  const cp = require('child_process');
+  const asarPath = 'C:\\Users\\Administrator\\AppData\\Local\\Programs\\antigravity\\resources\\app.asar';
+  const tmpCheckDir = path.join(__dirname, 'asar_test_verify');
+  if (fs.existsSync(tmpCheckDir)) fs.rmSync(tmpCheckDir, { recursive: true, force: true });
+  cp.execSync(`npx.cmd --yes asar extract "${asarPath}" "${tmpCheckDir}"`);
+  const asarPreload = fs.readFileSync(path.join(tmpCheckDir, 'dist', 'preload.js'), 'utf8');
+  assert(asarPreload.includes('ag-modal-btn-cancel'), 'app.asar must contain ag-modal-btn-cancel');
+  assert(asarPreload.includes('data-closing'), 'app.asar must contain data-closing');
+  assert(asarPreload.includes('mouseDownTarget'), 'app.asar must contain mouseDownTarget backdrop protection');
+  fs.rmSync(tmpCheckDir, { recursive: true, force: true });
+  console.log('✓ [Test 13] Production app.asar bundle on disk verified complete and synchronized');
+
   ws.close();
 
   console.log('=======================================================');
-  console.log('✨ All 9 Update Button & Modal tests PASSED successfully!');
+  console.log('✨ All 13 Update Button & Modal tests PASSED successfully!');
   console.log('=======================================================');
 }
 

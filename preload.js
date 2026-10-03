@@ -1179,14 +1179,15 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 (function() {
   function findUpdateTarget(el) {
     if (!el) return null;
+    let curr = (el.nodeType === 3) ? el.parentElement : el;
+    if (!curr) return null;
     // CRITICAL: Any element inside the update modal (#antigravity-update-modal-overlay)
     // or modal box (#antigravity-update-modal-box) MUST NEVER be matched as an update trigger!
-    if (typeof el.closest === 'function') {
-      if (el.closest('#antigravity-update-modal-overlay') || el.closest('#antigravity-update-modal-box')) {
+    if (typeof curr.closest === 'function') {
+      if (curr.closest('#antigravity-update-modal-overlay') || curr.closest('#antigravity-update-modal-box')) {
         return null;
       }
     }
-    let curr = el;
     let depth = 0;
     while (curr && curr !== document.body && depth < 6) {
       if (curr.id === 'antigravity-update-modal-overlay' || curr.id === 'antigravity-update-modal-box') {
@@ -1247,17 +1248,19 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
   let lastUpdateModalOpen = 0;
   function showThemeUpdateModal(versionOverride) {
     const now = Date.now();
-    if (now - lastUpdateModalOpen < 200) return document.getElementById('antigravity-update-modal-overlay');
+    const existingOverlay = document.getElementById('antigravity-update-modal-overlay');
+    if (existingOverlay && existingOverlay.getAttribute('data-closing') !== 'true') {
+      if (now - lastUpdateModalOpen < 200) return existingOverlay;
+    }
     lastUpdateModalOpen = now;
 
-    // Remove any existing overlay synchronously
-    const oldOverlay = document.getElementById('antigravity-update-modal-overlay');
-    if (oldOverlay) {
+    // Remove any existing overlay synchronously (including one in the middle of closing)
+    if (existingOverlay) {
       try {
-        oldOverlay.remove();
+        existingOverlay.remove();
       } catch(e) {
         try {
-          if (oldOverlay.parentNode) oldOverlay.parentNode.removeChild(oldOverlay);
+          if (existingOverlay.parentNode) existingOverlay.parentNode.removeChild(existingOverlay);
         } catch(e2) {}
       }
     }
@@ -1354,6 +1357,9 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       </div>
     `;
 
+    const previouslyFocused = (typeof document !== 'undefined') ? document.activeElement : null;
+    box.setAttribute('tabindex', '-1');
+
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
@@ -1361,13 +1367,18 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     const closeModal = () => {
       if (isClosing) return;
       isClosing = true;
+      try { overlay.setAttribute('data-closing', 'true'); } catch(e) {}
       try { window.removeEventListener('keydown', onKeyDown, true); } catch(e) {}
       try { document.removeEventListener('keydown', onKeyDown, true); } catch(e) {}
+      try { overlay.removeEventListener('keydown', onKeyDown, true); } catch(e) {}
       try {
         overlay.style.opacity = '0';
         overlay.style.pointerEvents = 'none';
         box.style.transform = 'scale(0.94) translateY(6px)';
       } catch(e) {}
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+        try { previouslyFocused.focus(); } catch(e) {}
+      }
       setTimeout(() => {
         try {
           overlay.remove();
@@ -1383,6 +1394,14 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     requestAnimationFrame(() => {
       overlay.style.opacity = '1';
       box.style.transform = 'scale(1) translateY(0)';
+      try {
+        const cancelBtn = overlay.querySelector('#ag-modal-btn-cancel');
+        if (cancelBtn) {
+          cancelBtn.focus();
+        } else {
+          box.focus();
+        }
+      } catch(e) {}
     });
 
     const onKeyDown = (e) => {
@@ -1391,33 +1410,62 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
         e.stopPropagation();
         e.stopImmediatePropagation();
         closeModal();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusable = box.querySelectorAll('button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+        if (focusable.length > 0) {
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown, true);
     document.addEventListener('keydown', onKeyDown, true);
+    overlay.addEventListener('keydown', onKeyDown, true);
 
     const closeBtn = overlay.querySelector('#ag-modal-close-x');
-    if (closeBtn) {
-      closeBtn.onclick = (e) => {
-        if (e) { e.preventDefault(); e.stopPropagation(); }
-        closeModal();
-      };
-    }
-
     const cancelBtn = overlay.querySelector('#ag-modal-btn-cancel');
-    if (cancelBtn) {
-      cancelBtn.onclick = (e) => {
+
+    const bindCloseAction = (btn) => {
+      if (!btn) return;
+      btn.onclick = (e) => {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         closeModal();
       };
-    }
+      btn.onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          closeModal();
+        }
+      };
+    };
 
+    bindCloseAction(closeBtn);
+    bindCloseAction(cancelBtn);
+
+    let mouseDownTarget = null;
+    overlay.addEventListener('mousedown', (e) => {
+      mouseDownTarget = e.target;
+    });
     overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
+      if (e.target === overlay && mouseDownTarget === overlay) {
         e.preventDefault();
         e.stopPropagation();
         closeModal();
       }
+      mouseDownTarget = null;
+    });
+    box.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
     });
     box.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1566,10 +1614,11 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
   const onPointerDown = (e) => {
     try {
-      if (e.target && typeof e.target.closest === 'function' && e.target.closest('#antigravity-update-modal-overlay')) {
+      const targetEl = (e.target && e.target.nodeType === 3) ? e.target.parentElement : e.target;
+      if (targetEl && typeof targetEl.closest === 'function' && targetEl.closest('#antigravity-update-modal-overlay')) {
         return;
       }
-      const updateBtn = findUpdateTarget(e.target);
+      const updateBtn = findUpdateTarget(targetEl);
       if (updateBtn) {
         let el = updateBtn;
         let depth = 0;
@@ -1585,10 +1634,11 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
   const onClick = (e) => {
     try {
-      if (e.target && typeof e.target.closest === 'function' && e.target.closest('#antigravity-update-modal-overlay')) {
+      const targetEl = (e.target && e.target.nodeType === 3) ? e.target.parentElement : e.target;
+      if (targetEl && typeof targetEl.closest === 'function' && targetEl.closest('#antigravity-update-modal-overlay')) {
         return;
       }
-      const updateBtn = findUpdateTarget(e.target);
+      const updateBtn = findUpdateTarget(targetEl);
       if (updateBtn) {
         e.preventDefault();
         e.stopPropagation();
