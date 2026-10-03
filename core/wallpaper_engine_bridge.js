@@ -227,7 +227,11 @@ function findDefaultProjectsDirs() {
  * @returns {Array} List of wallpaper items
  */
 function scanWorkshopWallpapers(options = {}) {
-  const { typeFilter = 'all', search = '', refresh = false } = options;
+  let opts = options;
+  if (typeof opts === 'string') {
+    opts = { search: opts };
+  }
+  const { typeFilter = 'all', search = '', refresh = false } = opts || {};
 
   const now = Date.now();
   if (!refresh && _cachedWallpapers && (now - _cacheTime < CACHE_TTL_MS)) {
@@ -380,14 +384,16 @@ function filterWallpapers(list, typeFilter, search) {
     filtered = filtered.filter(w => w.mediaType === 'image');
   }
 
-  if (search) {
-    const q = search.toLowerCase();
-    filtered = filtered.filter(item =>
-      item.title.toLowerCase().includes(q) ||
-      item.id.toLowerCase().includes(q) ||
-      item.workshopId.toLowerCase().includes(q) ||
-      item.file.toLowerCase().includes(q)
-    );
+  if (search && typeof search === 'string') {
+    const q = search.trim().toLowerCase();
+    if (q) {
+      filtered = filtered.filter(item =>
+        (item.title && item.title.toLowerCase().includes(q)) ||
+        (item.id && item.id.toLowerCase().includes(q)) ||
+        (item.workshopId && item.workshopId.toLowerCase().includes(q)) ||
+        (item.file && item.file.toLowerCase().includes(q))
+      );
+    }
   }
 
   return filtered;

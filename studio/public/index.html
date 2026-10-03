@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antigravity Theme Studio</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="ambient-glow"></div>
+
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">🌸</div>
+      <div class="brand-info">
+        <h1>Antigravity Theme Studio</h1>
+        <span class="badge badge-subtle">v1.0 便携版 · 零后台常驻</span>
+      </div>
+    </div>
+
+    <div class="header-status">
+      <div class="status-pill" id="cdp-status">
+        <span class="status-dot"></span>
+        <span class="status-text">正在探测 CDP...</span>
+      </div>
+      <div class="status-pill" id="media-status">
+        <span class="status-dot"></span>
+        <span class="status-text">流媒体 8315</span>
+      </div>
+      <button class="btn btn-danger-ghost btn-sm" id="btn-shutdown" title="彻底关闭配置软件，退出后台服务，零性能占用">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+        退出软件
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Bento Grid -->
+  <main class="bento-container">
+
+    <!-- Bento 1: 5 Slots Visual Assembly Matrix (Hero 2x2) -->
+    <section class="bento-card bento-hero spotlight-card" id="card-slots">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="section-tag">SLOTS MATRIX</span>
+          <h2>🎨 5 大核心槽位装配矩阵</h2>
+          <p class="section-desc">支持拖拽 MP4/JPG/PNG 立即装配，精细微调对齐轴，0.3 秒无感热重载生效</p>
+        </div>
+        <div class="slot-pills" id="slot-selector">
+          <button class="slot-pill active" data-slot="left">主对话底座 (left)</button>
+          <button class="slot-pill" data-slot="mid">活跃终端 (mid)</button>
+          <button class="slot-pill" data-slot="right">右侧抽屉 (right)</button>
+          <button class="slot-pill" data-slot="bottom">提问输入框 (bottom)</button>
+          <button class="slot-pill" data-slot="settings">设置弹窗 (settings)</button>
+        </div>
+      </div>
+
+      <div class="slot-content-layout">
+        <!-- Left: Drag and Drop Upload Area -->
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".mp4,.webm,.jpg,.jpeg,.png,.webp" style="display:none;">
+          <div class="drop-zone-inner">
+            <div class="drop-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="4" ry="4"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+            </div>
+            <div class="drop-title">点击浏览文件 或 将壁纸直接拖入此处</div>
+            <div class="drop-sub">支持 4K/2K MP4 动态视频、JPG、PNG、WebP 素材</div>
+            <div class="drop-actions">
+              <button class="btn btn-secondary btn-sm" id="btn-browse-native">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                浏览本地文件...
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Current Configuration & Position Controls -->
+        <div class="slot-details">
+          <div class="info-card">
+            <div class="info-row">
+              <span class="info-label">当前活跃槽位</span>
+              <span class="info-val highlight-val" id="active-slot-name">主对话界面 / 全局底图</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">素材文件</span>
+              <span class="info-val font-mono" id="active-slot-file">正在获取...</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">素材类型</span>
+              <span class="info-val" id="active-slot-type">
+                <span class="badge badge-accent" id="type-badge">动态视频</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Position Adjustment Controls -->
+          <div class="pos-control-group">
+            <div class="slider-row">
+              <div class="slider-label-line">
+                <span>水平位置 (X轴对齐)</span>
+                <span class="slider-val-tag" id="val-pos-x">50%</span>
+              </div>
+              <input type="range" class="range-slider" id="slider-pos-x" min="0" max="100" value="50">
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-label-line">
+                <span>垂直位置 (Y轴对齐)</span>
+                <span class="slider-val-tag" id="val-pos-y">50%</span>
+              </div>
+              <input type="range" class="range-slider" id="slider-pos-y" min="0" max="100" value="50">
+            </div>
+          </div>
+
+          <div class="slot-footer-action">
+            <button class="btn btn-primary btn-block" id="btn-apply-slot">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              立即应用微调 (0.3s 热重载)
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bento 2: Font Color & Rec. 601 Adaptive (1x1) -->
+    <section class="bento-card spotlight-card" id="card-font">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="section-tag">TYPOGRAPHY</span>
+          <h3>🔤 字体配色与亮度自适应</h3>
+        </div>
+      </div>
+      <p class="section-desc">基于 Rec. 601 加权公式，浅色背景自动附带双重白辉光，深色背景施加暗影保护</p>
+
+      <div class="font-presets-grid" id="font-presets">
+        <!-- Injected via JS -->
+      </div>
+
+      <div class="custom-color-row">
+        <input type="color" id="font-color-picker" value="#ffffff">
+        <input type="text" id="font-hex-input" class="input-text font-mono" placeholder="#ffffff" maxlength="7">
+        <button class="btn btn-secondary btn-sm" id="btn-apply-font">设定字体色</button>
+      </div>
+
+      <div class="preview-text-box" id="font-preview-box">
+        <div class="preview-title" id="preview-text">Antigravity Coding Assistant</div>
+        <div class="preview-sub">代码编辑器 · 终端流光 · 智能侧栏</div>
+      </div>
+    </section>
+
+    <!-- Bento 3: Preset Vault (1x1) -->
+    <section class="bento-card spotlight-card" id="card-presets">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="section-tag">PRESET VAULT</span>
+          <h3>💾 预设保险库</h3>
+        </div>
+        <button class="btn btn-primary-ghost btn-sm" id="btn-open-save-modal">
+          + 另存为新预设
+        </button>
+      </div>
+      <p class="section-desc">一键归档全套 5 槽位壁纸与字体配色，支持秒级整套切装与备份</p>
+
+      <div class="preset-list" id="preset-list">
+        <!-- Injected via JS -->
+      </div>
+    </section>
+
+    <!-- Bento 4: Safety & Vanilla Center (1x1) -->
+    <section class="bento-card spotlight-card" id="card-safety">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="section-tag">SAFETY CENTER</span>
+          <h3>🛡️ 官方原版与安全还原</h3>
+        </div>
+      </div>
+      <p class="section-desc">所有修改 100% 可逆。出厂原生核心 `app.asar.orig.bak` 已建立安全镜像</p>
+
+      <div class="backup-status-banner" id="backup-banner">
+        <span class="backup-dot"></span>
+        <span id="backup-text">官方原版出厂备份已在列</span>
+      </div>
+
+      <div class="safety-actions">
+        <button class="btn btn-secondary btn-block" id="btn-vanilla">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          一键恢复官方原版纯净模式
+        </button>
+        <button class="btn btn-danger-ghost btn-block" id="btn-uninstall">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          彻底物理卸载出厂还原
+        </button>
+      </div>
+    </section>
+
+    <!-- Bento 5: Steam Wallpaper Engine Bridge (1x1) -->
+    <section class="bento-card spotlight-card" id="card-we">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="section-tag">WALLPAPER ENGINE</span>
+          <h3>🎮 Steam 创意工坊直连</h3>
+        </div>
+        <span class="badge badge-accent" id="we-badge">检测中...</span>
+      </div>
+      <p class="section-desc">自动扫描本地跨盘 Steam 库与创意工坊已订阅的 4K/2K 动态壁纸资源</p>
+
+      <div class="we-info-box">
+        <div class="we-stat">
+          <span class="we-stat-num" id="we-count">127</span>
+          <span class="we-stat-label">套创意工坊素材就绪</span>
+        </div>
+        <p class="we-hint">
+          ✨ 软件内壁纸画廊瀑布流展示与即时预览组件现已进入装配通道。当前您可以通过槽位选择器直接导入工坊 MP4 视频！
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal: Save Preset -->
+  <div class="modal-overlay" id="save-preset-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>💾 保存当前全套配置为独立预设</h3>
+        <button class="modal-close" id="btn-close-save-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="new-preset-name">预设名称 (如：赛博朋克、星铁黑塔)</label>
+          <input type="text" id="new-preset-name" class="input-text" placeholder="请输入预设名称...">
+        </div>
+        <div class="form-group">
+          <label for="new-preset-desc">预设描述（可选）</label>
+          <input type="text" id="new-preset-desc" class="input-text" placeholder="如：4K 动态雨夜流光搭配纯白高对比字体...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-save-modal">取消</button>
+        <button class="btn btn-primary" id="btn-confirm-save-preset">保存归档</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
