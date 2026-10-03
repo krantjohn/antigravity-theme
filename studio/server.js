@@ -81,27 +81,41 @@ function checkMediaServerStatus() {
   });
 }
 
-// Helper: Open native Windows file dialog using PowerShell
+// Helper: Open native Windows file dialog
 function openNativeFileDialog() {
   return new Promise((resolve) => {
-    const script = `
-Add-Type -AssemblyName System.Windows.Forms
-$dialog = New-Object System.Windows.Forms.OpenFileDialog
-$dialog.Filter = "媒体与视频文件 (*.mp4;*.webm;*.jpg;*.png;*.webp)|*.mp4;*.webm;*.jpg;*.png;*.webp|所有文件 (*.*)|*.*"
-$dialog.Title = "🌸 选择要作为 Antigravity 壁纸的素材文件"
-$dialog.InitialDirectory = [Environment]::GetFolderPath("MyVideos")
-if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-    Write-Output $dialog.FileName
-} else {
-    Write-Output ""
-}
-    `.trim();
+    const exePath = path.join(__dirname, '..', 'bin', 'file_dialog.exe');
+    if (fs.existsSync(exePath)) {
+      exec(`"${exePath}"`, { encoding: 'utf8' }, (err, stdout) => {
+        if (!err && stdout && stdout.trim()) {
+          resolve(stdout.trim());
+        } else {
+          resolve('');
+        }
+      });
+      return;
+    }
 
-    exec(`powershell -NoProfile -Command "${script.replace(/\r?\n/g, '; ')}"`, (err, stdout) => {
+    // Fallback: PowerShell with Base64 EncodedCommand (avoids pipe character issues)
+    const psScript = [
+      'Add-Type -AssemblyName System.Windows.Forms',
+      '[System.Windows.Forms.Application]::EnableVisualStyles()',
+      '$d = New-Object System.Windows.Forms.OpenFileDialog',
+      '$d.Filter = "媒体与视频文件 (*.mp4;*.webm;*.jpg;*.png;*.webp)|*.mp4;*.webm;*.jpg;*.png;*.webp|所有文件 (*.*)|*.*"',
+      '$d.Title = "🌸 选择要作为 Antigravity 壁纸的素材文件"',
+      '$d.RestoreDirectory = $true',
+      'if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {',
+      '    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
+      '    Write-Host -NoNewline $d.FileName',
+      '}'
+    ].join("\r\n");
+
+    const b64 = Buffer.from(psScript, 'utf16le').toString('base64');
+    exec(`powershell -NoProfile -Sta -EncodedCommand ${b64}`, { encoding: 'utf8' }, (err, stdout) => {
       if (err) {
         resolve('');
       } else {
-        resolve(stdout.trim());
+        resolve(stdout ? stdout.trim() : '');
       }
     });
   });

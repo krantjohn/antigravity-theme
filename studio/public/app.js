@@ -492,6 +492,7 @@ function setupEvents() {
 
 async function browseSlotFile() {
   try {
+    showToast('正在打开文件选择器...', 2000);
     const res = await fetch('/api/file/browse', { method: 'POST' });
     const data = await res.json();
     if (data.success && data.filePath) {
