@@ -788,11 +788,29 @@ function initPreviewToolbar() {
 
   // 1.3.1 Toggle Chat Messages Visibility (Pure Wallpaper Mode)
   const btnToggleChat = document.getElementById('btn-toggle-chat-visibility');
-  if (btnToggleChat && agMockup) {
+  const btnTogglePureWp = document.getElementById('btn-toggle-pure-wallpaper');
+
+  function setChatVisibility(hide) {
+    if (!agMockup) return;
+    agMockup.classList.toggle('hide-chat', hide);
+    if (btnToggleChat) btnToggleChat.classList.toggle('active', hide);
+    if (btnTogglePureWp) {
+      btnTogglePureWp.classList.toggle('active', hide);
+      btnTogglePureWp.innerHTML = hide
+        ? '💬 <span class="pure-wp-text">恢复对话</span>'
+        : '🖼️ <span class="pure-wp-text">纯壁纸</span>';
+    }
+    showToast(hide ? '已开启【纯净壁纸观赏】模式（隐藏对话文字）' : '已恢复对话文字显示');
+  }
+
+  if (btnToggleChat) {
     btnToggleChat.onclick = () => {
-      const isHidden = agMockup.classList.toggle('hide-chat');
-      btnToggleChat.classList.toggle('active', isHidden);
-      showToast(isHidden ? '已开启【纯净壁纸观赏】模式（隐藏对话文字）' : '已恢复对话文字显示');
+      setChatVisibility(!agMockup.classList.contains('hide-chat'));
+    };
+  }
+  if (btnTogglePureWp) {
+    btnTogglePureWp.onclick = () => {
+      setChatVisibility(!agMockup.classList.contains('hide-chat'));
     };
   }
 

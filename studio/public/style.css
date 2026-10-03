@@ -1734,16 +1734,18 @@ body {
 }
 
 .conv-action-btns {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.15s ease;
   margin-left: 6px;
 }
 
-.mock-conv-item:hover .conv-action-btns, .mock-conv-item.active .conv-action-btns {
-  opacity: 1;
+.mock-conv-item:hover .conv-action-btns {
+  display: flex;
+}
+
+.mock-conv-item:hover .conv-time {
+  display: none;
 }
 
 .conv-action-btn {

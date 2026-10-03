@@ -314,6 +314,11 @@
               </select>
             </div>
 
+            <!-- Pure Wallpaper Mode Button -->
+            <button class="btn btn-secondary btn-sm" id="btn-toggle-pure-wallpaper" title="切换纯净壁纸观赏模式 (隐藏对话文字)">
+              🖼️ <span class="pure-wp-text">纯壁纸</span>
+            </button>
+
             <!-- Peek Vanilla Comparison Button -->
             <button class="btn btn-secondary btn-sm btn-peek-vanilla" id="btn-peek-vanilla" title="长按此按钮可即时透视对比 Google 官方原生纯净暗黑界面，松开还原">
               👁️ <span class="peek-text">按住对比原版</span>
@@ -433,12 +438,8 @@
 
                     <div class="mock-conversations-list">
                       <div class="mock-conv-item active">
-                        <span class="conv-status-dots" title="正在执行子代理任务">
-                          <span class="conv-status-dot"></span>
-                          <span class="conv-status-dot"></span>
-                          <span class="conv-status-dot"></span>
-                        </span>
                         <span class="conv-title">更改壁纸</span>
+                        <span class="conv-time">27m</span>
                         <div class="conv-action-btns">
                           <span class="conv-action-btn" title="More options">⋯</span>
                           <span class="conv-action-btn" title="Pin conversation">📌</span>
@@ -491,13 +492,6 @@
                   <div class="mock-chat-header">
                     <div class="mock-breadcrumb-wrap">
                       <span class="mock-breadcrumb-segment">更改壁纸</span>
-                      <span class="mock-breadcrumb-sep">/</span>
-                      <span class="mock-breadcrumb-sub">
-                        <span>Parent Conversation</span>
-                        <span class="mock-breadcrumb-sep">/</span>
-                        <span class="subagent-pulse-icon">⟳</span>
-                        <span>Improvement Coding Worker</span>
-                      </span>
                     </div>
                     <div class="mock-chat-header-actions">
                       <button class="mock-hdr-btn" title="更多选项">⋮</button>
@@ -526,6 +520,18 @@
                         <span>Install IDE</span>
                       </button>
                       <div class="mock-hdr-icons-group">
+                        <button class="mock-hdr-icon" title="分屏视图">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -960 960 960" fill="currentColor"><path d="M140-160q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h680q24 0 42 18t18 42v520q0 24-18 42t-42 18H140Zm0-60h310v-520H140v520Zm370 0h310v-520H510v520Z"/></svg>
+                        </button>
+                        <button class="mock-hdr-icon" title="笔记 / 文档">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -960 960 960" fill="currentColor"><path d="M320-240h320v-60H320v60Zm0-120h320v-60H320v60Zm0-120h200v-60H320v60ZM220-80q-24 0-42-18t-18-42v-680q0-24 18-42t42-18h360l220 220v520q0 24-18 42t-42 18H220Zm320-560v-160H220v680h520v-520H540Z"/></svg>
+                        </button>
+                        <button class="mock-hdr-icon" title="新标签页">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -960 960 960" fill="currentColor"><path d="M450-450H200v-60h250v-250h60v250h250v60H510v250h-60v-250Z"/></svg>
+                        </button>
+                        <button class="mock-hdr-icon" title="展开 / 全屏">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -960 960 960" fill="currentColor"><path d="M120-120v-200h60v140h140v60H120Zm540 0v-60h140v-140h60v200H660ZM120-640v-200h200v60H180v140h-60Zm660 0v-140H640v-60h200v200h-60Z"/></svg>
+                        </button>
                         <button class="mock-hdr-icon" id="btn-toggle-chat-visibility" title="隐藏/显示对话文字 (纯净壁纸观赏)">👁️</button>
                         <button class="mock-hdr-icon active" id="btn-toggle-aux-pane" title="展开/收起右侧副栏">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
@@ -541,58 +547,14 @@
                     <!-- User Message Bubble -->
                     <div class="mock-msg-user">
                       <div class="user-bubble-box" id="mock-user-text">
-                        <span class="user-lightning">⚡</span> boost 继续打磨这个预览界面，和正版还是差了不是一星半点，你可以通过对各个部分截图来复刻原版界面，另外继续优化软件界面排版，现在打开软件都不能完整预览整个界面，还得我自己拉大窗口
+                        你好，请帮我分析代码并优化界面
                       </div>
                     </div>
 
                     <!-- Assistant Markdown Response Card -->
                     <div class="mock-msg-assistant">
                       <div class="assistant-content-card" id="mock-ai-text">
-                        <div class="thought-badge">Thought for 7s &gt;</div>
-                        <p class="msg-desc">I am executing the <strong>Delegation Routine</strong> to address this task.</p>
-                        <p class="msg-desc">I will delegate the work to the <strong>DeepCoder</strong> subagent to capture reference screenshots of the native Antigravity interface, refine every UI component for 1:1 pixel perfection, and overhaul the Theme Studio layout and launcher settings so the entire preview fits comfortably without requiring manual window resizing.</p>
-                        <div class="thought-badge">Worked for 13s &gt;</div>
-                        <p class="msg-desc">已启动 <strong>DeepCoder</strong> (高级 UI/UX 工程师) 子代理，针对正版 Antigravity 原生界面截图与 DOM 结构进行 1:1 细节复刻，并重构 Theme Studio 的启动视口与自适应缩放排版系统，确保开箱即完整呈现、无需手动拉大窗口。我将在子代理完成后进行核验与汇报。</p>
-                        
-                        <!-- Diff / Review pill -->
-                        <div class="msg-file-change-card">
-                          <div class="file-change-left">
-                            <span class="file-dot red-dot">◆</span>
-                            <span>5 files changed</span>
-                            <span class="diff-add">+889</span>
-                            <span class="diff-del">-98</span>
-                            <span class="file-arrow">&gt;</span>
-                          </div>
-                          <button class="btn-review-files">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                            <span>Review</span>
-                          </button>
-                        </div>
-
-                        <!-- Reactions Bar -->
-                        <div class="msg-reaction-bar">
-                          <button class="rx-btn" title="Copy">📋</button>
-                          <button class="rx-btn" title="Good">👍</button>
-                          <button class="rx-btn" title="Bad">👎</button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Subagents Running Drawer (Live Status) -->
-                    <div class="mock-running-subagents-drawer">
-                      <div class="subagents-drawer-header">
-                        <span>2 subagents running</span>
-                        <svg width="14" height="14" viewBox="0 -960 960 960" fill="currentColor"><path d="M480-357.85L253.85-584 296-626.15l184 184 184-184L706.15-584 480-357.85Z"/></svg>
-                      </div>
-                      <div class="subagents-running-list">
-                        <div class="running-agent-item">
-                          <span class="spinner-dot animate-spin"></span>
-                          <span class="agent-name">Layer 0 Coding Worker</span>
-                        </div>
-                        <div class="running-agent-item">
-                          <span class="spinner-dot animate-spin"></span>
-                          <span class="agent-name">Lead UI/UX Engineer</span>
-                        </div>
+                        <p class="msg-desc">你好！代码已为你优化完成，半透明毛玻璃与字体阴影已实时对齐。</p>
                       </div>
                     </div>
 

@@ -70,3 +70,4 @@ tests/verify_*.js
 
 # Third-party unmanaged repositories
 antigravity2-cn-main/
+.tmp_chrome_test_profile/
