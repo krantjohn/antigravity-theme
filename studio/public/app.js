@@ -393,7 +393,7 @@ function parseCoord(val, defaultVal) {
 function renderMockupPreview() {
   if (!agMockup) return;
 
-  const slotsToRender = ['left', 'mid', 'bottom', 'settings'];
+  const slotsToRender = ['left', 'mid', 'right', 'bottom', 'settings'];
 
   slotsToRender.forEach(slotKey => {
     const videoEl = document.getElementById(`mock-video-${slotKey}`);
@@ -502,13 +502,11 @@ function renderMockupPreview() {
   agMockup.style.setProperty('--mock-glass-darkness', currentDarkness / 100);
 
   // Update view mode classes on agMockup
-  if (state.viewMode === 'focus') {
-    agMockup.className = `mockup-window mode-focus-${state.activeSlot}`;
-  } else if (state.viewMode === 'compact') {
-    agMockup.className = 'mockup-window mode-compact';
-  } else {
-    agMockup.className = 'mockup-window';
-  }
+  agMockup.classList.toggle('mode-compact', state.viewMode === 'compact');
+  ['left', 'mid', 'right', 'bottom', 'settings'].forEach(slot => {
+    agMockup.classList.toggle(`mode-focus-${slot}`, state.viewMode === 'focus' && state.activeSlot === slot);
+  });
+  agMockup.classList.toggle('mode-split', state.rightPaneMode === 'split');
 }
 
 function calculateLuminance(hex) {
@@ -638,8 +636,62 @@ function initMockupInteractions() {
   }
 }
 
+function setRightPaneMode(paneMode) {
+  state.rightPaneMode = paneMode;
+  
+  // Update toolbar pills
+  const rightPanePills = document.getElementById('right-pane-pills');
+  if (rightPanePills) {
+    rightPanePills.querySelectorAll('.btn-mode-pill').forEach(b => {
+      b.classList.toggle('active', b.dataset.pane === paneMode);
+    });
+  }
+
+  // Update mockup right pane tabs
+  const tabSubagents = document.getElementById('tab-pane-subagents');
+  const tabTerminal = document.getElementById('tab-pane-terminal');
+  const viewSubagents = document.getElementById('mock-slot-right');
+  const viewTerminal = document.getElementById('mock-slot-mid');
+
+  if (paneMode === 'split') {
+    if (agMockup) agMockup.classList.add('mode-split');
+    if (tabSubagents) tabSubagents.classList.add('active');
+    if (tabTerminal) tabTerminal.classList.add('active');
+    if (viewSubagents) viewSubagents.classList.add('active');
+    if (viewTerminal) viewTerminal.classList.add('active');
+  } else if (paneMode === 'terminal') {
+    if (agMockup) agMockup.classList.remove('mode-split');
+    if (tabSubagents) tabSubagents.classList.remove('active');
+    if (tabTerminal) tabTerminal.classList.add('active');
+    if (viewSubagents) viewSubagents.classList.remove('active');
+    if (viewTerminal) viewTerminal.classList.add('active');
+  } else {
+    // default subagents (right)
+    if (agMockup) agMockup.classList.remove('mode-split');
+    if (tabSubagents) tabSubagents.classList.add('active');
+    if (tabTerminal) tabTerminal.classList.remove('active');
+    if (viewSubagents) viewSubagents.classList.add('active');
+    if (viewTerminal) viewTerminal.classList.remove('active');
+  }
+}
+
 function selectSlot(slotKey) {
   state.activeSlot = slotKey;
+
+  if (slotKey === 'settings') {
+    state.mockSettingsOpen = true;
+    if (mockSettingsOverlay) mockSettingsOverlay.classList.add('active');
+  } else if (state.mockSettingsOpen) {
+    state.mockSettingsOpen = false;
+    if (mockSettingsOverlay) mockSettingsOverlay.classList.remove('active');
+  }
+
+  if (slotKey === 'mid') {
+    setRightPaneMode('terminal');
+  } else if (slotKey === 'right') {
+    setRightPaneMode('subagents');
+  }
+
   renderSlotInspector();
   renderMockupPreview();
 }
@@ -659,6 +711,44 @@ function initPreviewToolbar() {
         showToast(`已切换视窗模式: ${btn.textContent.trim()}`);
       };
     });
+  }
+
+  // 1.1 Right Pane View Switcher (Subagents / Terminal / Split)
+  const rightPanePills = document.getElementById('right-pane-pills');
+  if (rightPanePills) {
+    rightPanePills.querySelectorAll('.btn-mode-pill').forEach(btn => {
+      btn.onclick = () => {
+        const pane = btn.dataset.pane;
+        setRightPaneMode(pane);
+        if (pane === 'terminal') selectSlot('mid');
+        else if (pane === 'subagents') selectSlot('right');
+        showToast(`已切换右侧栏视图: ${btn.textContent.trim()}`);
+      };
+    });
+  }
+
+  // 1.2 Right Pane Internal Tabs & Split Button
+  const tabSub = document.getElementById('tab-pane-subagents');
+  const tabTerm = document.getElementById('tab-pane-terminal');
+  const btnSplit = document.getElementById('btn-pane-split');
+  if (tabSub) tabSub.onclick = () => { setRightPaneMode('subagents'); selectSlot('right'); };
+  if (tabTerm) tabTerm.onclick = () => { setRightPaneMode('terminal'); selectSlot('mid'); };
+  if (btnSplit) btnSplit.onclick = () => {
+    const nextMode = state.rightPaneMode === 'split' ? 'subagents' : 'split';
+    setRightPaneMode(nextMode);
+    showToast(nextMode === 'split' ? '已开启分屏双显 (同时展示任务与终端)' : '已恢复单栏显示');
+  };
+
+  // 1.3 Header auxiliary pane toggle button
+  const btnToggleAux = document.getElementById('btn-toggle-aux-pane');
+  const mockRightPane = document.getElementById('mock-right-pane');
+  if (btnToggleAux && mockRightPane) {
+    btnToggleAux.onclick = () => {
+      const isHidden = mockRightPane.style.display === 'none';
+      mockRightPane.style.display = isHidden ? 'flex' : 'none';
+      btnToggleAux.classList.toggle('active', isHidden);
+      showToast(isHidden ? '已展开右侧副栏' : '已收起右侧副栏');
+    };
   }
 
   // 2. Video Play / Pause Toggle
