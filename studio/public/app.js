@@ -343,16 +343,6 @@ function renderSlotInspector() {
   valPosX.textContent = `${coords.x}%`;
   valPosY.textContent = `${coords.y}%`;
 
-  // Highlight active 3x3 alignment button
-  document.querySelectorAll('.btn-align-cell').forEach(btn => {
-    const alignStr = btn.dataset.align;
-    if (alignStr === `${coords.x}% ${coords.y}%`) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
-  });
-
   // Highlight Active Pill in Selector
   document.querySelectorAll('.slot-pill').forEach(btn => {
     if (btn.dataset.slot === slotKey) {
@@ -769,6 +759,16 @@ function initPreviewToolbar() {
     };
   }
 
+  // 1.3.1 Toggle Chat Messages Visibility (Pure Wallpaper Mode)
+  const btnToggleChat = document.getElementById('btn-toggle-chat-visibility');
+  if (btnToggleChat && agMockup) {
+    btnToggleChat.onclick = () => {
+      const isHidden = agMockup.classList.toggle('hide-chat');
+      btnToggleChat.classList.toggle('active', isHidden);
+      showToast(isHidden ? '已开启【纯净壁纸观赏】模式（隐藏对话文字）' : '已恢复对话文字显示');
+    };
+  }
+
   // 2. Video Play / Pause Toggle
   if (btnTogglePlay && playIcon) {
     btnTogglePlay.onclick = () => {
@@ -1107,10 +1107,6 @@ function updateActiveSlotPosition(x, y) {
   valPosX.textContent = `${x}%`;
   valPosY.textContent = `${y}%`;
 
-  document.querySelectorAll('.btn-align-cell').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.align === `${x}% ${y}%`);
-  });
-
   setDraftDirty(true);
   renderMockupPreview();
 }
@@ -1122,17 +1118,6 @@ function initPositionControls() {
   sliderPosY.oninput = () => {
     updateActiveSlotPosition(sliderPosX.value, sliderPosY.value);
   };
-
-  document.querySelectorAll('.btn-align-cell').forEach(btn => {
-    btn.onclick = () => {
-      const alignStr = btn.dataset.align;
-      if (!alignStr) return;
-      const [xStr, yStr] = alignStr.split(' ');
-      const x = parseInt(xStr, 10);
-      const y = parseInt(yStr, 10);
-      updateActiveSlotPosition(x, y);
-    };
-  });
 
   btnResetPos.onclick = () => {
     const slot = state.activeSlot;

@@ -622,42 +622,6 @@ body {
   transform: scale(1.2);
 }
 
-/* 3x3 Quick Alignment Grid */
-.quick-align-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.btn-align-cell {
-  height: 32px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-
-.btn-align-cell:hover {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: var(--accent-cyan);
-  color: #fff;
-}
-
-.btn-align-cell.active {
-  background: var(--accent-cyan);
-  border-color: var(--accent-cyan);
-  color: #07090e;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
-}
-
 /* Typography Presets Grid */
 .font-presets-grid {
   display: grid;
@@ -1536,8 +1500,7 @@ body {
 /* Assistant Markdown Response Card */
 .mock-msg-assistant {
   align-self: flex-start;
-  max-width: 94%;
-  width: 100%;
+  max-width: 80%;
 }
 
 .assistant-content-card {
@@ -1546,14 +1509,23 @@ body {
   -webkit-backdrop-filter: blur(var(--mock-glass-blur, 16px));
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 12px;
-  padding: 16px 18px;
+  border-bottom-left-radius: 3px;
+  padding: 10px 16px;
   color: var(--mock-font-primary, #ffffff);
   text-shadow: var(--mock-font-shadow, none);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  line-height: 1.5;
+  gap: 6px;
+  line-height: 1.45;
+  font-size: 13px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.mockup-window.hide-chat .mock-chat-scroll {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .msg-section-title {
@@ -1571,9 +1543,11 @@ body {
 }
 
 .msg-desc {
-  font-size: 12.5px;
-  color: #cbd5e1;
+  font-size: 13px;
+  color: var(--mock-font-primary, #f1f5f9);
+  text-shadow: var(--mock-font-shadow, none);
   margin: 0;
+  line-height: 1.5;
 }
 
 .msg-list {

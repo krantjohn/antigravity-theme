@@ -185,19 +185,6 @@
               </div>
               <input type="range" class="range-slider" id="slider-pos-y" min="0" max="100" value="50">
             </div>
-
-            <!-- 3x3 Quick Alignment Grid -->
-            <div class="quick-align-grid">
-              <button class="btn-align-cell" data-align="0% 0%" title="左上对齐">↖</button>
-              <button class="btn-align-cell" data-align="50% 0%" title="中上对齐">↑</button>
-              <button class="btn-align-cell" data-align="100% 0%" title="右上对齐">↗</button>
-              <button class="btn-align-cell" data-align="0% 50%" title="左中对齐">←</button>
-              <button class="btn-align-cell" data-align="50% 50%" title="居中对齐">⊙</button>
-              <button class="btn-align-cell" data-align="100% 50%" title="右中对齐">→</button>
-              <button class="btn-align-cell" data-align="0% 100%" title="左下对齐">↙</button>
-              <button class="btn-align-cell" data-align="50% 100%" title="中下对齐">↓</button>
-              <button class="btn-align-cell" data-align="100% 100%" title="右下对齐">↘</button>
-            </div>
           </div>
         </div>
 
@@ -454,77 +441,25 @@
                     </button>
                     <button class="mock-hdr-icon" title="新建分栏">+</button>
                     <button class="mock-hdr-icon" title="最大化视窗">⤢</button>
+                    <button class="mock-hdr-icon" id="btn-toggle-chat-visibility" title="隐藏/显示对话文字 (纯净壁纸观赏)">👁️</button>
                     <button class="mock-hdr-icon active" id="btn-toggle-aux-pane" title="展开/收起右侧副栏">◨</button>
                   </div>
                 </div>
               </div>
 
-              <!-- Chat Message Stream (1:1 matching user conversation) -->
-              <div class="mock-chat-scroll">
+              <!-- Chat Message Stream (Clean, minimal & realistic preview) -->
+              <div class="mock-chat-scroll" id="mock-chat-scroll">
                 <!-- User Message -->
                 <div class="mock-msg-user">
                   <div class="user-bubble-box" id="mock-user-text">
-                    jix继续优化预览功能
+                    你好，请帮我分析代码并优化界面
                   </div>
                 </div>
 
                 <!-- Assistant Markdown Response Card -->
                 <div class="mock-msg-assistant">
                   <div class="assistant-content-card" id="mock-ai-text">
-                    <div class="msg-section-title">
-                      <span class="num-badge">3.</span>
-                      <strong>毛玻璃模糊度与卡片暗度实时调节 (Glass &amp; Contrast Tuner)</strong>
-                    </div>
-                    <p class="msg-desc">在右侧属性检查器中新增毛玻璃调节模块：</p>
-                    <ul class="msg-list">
-                      <li><strong>毛玻璃模糊半径 (Backdrop Blur)</strong>: <code>0px ~ 36px</code> 实时高斯模糊调节。</li>
-                      <li><strong>卡片遮罩深度 (Card Darkness)</strong>: <code>10% ~ 95%</code> 半透明暗度调节，保障深色/浅色壁纸下的文字可读性。</li>
-                      <li>提供“重置”按钮，可随时一键恢复官方最佳通透质感。</li>
-                    </ul>
-
-                    <div class="msg-section-title">
-                      <span class="num-badge">4.</span>
-                      <strong>🎮 工坊内直接挑选 Steam Wallpaper Engine 壁纸</strong>
-                    </div>
-                    <ul class="msg-list">
-                      <li>在右侧壁纸选择区域点击 <code>🎮 创意工坊...</code>，会直接弹出模态选择框。</li>
-                      <li>支持按名称即时搜索系统内检测到的 127 款动态壁纸，点击任意卡片即可直接填入当前选中的槽位，无需在标签页之间来回跳转。</li>
-                    </ul>
-
-                    <div class="msg-section-title">
-                      <span>🧪 自动化测试验证</span>
-                    </div>
-                    <div class="msg-code-pill-list">
-                      <div class="code-pill-item">
-                        <span class="code-pill-name">tests/test_studio_v3.js</span>
-                        <span class="code-pill-desc">页面静态资源、动态流媒体 206 局部切片串流全部通过。</span>
-                      </div>
-                      <div class="code-pill-item">
-                        <span class="code-pill-name">tests/test_suite.js</span>
-                        <span class="code-pill-desc">17 项完整端到端自动化测试全部通过 (PASS)。</span>
-                      </div>
-                      <div class="code-pill-item">
-                        <span class="code-pill-name">代码提交</span>
-                        <span class="code-pill-desc">已提交并同步推送到远程仓库 origin/main (Commit: 5e5e016)。</span>
-                      </div>
-                    </div>
-
-                    <div class="msg-file-change-card">
-                      <div class="file-change-left">
-                        <span class="file-stat">5 files changed +889 -98</span>
-                        <span class="file-arrow">&gt;</span>
-                      </div>
-                      <button class="btn-review-files">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        Review
-                      </button>
-                    </div>
-
-                    <div class="msg-reaction-bar">
-                      <button class="rx-btn" title="赞">👍</button>
-                      <button class="rx-btn" title="踩">👎</button>
-                      <button class="rx-btn" title="复制">📋</button>
-                    </div>
+                    <p class="msg-desc">你好！代码已为你优化完成，半透明毛玻璃与字体阴影已实时对齐。</p>
                   </div>
                 </div>
 
@@ -543,7 +478,7 @@
 
                 <div class="mock-input-inner-card">
                   <div class="mock-input-textarea-area">
-                    <span class="mock-placeholder-text" id="mock-input-text">此预览界面并未还原原应用的界面，要100%还原，然后合理安排各个区域空间占位</span>
+                    <span class="mock-placeholder-text" id="mock-input-text">Ask anything, @ to mention, / for workflows...</span>
                   </div>
                   <div class="mock-input-bottom-bar">
                     <div class="input-bar-left">
