@@ -250,7 +250,35 @@ body {
 
 .view-panel.active {
   display: block;
+  height: calc(100vh - 48px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
   animation: viewFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* View 1 (#view-preview) has its own nested layout with zero outer scroll */
+#view-preview.active {
+  overflow: hidden;
+}
+
+/* View Panel Scrollbars (Obsidian Theme) */
+.view-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.view-panel::-webkit-scrollbar-track {
+  background: rgba(8, 10, 16, 0.6);
+}
+
+.view-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+}
+
+.view-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.45);
 }
 
 @keyframes viewFadeIn {
@@ -267,7 +295,7 @@ body {
 /* Common Page Container (Views 2, 3, 4) */
 .page-container {
   max-width: 1400px;
-  margin: 28px auto 60px;
+  margin: 24px auto 80px;
   padding: 0 32px;
 }
 
