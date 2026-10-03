@@ -139,6 +139,7 @@ try {
   const { app: _app } = require('electron');
   const _cl = _app ? _app.commandLine : null;
   if (_cl && process.env.ELECTRON_OZONE_PLATFORM_HINT !== 'headless') {
+    if (!_cl.hasSwitch('remote-debugging-port')) _cl.appendSwitch('remote-debugging-port', '8314');
     if (!_cl.hasSwitch('enable-gpu-rasterization')) _cl.appendSwitch('enable-gpu-rasterization');
     if (!_cl.hasSwitch('ignore-gpu-blocklist')) _cl.appendSwitch('ignore-gpu-blocklist');
     if (!_cl.hasSwitch('enable-zero-copy')) _cl.appendSwitch('enable-zero-copy');

@@ -9,7 +9,8 @@ let state = {
   fontPresets: {},
   slotsMeta: {},
   isCdpOnline: false,
-  isMediaOnline: false
+  isMediaOnline: false,
+  isAntigravityRunning: false
 };
 
 // DOM Elements
@@ -92,6 +93,7 @@ async function fetchStatus() {
     if (data.success) {
       state.isCdpOnline = data.isCdpOnline;
       state.isMediaOnline = data.isMediaOnline;
+      state.isAntigravityRunning = data.isAntigravityRunning;
       state.slotsConfig = data.slotsConfig || {};
       state.presets = data.presets || [];
       state.fontPresets = data.fontPresets || {};
@@ -116,6 +118,9 @@ function renderHeaderStatus(data) {
   if (data.isCdpOnline) {
     cdpDot.className = 'status-dot online';
     cdpText.textContent = 'CDP 8314 在线 (0.3s 热重载就绪)';
+  } else if (data.isAntigravityRunning) {
+    cdpDot.className = 'status-dot warning';
+    cdpText.textContent = '需完全重启客户端以激活 8314 热重载';
   } else {
     cdpDot.className = 'status-dot offline';
     cdpText.textContent = 'Antigravity 未启动';
@@ -451,7 +456,13 @@ async function applyPreset(name) {
     });
     const data = await res.json();
     if (data.success) {
-      showToast(`✨ 预设【${name}】已成功应用生效！`);
+      if (state.isCdpOnline) {
+        showToast(`✨ 预设【${name}】已成功应用并极速热重载生效！`);
+      } else if (state.isAntigravityRunning) {
+        showToast(`✨ 预设【${name}】配置已固化！请完全重启一次 Antigravity 客户端使其生效（重启后将激活 0.3s 免重启热重载）`, 7000);
+      } else {
+        showToast(`✨ 预设【${name}】已成功应用！启动 Antigravity 即可显示`);
+      }
       await fetchStatus();
     } else {
       alert('应用预设失败: ' + (data.error || '未知错误'));
@@ -888,7 +899,13 @@ async function uploadSlotWallpaper(file) {
     });
     const data = await res.json();
     if (data.success) {
-      showToast(`✨ 槽位 [${slot}] 壁纸更换完成，已通过 CDP 0.3s 极速热重载生效！`);
+      if (state.isCdpOnline) {
+        showToast(`✨ 槽位 [${slot}] 壁纸更换完成，已通过 CDP 0.3s 极速热重载生效！`);
+      } else if (state.isAntigravityRunning) {
+        showToast(`✨ 槽位 [${slot}] 壁纸配置已固化！请完全重启一次 Antigravity 客户端使其生效并激活热重载`, 6000);
+      } else {
+        showToast(`✨ 槽位 [${slot}] 壁纸更换完成！启动 Antigravity 即可看到效果`);
+      }
       await fetchStatus();
     } else {
       showToast('更换失败: ' + (data.error || '未知错误'));
@@ -910,7 +927,13 @@ async function swapSlotWallpaper(filePath) {
     });
     const data = await res.json();
     if (data.success) {
-      showToast(`✨ 槽位 [${slot}] 壁纸更换完成，已通过 CDP 0.3s 极速热重载生效！`);
+      if (state.isCdpOnline) {
+        showToast(`✨ 槽位 [${slot}] 壁纸更换完成，已通过 CDP 0.3s 极速热重载生效！`);
+      } else if (state.isAntigravityRunning) {
+        showToast(`✨ 槽位 [${slot}] 壁纸配置已固化！请完全重启一次 Antigravity 客户端使其生效并激活热重载`, 6000);
+      } else {
+        showToast(`✨ 槽位 [${slot}] 壁纸更换完成！启动 Antigravity 即可看到效果`);
+      }
       await fetchStatus();
     } else {
       showToast('更换失败: ' + (data.error || '未知错误'));

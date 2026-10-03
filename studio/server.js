@@ -84,6 +84,17 @@ function checkMediaServerStatus() {
   });
 }
 
+// Helper: check if Antigravity process is running
+function checkAntigravityProcess() {
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') return resolve(false);
+    exec('tasklist /FI "IMAGENAME eq Antigravity.exe" /NH', { windowsHide: true }, (err, stdout) => {
+      if (err || !stdout) return resolve(false);
+      resolve(stdout.toLowerCase().includes('antigravity.exe'));
+    });
+  });
+}
+
 // Helper: Open native Windows file dialog using PowerShell Base64 EncodedCommand
 function openNativeFileDialog() {
   return new Promise((resolve) => {
@@ -155,6 +166,7 @@ const server = http.createServer(async (req, res) => {
       hasEverHeartbeated = true;
       const isCdpOnline = await checkPortStatus(8314);
       const isMediaOnline = await checkMediaServerStatus();
+      const isAntigravityRunning = await checkAntigravityProcess();
       const slotsConfig = themeEngine.loadSlotsConfig();
       const presets = themeEngine.listPresets();
       const fontPresets = themeEngine.FONT_PRESETS;
@@ -179,6 +191,7 @@ const server = http.createServer(async (req, res) => {
         success: true,
         isCdpOnline,
         isMediaOnline,
+        isAntigravityRunning,
         slotsConfig,
         presets,
         fontPresets,
