@@ -171,6 +171,13 @@ console.log('[3/5] 正在注入 preload.js (前台开机自启 & 动态壁纸自
 const preloadPath = path.join(appDist, 'preload.js');
 let preloadContent = fs.readFileSync(preloadPath, 'utf8');
 
+if (!preloadContent.includes('downloadUpdate:')) {
+  preloadContent = preloadContent.replace(
+    "applyUpdate: () => electron_1.ipcRenderer.invoke('updater:apply'),",
+    "applyUpdate: () => electron_1.ipcRenderer.invoke('updater:apply'),\n    downloadUpdate: () => electron_1.ipcRenderer.invoke('updater:download'),"
+  );
+}
+
 const slotsConfigPath = path.join(antigravityDir, 'slots_config.json');
 let initialSlotsConfig = null;
 try {
@@ -262,21 +269,80 @@ if (fs.existsSync(kbPath)) {
   }
 }
 
-// 5.5 Patch updater.js (防止静默自动更新再次覆盖主题补丁)
+// 5.5 Patch updater.js (防止静默自动更新再次覆盖主题补丁，并支持按需下载)
 const updaterPath = path.join(appDist, 'updater.js');
 if (fs.existsSync(updaterPath)) {
   let updaterContent = fs.readFileSync(updaterPath, 'utf8');
   if (updaterContent.includes('autoUpdater.autoDownload = true')) {
     updaterContent = updaterContent.replace('autoUpdater.autoDownload = true;', 'autoUpdater.autoDownload = false; // Theme patch: prevent silent overwrite');
     updaterContent = updaterContent.replace('autoUpdater.autoInstallOnAppQuit = electron_1.app.isPackaged;', 'autoUpdater.autoInstallOnAppQuit = false; // Theme patch: prevent silent overwrite');
-    fs.writeFileSync(updaterPath, updaterContent, 'utf8');
-    console.log('✓ updater.js 静默后台下载已拦截保护');
   }
+  if (!updaterContent.includes('Starting download on demand') && updaterContent.includes('case types_1.UpdateState.AvailableForDownload:')) {
+    updaterContent = updaterContent.replace(
+      /case types_1\.UpdateState\.AvailableForDownload:[\s\S]*?case types_1\.UpdateState\.Downloading:/m,
+      `case types_1.UpdateState.AvailableForDownload:
+            console.log('[AutoUpdater] Update available, starting download on demand...');
+            try {
+                if (typeof electron_updater_1.autoUpdater.downloadUpdate === 'function') {
+                    electron_updater_1.autoUpdater.downloadUpdate().catch((err) => {
+                        console.error('[AutoUpdater] Failed to download update:', err.message);
+                    });
+                }
+            } catch (err) {
+                console.error('[AutoUpdater] Download error:', err);
+            }
+            return true;
+        case types_1.UpdateState.Downloading:`
+    );
+  }
+  fs.writeFileSync(updaterPath, updaterContent, 'utf8');
+  console.log('✓ updater.js 静默后台下载已拦截保护 & 按需下载已支持');
 }
+
+// 5.6 Patch ipcHandlers.js (增强 updater:download, updater:apply 及 updater:get-state)
+const ipcHandlersPath = path.join(appDist, 'ipcHandlers.js');
+if (fs.existsSync(ipcHandlersPath)) {
+  let ipcContent = fs.readFileSync(ipcHandlersPath, 'utf8');
+  if (!ipcContent.includes("electron_1.ipcMain.handle('updater:download'")) {
+    ipcContent = ipcContent.replace(
+      "electron_1.ipcMain.handle('updater:apply', async () => {",
+      `electron_1.ipcMain.handle('updater:download', async () => {
+        try {
+            if (typeof electron_updater_1.autoUpdater.downloadUpdate === 'function') {
+                return await electron_updater_1.autoUpdater.downloadUpdate();
+            }
+        } catch(e) {}
+        return (0, updater_1.applyHostUpdate)();
+    });
+    electron_1.ipcMain.handle('updater:apply', async () => {`
+    );
+  }
+  if (ipcContent.includes("(0, updater_1.broadcastState)({ type: types_1.UpdateState.Ready });")) {
+    ipcContent = ipcContent.replace(
+      "(0, updater_1.broadcastState)({ type: types_1.UpdateState.Ready });",
+      "return (0, updater_1.applyHostUpdate)();"
+    );
+  }
+  if (!ipcContent.includes("currentVersion: electron_1.app.getVersion()")) {
+    ipcContent = ipcContent.replace(
+      "return (0, updater_1.getLastState)();",
+      `const _st = (0, updater_1.getLastState)();
+        return {
+            ..._st,
+            currentVersion: electron_1.app.getVersion(),
+            latestVersion: _st.update?.version || '2.19.1',
+            downloadUrl: 'https://storage.googleapis.com/antigravity-public/antigravity-hub/2.19.1-6046815158665216/windows-x64/Antigravity-x64.exe'
+        };`
+    );
+  }
+  fs.writeFileSync(ipcHandlersPath, ipcContent, 'utf8');
+  console.log('✓ ipcHandlers.js updater 下载与应用处理已增强');
+}
+
 
 // 6. 打包生成 app.asar.patched
 console.log('[5/5] 正在重新打包并生成 app.asar.patched 补丁镜像...');
-execSync(`${npxCmd} --yes asar pack "${appDir}" "${patchedAsarPath}"`, { stdio: 'inherit' });
+execSync(`${npxCmd} --yes asar pack "${appDir}" "${patchedAsarPath}" --unpack-dir "node_modules/chrome-devtools-mcp"`, { stdio: 'inherit' });
 console.log('✓ app.asar.patched 打包生成完毕！');
 
 try {

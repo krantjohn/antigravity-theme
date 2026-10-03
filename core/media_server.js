@@ -65,6 +65,78 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         return;
       }
 
+      // API endpoints for updater status & actions
+      if (pathname.startsWith('/api/updater/')) {
+        const updaterAction = pathname.replace('/api/updater/', '');
+        let electronModule = null;
+        let autoUpdaterModule = null;
+        try { electronModule = require('electron'); } catch(e) {}
+        try { autoUpdaterModule = require('electron-updater'); } catch(e) {}
+
+        const currentVer = (electronModule && electronModule.app) ? electronModule.app.getVersion() : '2.18.1';
+        const targetVer = '2.19.1';
+        const directDownloadUrl = 'https://storage.googleapis.com/antigravity-public/antigravity-hub/2.19.1-6046815158665216/windows-x64/Antigravity-x64.exe';
+        const officialSiteUrl = 'https://antigravity.google';
+
+        if (updaterAction === 'status') {
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({
+            currentVersion: currentVer,
+            latestVersion: targetVer,
+            downloadUrl: directDownloadUrl,
+            officialUrl: officialSiteUrl,
+            hasUpdater: !!autoUpdaterModule
+          }));
+          return;
+        }
+
+        if (updaterAction === 'download') {
+          console.log('[MediaServer] Received updater download request');
+          let success = false;
+          if (autoUpdaterModule && autoUpdaterModule.autoUpdater) {
+            try {
+              if (typeof autoUpdaterModule.autoUpdater.downloadUpdate === 'function') {
+                autoUpdaterModule.autoUpdater.downloadUpdate().catch(err => {
+                  console.error('[MediaServer] downloadUpdate error:', err.message);
+                });
+                success = true;
+              }
+            } catch(e) {
+              console.error('[MediaServer] Failed to trigger download:', e);
+            }
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ success, message: success ? 'Download started' : 'Direct link available', downloadUrl: directDownloadUrl }));
+          return;
+        }
+
+        if (updaterAction === 'apply') {
+          console.log('[MediaServer] Received updater apply/restart request');
+          if (autoUpdaterModule && autoUpdaterModule.autoUpdater) {
+            try {
+              autoUpdaterModule.autoUpdater.quitAndInstall();
+            } catch(e) {}
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ success: true }));
+          return;
+        }
+
+        if (updaterAction === 'open-external') {
+          const targetUrl = urlObj.searchParams.get('url') || officialSiteUrl;
+          console.log('[MediaServer] Opening external URL:', targetUrl);
+          if (electronModule && electronModule.shell) {
+            electronModule.shell.openExternal(targetUrl);
+          } else {
+            const { exec } = require('child_process');
+            exec(`start "" "${targetUrl}"`);
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ success: true, url: targetUrl }));
+          return;
+        }
+      }
+
 
 
       // API endpoint for slots config

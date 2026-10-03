@@ -18,6 +18,7 @@ const updaterAPI = {
         };
     },
     applyUpdate: () => electron_1.ipcRenderer.invoke('updater:apply'),
+    downloadUpdate: () => electron_1.ipcRenderer.invoke('updater:download'),
     quitAndInstall: () => electron_1.ipcRenderer.invoke('updater:quit-and-install'),
     checkForUpdates: () => electron_1.ipcRenderer.invoke('updater:check-for-updates'),
     getState: () => electron_1.ipcRenderer.invoke('updater:get-state'),
@@ -1169,6 +1170,389 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     }, 20);
   } else {
     startEngine();
+  }
+})();
+
+
+// ================= Antigravity Update Button & Interactive Modal Handler =================
+(function() {
+  function findUpdateTarget(el) {
+    if (!el) return null;
+    let curr = el;
+    let depth = 0;
+    while (curr && curr !== document.body && depth < 6) {
+      if (curr.getAttribute) {
+        const testId = curr.getAttribute('data-testid') || '';
+        const ariaLabel = curr.getAttribute('aria-label') || '';
+        const text = (curr.innerText || '').trim();
+        if (
+          testId === 'app-update-button' ||
+          testId === 'manual-update-button' ||
+          testId.toLowerCase().includes('update') ||
+          ariaLabel.toLowerCase().includes('update') ||
+          text.includes('Update Available') ||
+          text.includes('Restart to Update') ||
+          text.includes('Install Update')
+        ) {
+          return curr;
+        }
+      }
+      curr = curr.parentElement;
+      depth++;
+    }
+    return null;
+  }
+
+  function hideUpdateButton() {
+    try {
+      let hideStyle = document.getElementById('antigravity-hide-update-btn');
+      if (!hideStyle) {
+        hideStyle = document.createElement('style');
+        hideStyle.id = 'antigravity-hide-update-btn';
+        hideStyle.textContent = '[data-testid="app-update-button"], [data-testid="manual-update-button"], [data-testid*="update"], [aria-label*="update" i] { display: none !important; }';
+        (document.head || document.documentElement).appendChild(hideStyle);
+      }
+      const btns = document.querySelectorAll('[data-testid="app-update-button"], [data-testid="manual-update-button"], [data-testid*="update"], [aria-label*="update" i]');
+      btns.forEach(b => b.style.setProperty('display', 'none', 'important'));
+    } catch(e) {}
+  }
+
+  function openExternalUrl(url) {
+    try {
+      if (window.electronNative && typeof window.electronNative.openExternal === 'function') {
+        window.electronNative.openExternal(url);
+        return;
+      }
+    } catch(e) {}
+    try {
+      fetch('http://127.0.0.1:8315/api/updater/open-external?url=' + encodeURIComponent(url)).catch(() => {});
+    } catch(e) {}
+    try {
+      window.open(url, '_blank');
+    } catch(e) {}
+  }
+
+  let lastUpdateModalOpen = 0;
+  function showThemeUpdateModal(versionOverride) {
+    const now = Date.now();
+    if (now - lastUpdateModalOpen < 200) return document.getElementById('antigravity-update-modal-overlay');
+    lastUpdateModalOpen = now;
+
+    // Remove any existing overlay synchronously
+    const oldOverlay = document.getElementById('antigravity-update-modal-overlay');
+    if (oldOverlay) {
+      try {
+        oldOverlay.remove();
+      } catch(e) {
+        try {
+          if (oldOverlay.parentNode) oldOverlay.parentNode.removeChild(oldOverlay);
+        } catch(e2) {}
+      }
+    }
+
+    let curVer = '2.18.1';
+    let newVer = (typeof versionOverride === 'string' ? versionOverride : '2.19.1');
+    let downloadUrl = 'https://storage.googleapis.com/antigravity-public/antigravity-hub/2.19.1-6046815158665216/windows-x64/Antigravity-x64.exe';
+    let officialUrl = 'https://antigravity.google';
+    let isReady = false;
+    let isDownloading = false;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'antigravity-update-modal-overlay';
+    overlay.style.cssText = [
+      'position: fixed',
+      'inset: 0',
+      'background: rgba(0, 0, 0, 0.72)',
+      'backdrop-filter: blur(8px)',
+      '-webkit-backdrop-filter: blur(8px)',
+      'z-index: 999999',
+      'display: flex',
+      'align-items: center',
+      'justify-content: center',
+      'opacity: 0',
+      'transition: opacity 0.15s ease-out',
+      'user-select: none',
+      'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+    ].join(';');
+
+    const box = document.createElement('div');
+    box.id = 'antigravity-update-modal-box';
+    box.style.cssText = [
+      'background: #18181b',
+      'border: 1px solid rgba(255, 255, 255, 0.12)',
+      'border-radius: 14px',
+      'padding: 22px 24px',
+      'width: 440px',
+      'max-width: 90vw',
+      'box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06)',
+      'color: #f4f4f5',
+      'transform: scale(0.95) translateY(4px)',
+      'transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)'
+    ].join(';');
+
+    box.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">✨</span>
+          <span style="font-size: 16px; font-weight: 600; letter-spacing: -0.2px;">发现新版本 (Update Available)</span>
+        </div>
+        <button id="ag-modal-close-x" style="background: transparent; border: none; color: #a1a1aa; font-size: 16px; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='#fff'" onmouseout="this.style.background='transparent'; this.style.color='#a1a1aa'">✕</button>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px;">
+        <span style="background: rgba(255, 255, 255, 0.07); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08); color: #a1a1aa;">当前版本: <b id="ag-modal-cur-ver" style="color: #e4e4e7;">v${curVer}</b></span>
+        <span style="color: #71717a;">➔</span>
+        <span style="background: rgba(59, 130, 246, 0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-weight: 600;">目标版本: <b id="ag-modal-target-ver">v${newVer}</b></span>
+      </div>
+
+      <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; font-size: 12px; line-height: 1.55; color: #fbbf24;">
+        🛡️ <b>主题保护提示</b>：当前客户端已开启 Antigravity Master Theme 增强渲染与动态壁纸引擎。为防止官方更新静默覆盖您的个性化配置与壁纸，自动更新已设为手动确认模式。
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button id="ag-modal-btn-primary" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; border: none; border-radius: 10px; padding: 11px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); transition: all 0.15s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 18px rgba(37, 99, 235, 0.45)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 14px rgba(37, 99, 235, 0.35)'">
+          ⬇️ 开始后台下载更新
+        </button>
+
+        <div style="display: flex; gap: 8px;">
+          <button id="ag-modal-btn-download" style="flex: 1; background: rgba(255, 255, 255, 0.07); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 9px 12px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">
+            📥 下载官方安装包 (.exe)
+          </button>
+          <button id="ag-modal-btn-changelog" style="flex: 1; background: rgba(255, 255, 255, 0.07); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 9px 12px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.07)'">
+            🌐 前往官网 / 更新日志
+          </button>
+        </div>
+
+        <button id="ag-modal-btn-dismiss" style="margin-top: 2px; background: transparent; color: #94a3b8; border: none; border-radius: 8px; padding: 7px 10px; font-size: 12px; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.color='#cbd5e1'; this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.color='#94a3b8'; this.style.background='transparent'">
+          稍后提醒 / 隐藏更新按钮
+        </button>
+      </div>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const closeModal = () => {
+      try { document.removeEventListener('keydown', onKeyDown); } catch(e) {}
+      overlay.style.opacity = '0';
+      overlay.style.pointerEvents = 'none';
+      box.style.transform = 'scale(0.94) translateY(6px)';
+      setTimeout(() => {
+        try {
+          overlay.remove();
+        } catch(e) {
+          try {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          } catch(e2) {}
+        }
+      }, 100);
+    };
+    overlay.closeModal = closeModal;
+
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '1';
+      box.style.transform = 'scale(1) translateY(0)';
+    });
+
+    overlay.querySelector('#ag-modal-close-x').onclick = closeModal;
+    overlay.onclick = (e) => {
+      if (e.target === overlay) closeModal();
+    };
+
+    overlay.querySelector('#ag-modal-btn-download').onclick = () => {
+      closeModal();
+      openExternalUrl(downloadUrl);
+    };
+
+    overlay.querySelector('#ag-modal-btn-changelog').onclick = () => {
+      closeModal();
+      openExternalUrl(officialUrl);
+    };
+
+    overlay.querySelector('#ag-modal-btn-dismiss').onclick = () => {
+      closeModal();
+      sessionStorage.setItem('ag_hide_update', '1');
+      hideUpdateButton();
+    };
+
+    const primaryBtn = overlay.querySelector('#ag-modal-btn-primary');
+    primaryBtn.onclick = async () => {
+      if (isReady) {
+        closeModal();
+        try {
+          if (window.electronUpdater && window.electronUpdater.quitAndInstall) {
+            await window.electronUpdater.quitAndInstall();
+            return;
+          }
+        } catch(err) {}
+        try {
+          await fetch('http://127.0.0.1:8315/api/updater/apply', { method: 'POST' });
+        } catch(err) {}
+      } else if (isDownloading) {
+        closeModal();
+      } else {
+        primaryBtn.style.opacity = '0.85';
+        primaryBtn.style.pointerEvents = 'none';
+        primaryBtn.innerHTML = '<span>⏳ 正在启动后台更新下载...</span>';
+
+        let triggered = false;
+        try {
+          if (window.electronUpdater && window.electronUpdater.downloadUpdate) {
+            await window.electronUpdater.downloadUpdate();
+            triggered = true;
+          } else if (window.electronUpdater && window.electronUpdater.applyUpdate) {
+            await window.electronUpdater.applyUpdate();
+            triggered = true;
+          }
+        } catch(err) {}
+
+        try {
+          const resp = await fetch('http://127.0.0.1:8315/api/updater/download', { method: 'POST' });
+          if (resp.ok) triggered = true;
+        } catch(err) {}
+
+        setTimeout(() => {
+          if (triggered) {
+            primaryBtn.innerHTML = '<span>✓ 已启动后台静默下载，完成后可重启生效</span>';
+            setTimeout(closeModal, 1500);
+          } else {
+            primaryBtn.innerHTML = '<span>📥 正在打开官方安装包直接下载...</span>';
+            openExternalUrl(downloadUrl);
+            setTimeout(closeModal, 1200);
+          }
+        }, 600);
+      }
+    };
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+
+    // Asynchronously update version info and state in background
+    (async () => {
+      try {
+        if (typeof window !== 'undefined' && window.electronUpdater && window.electronUpdater.getState) {
+          const st = await window.electronUpdater.getState();
+          if (st?.currentVersion) curVer = st.currentVersion;
+          if (st?.latestVersion) newVer = st.latestVersion;
+          else if (st?.update?.version) newVer = st.update.version;
+          if (st?.type === 'ready') isReady = true;
+          if (st?.type === 'downloading') isDownloading = true;
+        }
+      } catch(e) {}
+
+      try {
+        const res = await fetch('http://127.0.0.1:8315/api/updater/status', { signal: AbortSignal.timeout(400) });
+        if (res.ok) {
+          const api = await res.json();
+          if (api.currentVersion) curVer = api.currentVersion;
+          if (api.latestVersion) newVer = api.latestVersion;
+          if (api.downloadUrl) downloadUrl = api.downloadUrl;
+          if (api.officialUrl) officialUrl = api.officialUrl;
+        }
+      } catch(e) {}
+
+      // Update UI elements if modal is still open
+      try {
+        const curEl = overlay.querySelector('#ag-modal-cur-ver');
+        if (curEl) curEl.textContent = 'v' + curVer;
+        const targetEl = overlay.querySelector('#ag-modal-target-ver');
+        if (targetEl) targetEl.textContent = 'v' + newVer;
+        if (isReady) {
+          primaryBtn.innerHTML = '🔄 立即重启并更新 (Restart to Update)';
+        } else if (isDownloading) {
+          primaryBtn.innerHTML = '⏳ 正在后台下载更新包...';
+        }
+      } catch(e) {}
+    })();
+
+    return overlay;
+  }
+
+  // Expose on window for direct access / testing
+  if (typeof window !== 'undefined') {
+    window.showThemeUpdateModal = showThemeUpdateModal;
+    window.hideThemeUpdateButton = hideUpdateButton;
+  }
+
+  // Check if previously dismissed in this session
+  try {
+    if (sessionStorage.getItem('ag_hide_update') === '1') {
+      hideUpdateButton();
+    }
+  } catch(e) {}
+
+  const onPointerDown = (e) => {
+    try {
+      const updateBtn = findUpdateTarget(e.target);
+      if (updateBtn) {
+        let el = updateBtn;
+        let depth = 0;
+        while (el && el !== document.body && depth < 4) {
+          el.style.setProperty('-webkit-app-region', 'no-drag', 'important');
+          el.style.setProperty('app-region', 'no-drag', 'important');
+          el = el.parentElement;
+          depth++;
+        }
+      }
+    } catch(err) {}
+  };
+
+  const onClick = (e) => {
+    try {
+      const updateBtn = findUpdateTarget(e.target);
+      if (updateBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (typeof window !== 'undefined' && window.showThemeUpdateModal) {
+          window.showThemeUpdateModal();
+        } else {
+          showThemeUpdateModal();
+        }
+      }
+    } catch(err) {}
+  };
+
+  try {
+    if (window.__antigravityUpdateClickHandler) {
+      document.removeEventListener('click', window.__antigravityUpdateClickHandler, true);
+    }
+    if (window.__antigravityUpdatePointerHandler) {
+      document.removeEventListener('pointerdown', window.__antigravityUpdatePointerHandler, true);
+    }
+    window.__antigravityUpdateClickHandler = onClick;
+    window.__antigravityUpdatePointerHandler = onPointerDown;
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('click', onClick, true);
+  } catch(e) {}
+
+  // Ensure styling for update buttons has no-drag
+  const injectStyle = () => {
+    try {
+      let st = document.getElementById('antigravity-update-nodrag-style');
+      if (!st && document.head) {
+        st = document.createElement('style');
+        st.id = 'antigravity-update-nodrag-style';
+        st.textContent = `
+          [data-testid*="update" i], [data-testid="app-update-button"], [data-testid="manual-update-button"] {
+            -webkit-app-region: no-drag !important;
+            app-region: no-drag !important;
+            cursor: pointer !important;
+          }
+        `;
+        document.head.appendChild(st);
+      }
+    } catch(e) {}
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectStyle);
+  } else {
+    injectStyle();
   }
 })();
 // =========================================================================

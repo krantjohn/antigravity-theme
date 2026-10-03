@@ -51,7 +51,7 @@ if (fs.existsSync(asarPath) && !fs.existsSync(asarOrigBak)) {
 console.log('[1/3] 正在从源码打包最新补丁镜像...');
 const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 try {
-  execSync(`${npxCmd} --yes asar pack "${appDir}" "${patchedAsarPath}"`, { stdio: 'inherit' });
+  execSync(`${npxCmd} --yes asar pack "${appDir}" "${patchedAsarPath}" --unpack-dir "node_modules/chrome-devtools-mcp"`, { stdio: 'inherit' });
 } catch (err) {
   console.error('❌ 打包失败:', err.message);
   process.exit(1);
