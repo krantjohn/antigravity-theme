@@ -675,21 +675,35 @@ function setRightPaneMode(paneMode) {
   const viewSubagents = document.getElementById('mock-slot-right');
   const viewTerminal = document.getElementById('mock-slot-mid');
 
+  const btnToggleAux = document.getElementById('btn-toggle-aux-pane');
+
   if (paneMode === 'split') {
-    if (agMockup) agMockup.classList.add('mode-split');
+    if (agMockup) {
+      agMockup.classList.remove('aux-closed');
+      agMockup.classList.add('mode-split');
+    }
+    if (btnToggleAux) btnToggleAux.classList.add('active');
     if (tabSubagents) tabSubagents.classList.add('active');
     if (tabTerminal) tabTerminal.classList.add('active');
     if (viewSubagents) viewSubagents.classList.add('active');
     if (viewTerminal) viewTerminal.classList.add('active');
   } else if (paneMode === 'terminal') {
-    if (agMockup) agMockup.classList.remove('mode-split');
+    if (agMockup) {
+      agMockup.classList.remove('aux-closed');
+      agMockup.classList.remove('mode-split');
+    }
+    if (btnToggleAux) btnToggleAux.classList.add('active');
     if (tabSubagents) tabSubagents.classList.remove('active');
     if (tabTerminal) tabTerminal.classList.add('active');
     if (viewSubagents) viewSubagents.classList.remove('active');
     if (viewTerminal) viewTerminal.classList.add('active');
   } else {
     // default subagents (right)
-    if (agMockup) agMockup.classList.remove('mode-split');
+    if (agMockup) {
+      agMockup.classList.remove('aux-closed');
+      agMockup.classList.remove('mode-split');
+    }
+    if (btnToggleAux) btnToggleAux.classList.add('active');
     if (tabSubagents) tabSubagents.classList.add('active');
     if (tabTerminal) tabTerminal.classList.remove('active');
     if (viewSubagents) viewSubagents.classList.add('active');
@@ -763,13 +777,12 @@ function initPreviewToolbar() {
 
   // 1.3 Header auxiliary pane toggle button
   const btnToggleAux = document.getElementById('btn-toggle-aux-pane');
-  const mockRightPane = document.getElementById('mock-right-pane');
-  if (btnToggleAux && mockRightPane) {
+  if (btnToggleAux && agMockup) {
     btnToggleAux.onclick = () => {
-      const isHidden = mockRightPane.style.display === 'none';
-      mockRightPane.style.display = isHidden ? 'flex' : 'none';
-      btnToggleAux.classList.toggle('active', isHidden);
-      showToast(isHidden ? '已展开右侧副栏' : '已收起右侧副栏');
+      const isClosed = agMockup.classList.toggle('aux-closed');
+      btnToggleAux.classList.toggle('active', !isClosed);
+      showToast(isClosed ? '已收起右侧副栏 (主对话更宽阔)' : '已展开右侧副栏');
+      updateMockupScale();
     };
   }
 
@@ -918,17 +931,18 @@ function updateMockupScale() {
 
   if (!vpW || !vpH) return;
 
-  // Mockup base dimension is 1360 x 800 (100% authentic native Antigravity aspect ratio)
+  // Base dimensions: standard 1360 x 780, compact mode 1360 x 520
+  const isCompact = agMockup.classList.contains('mode-compact');
   const baseW = 1360;
-  const baseH = 800;
+  const baseH = isCompact ? 520 : 780;
 
-  // 24px total breathing margin (12px on each boundary)
-  const availW = Math.max(100, vpW - 24);
-  const availH = Math.max(100, vpH - 24);
+  // 16px total breathing margin (8px on each boundary)
+  const availW = Math.max(100, vpW - 16);
+  const availH = Math.max(100, vpH - 16);
 
   const scale = Math.min(availW / baseW, availH / baseH);
-  // Clamp scale safely between 0.35 and 1.25
-  const fitScale = Math.max(0.35, Math.min(scale, 1.25));
+  // Clamp scale safely between 0.30 and 1.35
+  const fitScale = Math.max(0.30, Math.min(scale, 1.35));
 
   state.zoomLevel = Math.round(fitScale * 100);
 
@@ -983,6 +997,32 @@ function initResponsiveAutoFit() {
     btnZoom100.onclick = () => {
       setManualScale(100);
       showToast('已还原为 100% 原始尺寸');
+    };
+  }
+
+  // Inspector Collapse / Expand Controls
+  const btnToggleInspector = document.getElementById('btn-toggle-inspector');
+  const btnExpandInspector = document.getElementById('btn-expand-inspector');
+  const inspectorPanel = document.getElementById('inspector-panel');
+  const workspaceContainer = document.querySelector('.workspace-container');
+
+  function setInspectorCollapsed(collapsed) {
+    if (workspaceContainer) workspaceContainer.classList.toggle('inspector-collapsed', collapsed);
+    if (inspectorPanel) inspectorPanel.classList.toggle('is-collapsed', collapsed);
+    setTimeout(updateMockupScale, 80);
+    setTimeout(updateMockupScale, 260);
+  }
+
+  if (btnToggleInspector) {
+    btnToggleInspector.onclick = () => {
+      setInspectorCollapsed(true);
+      showToast('已收起参数面板 (全景超宽视口)');
+    };
+  }
+  if (btnExpandInspector) {
+    btnExpandInspector.onclick = () => {
+      setInspectorCollapsed(false);
+      showToast('已展开参数面板');
     };
   }
 
@@ -2045,6 +2085,14 @@ function setupEventListeners() {
 // 20. Bootstrap
 // =========================================================================
 window.addEventListener('DOMContentLoaded', () => {
+  // Ensure standalone app window starts fully maximized without clipping
+  try {
+    if (window.screen && (window.outerWidth < window.screen.availWidth * 0.95 || window.outerHeight < window.screen.availHeight * 0.9)) {
+      window.moveTo(0, 0);
+      window.resizeTo(window.screen.availWidth, window.screen.availHeight);
+    }
+  } catch (_) {}
+
   initTabs();
   initSpotlightEffect();
   initMockupInteractions();

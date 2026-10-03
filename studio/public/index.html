@@ -57,15 +57,15 @@
       </div>
       <button class="btn btn-warning-ghost btn-sm" id="btn-restart-app" title="一键重启 Antigravity 客户端以激活 8314 热重载或装载最新补丁">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-        重启客户端
+        <span class="header-btn-text">重启客户端</span>
       </button>
       <button class="btn btn-secondary btn-sm" id="btn-reload" title="刷新页面">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-        刷新
+        <span class="header-btn-text">刷新</span>
       </button>
       <button class="btn btn-danger-ghost btn-sm" id="btn-shutdown" title="彻底关闭配置软件，退出后台服务，零性能占用">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
-        退出软件
+        <span class="header-btn-text">退出软件</span>
       </button>
     </div>
   </header>
@@ -75,13 +75,26 @@
     <div class="workspace-container">
       
       <!-- Left Column: Inspector & Customizer -->
-      <aside class="inspector-panel spotlight-card">
+      <aside class="inspector-panel spotlight-card" id="inspector-panel">
         
+        <!-- Inspector Collapsed Thin Bar (When collapsed for max preview) -->
+        <div class="inspector-collapsed-bar" id="inspector-collapsed-bar">
+          <button class="btn-toggle-inspector" id="btn-expand-inspector" title="展开参数调节侧栏">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <span class="collapsed-inspector-text">INSPECTOR</span>
+        </div>
+
         <!-- Draft Commit Actions Toolbar -->
         <div class="draft-action-bar">
-          <div class="draft-status-wrap">
-            <span class="draft-indicator synced" id="draft-indicator"></span>
-            <span class="draft-status-text" id="draft-status-text">与当前客户端同步</span>
+          <div class="draft-top-row" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="draft-status-wrap">
+              <span class="draft-indicator synced" id="draft-indicator"></span>
+              <span class="draft-status-text" id="draft-status-text">与当前客户端同步</span>
+            </div>
+            <button class="btn-toggle-inspector" id="btn-toggle-inspector" title="收起参数调节面板以获得更大全景预览视口">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
           </div>
           <div class="draft-btn-group">
             <button class="btn btn-primary btn-sm btn-glow" id="btn-commit-draft" title="将当前实时预览的全部槽位壁纸、位置对齐与字体正式应用至 Antigravity">
@@ -265,9 +278,9 @@
 
             <!-- Right Pane View Switcher -->
             <div class="view-mode-pills" id="right-pane-pills">
-              <button class="btn-mode-pill active" data-pane="subagents" title="显示右侧副栏 (槽位: right)">🤖 任务栏(right)</button>
-              <button class="btn-mode-pill" data-pane="terminal" title="显示活跃终端 (槽位: mid)">💻 终端(mid)</button>
-              <button class="btn-mode-pill" data-pane="split" title="分屏对比同时预览终端与任务栏">🪟 双显分屏</button>
+              <button class="btn-mode-pill active" data-pane="subagents" title="显示右侧副栏 (槽位: right)">🤖 任务栏<span class="mode-extra">(right)</span></button>
+              <button class="btn-mode-pill" data-pane="terminal" title="显示活跃终端 (槽位: mid)">💻 终端<span class="mode-extra">(mid)</span></button>
+              <button class="btn-mode-pill" data-pane="split" title="分屏对比同时预览终端与任务栏">🪟 双显<span class="mode-extra">分屏</span></button>
             </div>
           </div>
 
@@ -276,7 +289,7 @@
             <div class="preview-zoom-controls">
               <button class="btn-zoom-pill active" id="btn-auto-fit" title="全自适应缩放 (开箱即全景完整呈现，杜绝裁剪)">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                <span>自适应填满</span>
+                <span class="auto-fit-text">自适应填满</span>
               </button>
               <span class="zoom-divider"></span>
               <button class="btn-zoom-step" id="btn-zoom-out" title="缩小预览视窗">-</button>
@@ -303,7 +316,7 @@
 
             <!-- Peek Vanilla Comparison Button -->
             <button class="btn btn-secondary btn-sm btn-peek-vanilla" id="btn-peek-vanilla" title="长按此按钮可即时透视对比 Google 官方原生纯净暗黑界面，松开还原">
-              👁️ 按住对比原版
+              👁️ <span class="peek-text">按住对比原版</span>
             </button>
           </div>
         </div>
@@ -420,9 +433,17 @@
 
                     <div class="mock-conversations-list">
                       <div class="mock-conv-item active">
+                        <span class="conv-status-dots" title="正在执行子代理任务">
+                          <span class="conv-status-dot"></span>
+                          <span class="conv-status-dot"></span>
+                          <span class="conv-status-dot"></span>
+                        </span>
                         <span class="conv-title">更改壁纸</span>
-                        <span class="conv-time">27m</span>
-                        <span class="conv-more-dots">⋯</span>
+                        <div class="conv-action-btns">
+                          <span class="conv-action-btn" title="More options">⋯</span>
+                          <span class="conv-action-btn" title="Pin conversation">📌</span>
+                          <span class="conv-action-btn" title="Archive conversation">📥</span>
+                        </div>
                       </div>
                       <div class="mock-conv-item">
                         <span class="conv-title">Software Performance Trou...</span>
@@ -468,13 +489,40 @@
 
                   <!-- Top Chat Header -->
                   <div class="mock-chat-header">
-                    <div class="mock-chat-title">
-                      <span class="chat-title-text">更改壁纸</span>
+                    <div class="mock-breadcrumb-wrap">
+                      <span class="mock-breadcrumb-segment">更改壁纸</span>
+                      <span class="mock-breadcrumb-sep">/</span>
+                      <span class="mock-breadcrumb-sub">
+                        <span>Parent Conversation</span>
+                        <span class="mock-breadcrumb-sep">/</span>
+                        <span class="subagent-pulse-icon">⟳</span>
+                        <span>Improvement Coding Worker</span>
+                      </span>
                     </div>
                     <div class="mock-chat-header-actions">
                       <button class="mock-hdr-btn" title="更多选项">⋮</button>
-                      <button class="mock-hdr-pill-btn" title="Install IDE">
-                        <span class="ide-icon">▲</span>
+                      <button class="mock-install-ide-btn" title="Install IDE">
+                        <span class="mock-install-ide-icon">
+                          <svg width="15" height="15" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                              <filter id="ide-f0" x="-12.1" y="-45.9" width="77.7" height="68.9" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="4.4"/></filter>
+                              <filter id="ide-f1" x="17.4" y="-52.1" width="152.4" height="151.1" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="21.2"/></filter>
+                              <filter id="ide-f2" x="-85" y="-40.7" width="160.5" height="143" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="18"/></filter>
+                              <clipPath id="ide-clip"><rect width="96" height="96" fill="white"/></clipPath>
+                              <mask id="ide-mask" maskUnits="userSpaceOnUse" x="0" y="4" width="95" height="88">
+                                <path d="M85.9734 89.3438C91.2234 93.2812 99.0984 90.6562 91.8796 83.4375C70.2234 62.4375 74.8171 4.6875 47.9109 4.6875C21.0046 4.6875 25.5984 62.4375 3.94213 83.4375C-3.93287 91.3125 4.59838 93.2812 9.84838 89.3438C30.1921 75.5625 28.8796 51.2812 47.9109 51.2812C66.9421 51.2812 65.6296 75.5625 85.9734 89.3438Z" fill="white"/>
+                              </mask>
+                            </defs>
+                            <g clip-path="url(#ide-clip)">
+                              <path d="M85.9734 89.3438C91.2234 93.2812 99.0984 90.6562 91.8796 83.4375C70.2234 62.4375 74.8171 4.6875 47.9109 4.6875C21.0046 4.6875 25.5984 62.4375 3.94213 83.4375C-3.93287 91.3125 4.59838 93.2812 9.84838 89.3438C30.1921 75.5625 28.8796 51.2812 47.9109 51.2812C66.9421 51.2812 65.6296 75.5625 85.9734 89.3438Z" fill="#3186FF"/>
+                              <g mask="url(#ide-mask)">
+                                <ellipse cx="25.6" cy="30.2" rx="25.6" ry="30.2" fill="#FFE432" filter="url(#ide-f0)"/>
+                                <ellipse cx="93.6" cy="23.5" rx="33.2" ry="33.9" fill="#FC413D" filter="url(#ide-f1)"/>
+                                <ellipse cx="-4.8" cy="30.8" rx="34.7" ry="44.9" fill="#00B95C" filter="url(#ide-f2)"/>
+                              </g>
+                            </g>
+                          </svg>
+                        </span>
                         <span>Install IDE</span>
                       </button>
                       <div class="mock-hdr-icons-group">
