@@ -48,6 +48,7 @@ const newPresetNameInput = document.getElementById('new-preset-name');
 const btnVanilla = document.getElementById('btn-vanilla');
 const btnUninstall = document.getElementById('btn-uninstall');
 const btnShutdown = document.getElementById('btn-shutdown');
+const btnReload = document.getElementById('btn-reload');
 const toastContainer = document.getElementById('toast-container');
 const weBadge = document.getElementById('we-badge');
 const weCount = document.getElementById('we-count');
@@ -93,12 +94,12 @@ async function fetchStatus() {
       state.fontPresets = data.fontPresets || {};
       state.slotsMeta = data.slotsMeta || {};
 
-      renderHeaderStatus(data);
-      renderSlotView();
-      renderFontPresets();
-      renderPresetsList();
-      renderWeStatus(data.weCount);
-      renderBackupStatus(data.hasBackup, data.backupSize);
+      try { renderHeaderStatus(data); } catch(e) { console.error('Error in renderHeaderStatus:', e); }
+      try { renderSlotView(); } catch(e) { console.error('Error in renderSlotView:', e); }
+      try { renderFontPresets(); } catch(e) { console.error('Error in renderFontPresets:', e); }
+      try { renderPresetsList(); } catch(e) { console.error('Error in renderPresetsList:', e); }
+      try { renderWeStatus(data.weCount); } catch(e) { console.error('Error in renderWeStatus:', e); }
+      try { renderBackupStatus(data.hasBackup, data.backupSize); } catch(e) { console.error('Error in renderBackupStatus:', e); }
     }
   } catch (err) {
     console.error('Failed to fetch status:', err);
@@ -182,29 +183,44 @@ function parseCoord(val, defaultVal) {
 // 6. Render Font Presets
 function renderFontPresets() {
   fontPresetsGrid.innerHTML = '';
-  const currentFont = state.slotsConfig.fontColor || '#ffffff';
-
-  for (const [key, preset] of Object.entries(state.fontPresets)) {
-    const btn = document.createElement('button');
-    btn.className = 'font-preset-btn';
-    btn.innerHTML = `
-      <span class="font-dot" style="background-color: ${preset.primary};"></span>
-      <span>${preset.name.split(' ')[0]}</span>
-    `;
-    btn.onclick = async () => {
-      await applyFontColor(preset.primary);
-    };
-    fontPresetsGrid.appendChild(btn);
+  let currentFontHex = '#ffffff';
+  if (state.slotsConfig && state.slotsConfig.fontColor) {
+    if (typeof state.slotsConfig.fontColor === 'string') {
+      currentFontHex = state.slotsConfig.fontColor;
+    } else if (state.slotsConfig.fontColor.primary) {
+      currentFontHex = state.slotsConfig.fontColor.primary;
+    }
   }
 
-  fontColorPicker.value = currentFont.length === 7 ? currentFont : '#ffffff';
-  fontHexInput.value = currentFont;
-  updateFontPreview(currentFont);
+  if (state.fontPresets) {
+    for (const [key, preset] of Object.entries(state.fontPresets)) {
+      const btn = document.createElement('button');
+      btn.className = 'font-preset-btn';
+      btn.innerHTML = `
+        <span class="font-dot" style="background-color: ${preset.primary};"></span>
+        <span>${preset.name.split(' ')[0]}</span>
+      `;
+      btn.onclick = async () => {
+        await applyFontColor(preset.primary);
+      };
+      fontPresetsGrid.appendChild(btn);
+    }
+  }
+
+  fontColorPicker.value = (typeof currentFontHex === 'string' && currentFontHex.length === 7) ? currentFontHex : '#ffffff';
+  fontHexInput.value = currentFontHex;
+  updateFontPreview(currentFontHex);
 }
 
 function updateRec601Visualizer(hex) {
-  previewText.style.color = hex;
-  const lum = calculateLuminance(hex);
+  let colorStr = '#ffffff';
+  if (typeof hex === 'string') {
+    colorStr = hex;
+  } else if (hex && typeof hex === 'object' && hex.primary) {
+    colorStr = hex.primary;
+  }
+  previewText.style.color = colorStr;
+  const lum = calculateLuminance(colorStr);
   if (lum < 128) {
     previewText.style.textShadow = '0 0 2px #fff, 0 1px 3px rgba(255,255,255,0.95)';
   } else {
@@ -214,6 +230,13 @@ function updateRec601Visualizer(hex) {
 const updateFontPreview = updateRec601Visualizer;
 
 function calculateLuminance(hex) {
+  if (typeof hex !== 'string') {
+    if (hex && typeof hex === 'object' && hex.primary) {
+      hex = hex.primary;
+    } else {
+      return 255;
+    }
+  }
   let clean = hex.replace('#', '');
   if (clean.length === 3) clean = clean.split('').map(c => c + c).join('');
   if (clean.length < 6) return 255;
@@ -729,6 +752,14 @@ function setupEvents() {
       showToast('彻底卸载失败: ' + e.message);
     }
   };
+
+  // Reload Studio page
+  if (btnReload) {
+    btnReload.onclick = () => {
+      showToast('正在刷新工坊界面...');
+      setTimeout(() => location.reload(), 200);
+    };
+  }
 
   // Shutdown Software (Zero background footprint)
   btnShutdown.onclick = async () => {
