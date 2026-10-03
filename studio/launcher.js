@@ -40,9 +40,8 @@ console.log('   💡 用完即关，零后台常驻，零性能消耗！');
 console.log('=======================================================');
 
 if (browserExe) {
-  // Use dedicated temporary profile directory so window exit is completely trackable
+  // Use dedicated temporary profile directory for clean isolated app window
   const profileDir = path.join(os.tmpdir(), 'antigravity_studio_profile');
-  const startTime = Date.now();
   const child = spawn(browserExe, [
     `--app=${appUrl}`,
     '--window-size=1280,860',
@@ -54,13 +53,8 @@ if (browserExe) {
     stdio: 'ignore'
   });
 
-  child.on('exit', () => {
-    // If window lived longer than 3s, treat as user closing the app
-    if (Date.now() - startTime > 3000) {
-      console.log('\n[Studio] 客户端窗口已关闭，正在安全退出 (零后台残留)...');
-      try { server.close(); } catch (e) {}
-      process.exit(0);
-    }
+  child.on('error', (err) => {
+    console.error('[Studio] 启动应用窗口失败:', err.message);
   });
 } else {
   console.log('未检测到 Edge/Chrome 独立桌面环境，正在使用系统默认浏览器打开...');

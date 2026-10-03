@@ -30,6 +30,9 @@ function sendJson(res, statusCode, data) {
   const body = JSON.stringify(data);
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type'
@@ -120,6 +123,9 @@ function openNativeFileDialog() {
   });
 }
 
+let lastClientHeartbeat = Date.now();
+let hasEverHeartbeated = false;
+
 const server = http.createServer(async (req, res) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -142,6 +148,8 @@ const server = http.createServer(async (req, res) => {
   // 1. GET /api/status - Complete live status
   if (req.method === 'GET' && pathname === '/api/status') {
     try {
+      lastClientHeartbeat = Date.now();
+      hasEverHeartbeated = true;
       const isCdpOnline = await checkPortStatus(8314);
       const isMediaOnline = await checkMediaServerStatus();
       const slotsConfig = themeEngine.loadSlotsConfig();
@@ -421,7 +429,12 @@ const server = http.createServer(async (req, res) => {
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': contentType });
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     fs.createReadStream(filePath).pipe(res);
     return;
   }
@@ -437,6 +450,15 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log('   💡 用完即关，零后台常驻，零性能消耗！');
   console.log('=======================================================');
 });
+
+// Watchdog: auto-terminate if client was once connected and has ceased communicating for 30s
+setInterval(() => {
+  if (hasEverHeartbeated && (Date.now() - lastClientHeartbeat > 30000)) {
+    console.log('[Studio] 客户端已断开超 30 秒，安全释放后台服务 (零后台残留)...');
+    try { server.close(); } catch(e) {}
+    process.exit(0);
+  }
+}, 5000);
 
 server.PORT = PORT;
 server.server = server;

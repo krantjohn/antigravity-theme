@@ -45,7 +45,6 @@ const btnCloseSaveModal = document.getElementById('btn-close-save-modal');
 const btnCancelSaveModal = document.getElementById('btn-cancel-save-modal');
 const btnConfirmSavePreset = document.getElementById('btn-confirm-save-preset');
 const newPresetNameInput = document.getElementById('new-preset-name');
-const newPresetDescInput = document.getElementById('new-preset-desc');
 const btnVanilla = document.getElementById('btn-vanilla');
 const btnUninstall = document.getElementById('btn-uninstall');
 const btnShutdown = document.getElementById('btn-shutdown');
@@ -251,16 +250,15 @@ function renderPresetsList() {
   baselineCard.innerHTML = `
     <div class="preset-header">
       <div class="preset-title-wrap">
-        <h4>🌟 初版黄金基线 (Baseline V1)</h4>
-        <span class="preset-badge-system">系统基线</span>
+        <h4>🌟 初版黄金基线</h4>
+        <span class="preset-badge-system">系统预设</span>
       </div>
-      <span class="preset-date">官方初始美化</span>
+      <span class="preset-date">官方默认</span>
     </div>
     <div class="preset-meta-tags">
-      <span class="preset-tag">💾 完整保底壁纸</span>
-      <span class="preset-tag">📦 5 核心槽位</span>
+      <span class="preset-tag">💾 完整底图</span>
+      <span class="preset-tag">📦 5 槽位</span>
       <span class="preset-tag">🔤 纯白高对比</span>
-      <span class="preset-tag">🛡️ 稳定首选</span>
     </div>
     <div class="preset-slots-preview">
       <span class="slot-pill-tag">主对话: 图像</span>
@@ -268,9 +266,6 @@ function renderPresetsList() {
       <span class="slot-pill-tag">右侧抽屉: 图像</span>
       <span class="slot-pill-tag">提问输入: 图像</span>
       <span class="slot-pill-tag">设置弹窗: 图像</span>
-    </div>
-    <div class="preset-desc">
-      官方完整 5 槽位初始壁纸底座，经过精心调试的居中基准对齐，最稳定的出厂美化基线。
     </div>
     <div class="preset-actions-bar">
       <button class="btn btn-sm btn-apply-preset" id="btn-apply-baseline-preset">
@@ -280,7 +275,7 @@ function renderPresetsList() {
   `;
   baselineCard.querySelector('#btn-apply-baseline-preset').onclick = async () => {
     try {
-      showToast('正在应用【初版黄金基线】全套配置...', 3000);
+      showToast('正在应用【初版黄金基线】...', 2500);
       const res = await fetch('/api/theme/baseline', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
@@ -301,23 +296,19 @@ function renderPresetsList() {
   vanillaCard.innerHTML = `
     <div class="preset-header">
       <div class="preset-title-wrap">
-        <h4>🛡️ 官方原版 (Vanilla Pure)</h4>
-        <span class="preset-badge-system" style="background:rgba(255,255,255,0.08);color:#e2e8f0;border-color:rgba(255,255,255,0.16);">官方纯净</span>
+        <h4>🛡️ 官方原版纯净</h4>
+        <span class="preset-badge-system" style="background:rgba(255,255,255,0.08);color:#e2e8f0;border-color:rgba(255,255,255,0.16);">官方出厂</span>
       </div>
-      <span class="preset-date">出厂原生极简</span>
+      <span class="preset-date">无壁纸</span>
     </div>
     <div class="preset-meta-tags">
-      <span class="preset-tag">💾 0 MB 素材</span>
-      <span class="preset-tag">🔤 原生黑白配</span>
-      <span class="preset-tag">⚡ 零背景消耗</span>
+      <span class="preset-tag">⚡ 零素材占用</span>
+      <span class="preset-tag">🔤 原生极简</span>
     </div>
     <div class="preset-slots-preview">
-      <span class="slot-pill-tag">主对话: 无壁纸</span>
-      <span class="slot-pill-tag">活跃终端: 无壁纸</span>
-      <span class="slot-pill-tag">提问输入: 无壁纸</span>
-    </div>
-    <div class="preset-desc">
-      移除所有外置壁纸与注入背景，彻底还原 Antigravity 官方原生纯黑极简代码编辑器风格。
+      <span class="slot-pill-tag">主对话: 无</span>
+      <span class="slot-pill-tag">活跃终端: 无</span>
+      <span class="slot-pill-tag">提问输入: 无</span>
     </div>
     <div class="preset-actions-bar">
       <button class="btn btn-sm btn-apply-preset" id="btn-apply-vanilla-preset">
@@ -326,9 +317,9 @@ function renderPresetsList() {
     </div>
   `;
   vanillaCard.querySelector('#btn-apply-vanilla-preset').onclick = async () => {
-    if (!confirm('确定要切换为官方原版纯净模式吗？\n（当前美化状态将自动暂存为独立快照）')) return;
+    if (!confirm('确定要切换为官方原版纯净模式吗？\n（当前美化状态将自动暂存）')) return;
     try {
-      showToast('正在还原官方原版纯净模式...', 3000);
+      showToast('正在还原官方原版...', 2500);
       const res = await fetch('/api/theme/vanilla', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
@@ -349,7 +340,6 @@ function renderPresetsList() {
       const userCard = document.createElement('div');
       userCard.className = 'preset-card';
 
-      // Slot tags
       const slotChineseMap = {
         left: '主对话',
         mid: '活跃终端',
@@ -368,30 +358,26 @@ function renderPresetsList() {
         }
       }
 
-      const sizeStr = p.totalSizeFormatted || (p.totalSize ? (p.totalSize / 1024 / 1024).toFixed(1) + ' MB' : '独立预设');
-      const countStr = `${p.fileCount || (p.files ? p.files.length : '全槽位')} 个素材`;
-      const fontName = p.slotsConfig?.fontColor?.name || p.slotsConfig?.fontColor?.id || '高对比字体';
-      const timeStr = p.createdAtFormatted || (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '已归档');
-      const descStr = p.description || p.desc || '已保存的完整 5 槽位壁纸与字体配置';
+      const sizeStr = p.totalSizeFormatted || (p.totalSize ? (p.totalSize / 1024 / 1024).toFixed(1) + ' MB' : '');
+      const countStr = `${p.fileCount || (p.files ? p.files.length : '5')} 素材`;
+      const fontName = p.slotsConfig?.fontColor?.name?.split(' ')[0] || '纯白';
+      const timeStr = p.createdAtFormatted || (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '');
 
       userCard.innerHTML = `
         <div class="preset-header">
           <div class="preset-title-wrap">
             <h4>📦 ${p.name}</h4>
-            <span class="preset-badge-user">用户预设</span>
+            <span class="preset-badge-user">我的预设</span>
           </div>
           <span class="preset-date">${timeStr}</span>
         </div>
         <div class="preset-meta-tags">
-          <span class="preset-tag">💾 ${sizeStr}</span>
+          ${sizeStr ? `<span class="preset-tag">💾 ${sizeStr}</span>` : ''}
           <span class="preset-tag">📦 ${countStr}</span>
           <span class="preset-tag">🔤 ${fontName}</span>
         </div>
         <div class="preset-slots-preview">
           ${slotTagsHtml.join('')}
-        </div>
-        <div class="preset-desc">
-          ${descStr}
         </div>
         <div class="preset-actions-bar">
           <button class="btn btn-sm btn-apply-preset btn-apply-user-p" data-name="${p.name}">
@@ -431,6 +417,7 @@ function renderPresetsList() {
 
 async function applyPreset(name) {
   try {
+    showToast(`正在装配并应用预设【${name}】...`, 3000);
     const res = await fetch('/api/presets/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -438,11 +425,13 @@ async function applyPreset(name) {
     });
     const data = await res.json();
     if (data.success) {
-      showToast(`已成功换装并应用预设: 【${name}】`);
+      showToast(`✨ 预设【${name}】已成功应用生效！`);
       await fetchStatus();
+    } else {
+      alert('应用预设失败: ' + (data.error || '未知错误'));
     }
   } catch (e) {
-    showToast('应用预设失败: ' + e.message);
+    alert('应用预设失败: ' + e.message);
   }
 }
 
@@ -680,32 +669,33 @@ function setupEvents() {
   btnOpenSaveModal.onclick = () => {
     savePresetModal.classList.add('active');
     newPresetNameInput.value = '';
-    newPresetDescInput.value = '';
     newPresetNameInput.focus();
   };
   btnCloseSaveModal.onclick = () => savePresetModal.classList.remove('active');
   btnCancelSaveModal.onclick = () => savePresetModal.classList.remove('active');
   btnConfirmSavePreset.onclick = async () => {
     const name = newPresetNameInput.value.trim();
-    const desc = newPresetDescInput.value.trim();
     if (!name) {
       alert('请输入预设名称！');
       return;
     }
     try {
+      showToast(`正在保存预设【${name}】...`, 3000);
       const res = await fetch('/api/presets/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, desc })
+        body: JSON.stringify({ name })
       });
       const data = await res.json();
       if (data.success) {
-        showToast(`预设【${name}】保存并归档成功！`);
+        showToast(`✨ 预设【${name}】保存成功！`);
         savePresetModal.classList.remove('active');
         await fetchStatus();
+      } else {
+        alert('保存预设失败: ' + (data.error || '未知错误'));
       }
     } catch (e) {
-      showToast('保存预设失败: ' + e.message);
+      alert('保存预设失败: ' + e.message);
     }
   };
 
@@ -713,6 +703,7 @@ function setupEvents() {
   btnVanilla.onclick = async () => {
     if (!confirm('确定要恢复为 Antigravity 官方原版纯净模式吗？\n（当前壁纸将自动保存为快照，稍后随时可一键还原）')) return;
     try {
+      showToast('正在还原官方原版...', 2500);
       const res = await fetch('/api/theme/vanilla', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
@@ -727,6 +718,7 @@ function setupEvents() {
   btnUninstall.onclick = async () => {
     if (!confirm('⚠️ 警告：彻底物理卸载将物理还原官方原版 app.asar 并清除所有注入。\n确定要彻底还原吗？')) return;
     try {
+      showToast('正在彻底物理卸载...', 3000);
       const res = await fetch('/api/theme/uninstall', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
@@ -750,6 +742,13 @@ function setupEvents() {
       window.close();
     }
   };
+
+  // Window close beacon to ensure background process is killed cleanly
+  window.addEventListener('beforeunload', () => {
+    try {
+      navigator.sendBeacon('/api/shutdown');
+    } catch (_) {}
+  });
 }
 
 async function browseSlotFile() {

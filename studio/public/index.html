@@ -47,7 +47,6 @@
         <div class="card-title-group">
           <span class="section-tag">SLOTS MATRIX</span>
           <h2>🎨 5 大核心槽位装配矩阵</h2>
-          <p class="section-desc">支持拖拽 MP4/JPG/PNG 立即装配，精细微调对齐轴，0.3 秒无感热重载生效</p>
         </div>
         <div class="card-header-actions">
           <button class="btn btn-secondary btn-sm" id="btn-reset-baseline" title="一键将 5 大槽位恢复为初版黄金基线全套">
@@ -76,8 +75,7 @@
                 <polyline points="21 15 16 10 5 21"></polyline>
               </svg>
             </div>
-            <div class="drop-title">点击浏览文件 或 将壁纸直接拖入此处</div>
-            <div class="drop-sub">支持 4K/2K MP4 动态视频、JPG、PNG、WebP 素材</div>
+            <div class="drop-title">点击浏览 或 拖拽壁纸到此处</div>
             <div class="drop-actions">
               <button class="btn btn-secondary btn-sm" id="btn-browse-native">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
@@ -158,7 +156,7 @@
       <div class="card-header">
         <div class="card-title-group">
           <span class="section-tag">TYPOGRAPHY</span>
-          <h3>🔤 字体配色与亮度自适应</h3>
+          <h3>🔤 字体配色</h3>
         </div>
         <div class="card-header-actions">
           <button class="btn btn-secondary btn-sm" id="btn-reset-font" title="重置字体配色为默认纯白高对比">
@@ -167,7 +165,6 @@
           </button>
         </div>
       </div>
-      <p class="section-desc">基于 Rec. 601 加权公式，浅色背景自动附带双重白辉光，深色背景施加暗影保护</p>
 
       <div class="font-presets-grid" id="font-presets">
         <!-- Injected via JS -->
@@ -196,7 +193,6 @@
           + 另存为新预设
         </button>
       </div>
-      <p class="section-desc">一键归档全套 5 槽位壁纸与字体配色，支持秒级整套切装与备份</p>
 
       <div class="preset-list" id="preset-list">
         <!-- Injected via JS -->
@@ -208,10 +204,9 @@
       <div class="card-header">
         <div class="card-title-group">
           <span class="section-tag">SAFETY CENTER</span>
-          <h3>🛡️ 官方原版与安全还原</h3>
+          <h3>🛡️ 官方原版还原</h3>
         </div>
       </div>
-      <p class="section-desc">所有修改 100% 可逆。出厂原生核心 `app.asar.orig.bak` 已建立安全镜像</p>
 
       <div class="backup-status-banner" id="backup-banner">
         <span class="backup-dot"></span>
@@ -239,16 +234,12 @@
         </div>
         <span class="badge badge-accent" id="we-badge">检测中...</span>
       </div>
-      <p class="section-desc">自动扫描本地跨盘 Steam 库与创意工坊已订阅的 4K/2K 动态壁纸资源</p>
 
       <div class="we-info-box">
         <div class="we-stat">
           <span class="we-stat-num" id="we-count">127</span>
           <span class="we-stat-label">套创意工坊素材就绪</span>
         </div>
-        <p class="we-hint">
-          ✨ 软件内壁纸画廊瀑布流展示与即时预览组件现已进入装配通道。当前您可以通过槽位选择器直接导入工坊 MP4 视频！
-        </p>
       </div>
     </section>
 
@@ -258,22 +249,18 @@
   <div class="modal-overlay" id="save-preset-modal">
     <div class="modal-box">
       <div class="modal-header">
-        <h3>💾 保存当前全套配置为独立预设</h3>
+        <h3>💾 保存当前配置为新预设</h3>
         <button class="modal-close" id="btn-close-save-modal">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="new-preset-name">预设名称 (如：赛博朋克、星铁黑塔)</label>
-          <input type="text" id="new-preset-name" class="input-text" placeholder="请输入预设名称...">
-        </div>
-        <div class="form-group">
-          <label for="new-preset-desc">预设描述（可选）</label>
-          <input type="text" id="new-preset-desc" class="input-text" placeholder="如：4K 动态雨夜流光搭配纯白高对比字体...">
+          <label for="new-preset-name">预设名称</label>
+          <input type="text" id="new-preset-name" class="input-text" placeholder="输入预设名称 (如：守岸人、赛博朋克)">
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btn-cancel-save-modal">取消</button>
-        <button class="btn btn-primary" id="btn-confirm-save-preset">保存归档</button>
+        <button class="btn btn-primary" id="btn-confirm-save-preset">确定保存</button>
       </div>
     </div>
   </div>
@@ -281,6 +268,6 @@
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>
