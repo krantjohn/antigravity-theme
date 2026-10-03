@@ -1,6 +1,6 @@
 const path = require('path');
 const os = require('os');
-const { ensureMp4Faststart } = require('../core/theme_engine');
+const { ensureMp4Faststart } = require('../../core/theme_engine');
 
 const wallpapersDir = path.join(os.homedir(), '.gemini', 'antigravity', 'wallpapers');
 const leftMp4 = path.join(wallpapersDir, 'left_wallpaper.mp4');

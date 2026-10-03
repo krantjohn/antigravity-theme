@@ -6,7 +6,7 @@ async function runTests() {
   console.log('--- Starting Studio v3.0 Automated Test Suite ---');
   
   // 1. Require server.js
-  const studio = require('../studio/server');
+  const studio = require('../../studio/server');
   const server = studio.server;
   const PORT = studio.PORT;
   

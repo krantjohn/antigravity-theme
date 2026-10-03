@@ -40,10 +40,10 @@ const {
   SLOT_ALIASES,
   VIDEO_EXTS,
   IMAGE_EXTS
-} = require('../core/theme_engine');
-const { startMediaServer, isMediaServerRunning, DEFAULT_PORT } = require('../core/media_server');
+} = require('../../core/theme_engine');
+const { startMediaServer, isMediaServerRunning, DEFAULT_PORT } = require('../../core/media_server');
 
-const repoDir = path.join(__dirname, '..');
+const repoDir = path.join(__dirname, '..', '..');
 const repoWallpapers = path.join(repoDir, 'wallpapers');
 const userSampleVideo = path.join(os.homedir(), 'Videos', '2025-01-18 20-06-44.mp4');
 const sampleVideoPath = fs.existsSync(userSampleVideo)
@@ -561,7 +561,7 @@ async function runTests() {
 
   // Test 9: Batch scripts CRLF and UTF-8 verification
   console.log('\n[Test 9] 校验 bin/*.bat 脚本编码与 CRLF 行尾规范 (彻底杜绝 CMD 乱码与指令截断)...');
-  const binDir = path.join(repoDir, 'bin');
+  const binDir = path.join(repoDir, 'dev', 'bin');
   const batFiles = fs.readdirSync(binDir).filter(f => f.endsWith('.bat'));
   assert.ok(batFiles.length >= 3, 'At least 3 batch files must exist in bin');
   for (const batFile of batFiles) {

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
-const { triggerLiveHotReload, loadSlotsConfig, generateMasterCss } = require('../core/theme_engine');
+const { triggerLiveHotReload, loadSlotsConfig, generateMasterCss } = require('../../core/theme_engine');
 
 const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
 const resDir = path.join(localAppData, 'Programs', 'antigravity', 'resources');
@@ -11,16 +11,16 @@ const appDist = path.join(appDir, 'dist');
 const antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || path.join(os.homedir(), '.gemini', 'antigravity');
 
 const targetPreload = path.join(appDist, 'preload.js');
-const sourcePreload = path.join(__dirname, '..', 'preload.js');
+const sourcePreload = path.join(__dirname, '..', '..', 'core', 'preload.js');
 
 const targetMain = path.join(appDist, 'main.js');
 const sourceMain = path.join(__dirname, '..', 'main.js');
 
 const targetMediaServer = path.join(appDist, 'media_server.js');
-const sourceMediaServer = path.join(__dirname, '..', 'core', 'media_server.js');
+const sourceMediaServer = path.join(__dirname, '..', '..', 'core', 'media_server.js');
 const userMediaServer = path.join(antigravityDir, 'media_server.js');
 
-const sourceThemeEngine = path.join(__dirname, '..', 'core', 'theme_engine.js');
+const sourceThemeEngine = path.join(__dirname, '..', '..', 'core', 'theme_engine.js');
 const userThemeEngine = path.join(antigravityDir, 'theme_engine.js');
 
 const patchedAsar = path.join(resDir, 'app.asar.patched');

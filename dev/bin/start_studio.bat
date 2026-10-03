@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 title Antigravity Theme Studio
-cd /d "%~dp0.."
+cd /d "%~dp0..\.."
 
 where node >nul 2>nul
 if %ERRORLEVEL% neq 0 (
@@ -10,4 +10,4 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-node "%~dp0..\studio\launcher.js"
+node "%~dp0..\..\studio\launcher.js"

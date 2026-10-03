@@ -227,7 +227,9 @@ try {
 } catch (e) {}
 const initialSlotsConfigJson = JSON.stringify(initialSlotsConfig || {});
 
-const repoPreloadPath = path.join(__dirname, "..", "preload.js");
+const repoPreloadPath = fs.existsSync(path.join(__dirname, "preload.js"))
+  ? path.join(__dirname, "preload.js")
+  : path.join(__dirname, "..", "preload.js");
 let themeInjectionCode = "";
 if (fs.existsSync(repoPreloadPath)) {
   const rootPreload = fs.readFileSync(repoPreloadPath, "utf8");

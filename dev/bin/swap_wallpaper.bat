@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-cd /d "%~dp0.."
+cd /d "%~dp0..\.."
 
 if "%~1"=="" goto MENU
 set "arg1=%~1"
@@ -8,23 +8,23 @@ if /i "%arg1%"=="font" (
     if "%~2"=="" (
         goto FONT_MENU
     ) else (
-        node "%~dp0..\core\theme_engine.js" --set-font-color %2 %3 %4
+        node "%~dp0..\..\core\theme_engine.js" --set-font-color %2 %3 %4
         exit /b %ERRORLEVEL%
     )
 )
 if /i "%arg1%"=="fonts" (
-    node "%~dp0..\core\theme_engine.js" --list-font-colors
+    node "%~dp0..\..\core\theme_engine.js" --list-font-colors
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="set-font" (
-    node "%~dp0..\core\theme_engine.js" --set-font-color %2 %3 %4
+    node "%~dp0..\..\core\theme_engine.js" --set-font-color %2 %3 %4
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="pos" (
     if "%~2"=="" (
         goto POS_MENU
     ) else (
-        node "%~dp0..\core\theme_engine.js" --set-pos %2 %3 %4
+        node "%~dp0..\..\core\theme_engine.js" --set-pos %2 %3 %4
         exit /b %ERRORLEVEL%
     )
 )
@@ -32,94 +32,94 @@ if /i "%arg1%"=="position" (
     if "%~2"=="" (
         goto POS_MENU
     ) else (
-        node "%~dp0..\core\theme_engine.js" --set-pos %2 %3 %4
+        node "%~dp0..\..\core\theme_engine.js" --set-pos %2 %3 %4
         exit /b %ERRORLEVEL%
     )
 )
 if /i "%arg1%"=="set-pos" (
-    node "%~dp0..\core\theme_engine.js" --set-pos %2 %3 %4
+    node "%~dp0..\..\core\theme_engine.js" --set-pos %2 %3 %4
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="set-position" (
-    node "%~dp0..\core\theme_engine.js" --set-pos %2 %3 %4
+    node "%~dp0..\..\core\theme_engine.js" --set-pos %2 %3 %4
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="adj-pos" (
-    node "%~dp0..\core\theme_engine.js" --adj-pos %2 %3 %4
+    node "%~dp0..\..\core\theme_engine.js" --adj-pos %2 %3 %4
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="adjust-pos" (
-    node "%~dp0..\core\theme_engine.js" --adj-pos %2 %3 %4
+    node "%~dp0..\..\core\theme_engine.js" --adj-pos %2 %3 %4
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="adjust-position" (
-    node "%~dp0..\core\theme_engine.js" --adj-pos %2 %3 %4
+    node "%~dp0..\..\core\theme_engine.js" --adj-pos %2 %3 %4
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="adj" (
-    node "%~dp0..\core\theme_engine.js" --adj-pos %2 %3 %4
+    node "%~dp0..\..\core\theme_engine.js" --adj-pos %2 %3 %4
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="reset-pos" (
-    node "%~dp0..\core\theme_engine.js" --reset-pos %2
+    node "%~dp0..\..\core\theme_engine.js" --reset-pos %2
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="reset-position" (
-    node "%~dp0..\core\theme_engine.js" --reset-pos %2
+    node "%~dp0..\..\core\theme_engine.js" --reset-pos %2
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="reset" (
-    node "%~dp0..\core\theme_engine.js" --reset-pos %2
+    node "%~dp0..\..\core\theme_engine.js" --reset-pos %2
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="status" (
-    node "%~dp0..\core\theme_engine.js" --status
+    node "%~dp0..\..\core\theme_engine.js" --status
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="slots" (
-    node "%~dp0..\core\theme_engine.js" --status
+    node "%~dp0..\..\core\theme_engine.js" --status
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="list-slots" (
-    node "%~dp0..\core\theme_engine.js" --status
+    node "%~dp0..\..\core\theme_engine.js" --status
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="preset" (
     if "%~2"=="" (
         goto PRESET_MENU
     ) else (
-        node "%~dp0..\core\theme_engine.js" %*
+        node "%~dp0..\..\core\theme_engine.js" %*
         exit /b %ERRORLEVEL%
     )
 )
 if /i "%arg1%"=="presets" (
-    node "%~dp0..\core\theme_engine.js" --list-presets
+    node "%~dp0..\..\core\theme_engine.js" --list-presets
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="save-preset" (
-    node "%~dp0..\core\theme_engine.js" %*
+    node "%~dp0..\..\core\theme_engine.js" %*
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="apply-preset" (
-    node "%~dp0..\core\theme_engine.js" %*
+    node "%~dp0..\..\core\theme_engine.js" %*
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="restore-original" (
-    node "%~dp0..\core\theme_engine.js" --restore-original
+    node "%~dp0..\..\core\theme_engine.js" --restore-original
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="vanilla" (
-    node "%~dp0..\core\theme_engine.js" --restore-original
+    node "%~dp0..\..\core\theme_engine.js" --restore-original
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="original" (
-    node "%~dp0..\core\theme_engine.js" --restore-original
+    node "%~dp0..\..\core\theme_engine.js" --restore-original
     exit /b %ERRORLEVEL%
 )
 if "%arg1:~0,1%"=="-" (
-    node "%~dp0..\core\theme_engine.js" %*
+    node "%~dp0..\..\core\theme_engine.js" %*
 ) else (
-    node "%~dp0..\core\theme_engine.js" --swap %*
+    node "%~dp0..\..\core\theme_engine.js" --swap %*
 )
 exit /b %ERRORLEVEL%
 
@@ -174,7 +174,7 @@ if not defined imgpath (
 )
 set "imgpath=%imgpath:"=%"
 echo.
-node "%~dp0..\core\theme_engine.js" --swap "%slot%" "%imgpath%"
+node "%~dp0..\..\core\theme_engine.js" --swap "%slot%" "%imgpath%"
 echo.
 pause
 goto MENU
@@ -186,7 +186,7 @@ echo   [2] Steam Wallpaper Engine 创意工坊壁纸
 echo -------------------------------------------------------
 echo 正在扫描 Steam 创意工坊壁纸，请稍候...
 echo.
-node "%~dp0..\core\theme_engine.js" --list-we
+node "%~dp0..\..\core\theme_engine.js" --list-we
 echo.
 set "we_id="
 set /p "we_id=请输入要应用的壁纸序号或创意工坊ID (输入 0 返回菜单): "
@@ -198,7 +198,7 @@ set /p "slot=请输入要更换的槽位 (左/中/右/下/设置) [默认 左]: 
 if not defined slot set "slot=左"
 set "slot=%slot:"=%"
 echo.
-node "%~dp0..\core\theme_engine.js" --swap-we "%we_id%" "%slot%"
+node "%~dp0..\..\core\theme_engine.js" --swap-we "%we_id%" "%slot%"
 echo.
 pause
 goto MENU
@@ -213,7 +213,7 @@ set /p "keyword=请输入搜索关键词 (例如: 碧蓝 / 原神 / 4K / 动态�
 if not defined keyword goto MENU
 set "keyword=%keyword:"=%"
 echo.
-node "%~dp0..\core\theme_engine.js" --list-we "%keyword%"
+node "%~dp0..\..\core\theme_engine.js" --list-we "%keyword%"
 echo.
 set "we_id="
 set /p "we_id=请输入要应用的壁纸序号或创意工坊ID (输入 0 返回菜单): "
@@ -225,7 +225,7 @@ set /p "slot=请输入要更换的槽位 (左/中/右/下/设置) [默认 左]: 
 if not defined slot set "slot=左"
 set "slot=%slot:"=%"
 echo.
-node "%~dp0..\core\theme_engine.js" --swap-we "%we_id%" "%slot%"
+node "%~dp0..\..\core\theme_engine.js" --swap-we "%we_id%" "%slot%"
 echo.
 pause
 goto MENU
@@ -238,7 +238,7 @@ echo =======================================================
 echo.
 echo 可用槽位：左 (主对话底图) / 中 (活跃终端) / 右 (独立抽屉) / 下 (底部输入框) / 设置
 echo.
-node "%~dp0..\core\theme_engine.js" --status
+node "%~dp0..\..\core\theme_engine.js" --status
 echo.
 set "pslot="
 set /p "pslot=请输入要调节位置的槽位 (左/中/右/下/设置，输入 0 返回菜单) [默认 左]: "
@@ -283,31 +283,31 @@ if "%paction%"=="6" goto POS_RESET
 if "%paction%"=="复位" goto POS_RESET
 if "%paction%"=="恢复" goto POS_RESET
 
-node "%~dp0..\core\theme_engine.js" --set-pos "%pslot%" "%paction%"
+node "%~dp0..\..\core\theme_engine.js" --set-pos "%pslot%" "%paction%"
 goto POS_LOOP
 
 :POS_UP
-node "%~dp0..\core\theme_engine.js" --adj-pos "%pslot%" up 5
+node "%~dp0..\..\core\theme_engine.js" --adj-pos "%pslot%" up 5
 goto POS_LOOP
 
 :POS_DOWN
-node "%~dp0..\core\theme_engine.js" --adj-pos "%pslot%" down 5
+node "%~dp0..\..\core\theme_engine.js" --adj-pos "%pslot%" down 5
 goto POS_LOOP
 
 :POS_LEFT
-node "%~dp0..\core\theme_engine.js" --adj-pos "%pslot%" left 5
+node "%~dp0..\..\core\theme_engine.js" --adj-pos "%pslot%" left 5
 goto POS_LOOP
 
 :POS_RIGHT
-node "%~dp0..\core\theme_engine.js" --adj-pos "%pslot%" right 5
+node "%~dp0..\..\core\theme_engine.js" --adj-pos "%pslot%" right 5
 goto POS_LOOP
 
 :POS_CENTER
-node "%~dp0..\core\theme_engine.js" --set-pos "%pslot%" 50% 50%
+node "%~dp0..\..\core\theme_engine.js" --set-pos "%pslot%" 50% 50%
 goto POS_LOOP
 
 :POS_RESET
-node "%~dp0..\core\theme_engine.js" --reset-pos "%pslot%"
+node "%~dp0..\..\core\theme_engine.js" --reset-pos "%pslot%"
 goto POS_LOOP
 
 :FONT_MENU
@@ -316,7 +316,7 @@ echo -------------------------------------------------------
 echo   [5] 自定义字体颜色 (适配亮/暗/二次元壁纸，字迹极清)
 echo -------------------------------------------------------
 echo.
-node "%~dp0..\core\theme_engine.js" --list-font-colors
+node "%~dp0..\..\core\theme_engine.js" --list-font-colors
 echo.
 set "fchoice="
 set /p "fchoice=请输入预设序号(1-6)、预设名或自定义Hex代码 (例如 #ffffff / #1a1a2e，输入 0 返回): "
@@ -324,7 +324,7 @@ if not defined fchoice goto MENU
 set "fchoice=%fchoice:"=%"
 if "%fchoice%"=="0" goto MENU
 echo.
-node "%~dp0..\core\theme_engine.js" --set-font-color "%fchoice%"
+node "%~dp0..\..\core\theme_engine.js" --set-font-color "%fchoice%"
 echo.
 pause
 goto MENU
@@ -335,7 +335,7 @@ goto MENU
 
 :VIEW_STATUS
 echo.
-node "%~dp0..\core\theme_engine.js" --status
+node "%~dp0..\..\core\theme_engine.js" --status
 echo.
 pause
 goto MENU
@@ -356,7 +356,7 @@ if /i "%confirm_orig%"=="n" (
     goto MENU
 )
 echo.
-node "%~dp0..\core\theme_engine.js" --restore-original
+node "%~dp0..\..\core\theme_engine.js" --restore-original
 echo.
 pause
 goto MENU

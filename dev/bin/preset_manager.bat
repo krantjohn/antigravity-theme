@@ -1,51 +1,51 @@
 @echo off
 chcp 65001 >nul
-cd /d "%~dp0.."
+cd /d "%~dp0..\.."
 
 if "%~1"=="" goto MENU
 set "arg1=%~1"
 
 if /i "%arg1%"=="list" (
-    node "%~dp0..\core\theme_engine.js" --list-presets
+    node "%~dp0..\..\core\theme_engine.js" --list-presets
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="presets" (
-    node "%~dp0..\core\theme_engine.js" --list-presets
+    node "%~dp0..\..\core\theme_engine.js" --list-presets
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="save" (
     if "%~2"=="" (
         goto SAVE_PROMPT
     ) else (
-        node "%~dp0..\core\theme_engine.js" %*
+        node "%~dp0..\..\core\theme_engine.js" %*
         exit /b %ERRORLEVEL%
     )
 )
 if /i "%arg1%"=="save-preset" (
-    node "%~dp0..\core\theme_engine.js" %*
+    node "%~dp0..\..\core\theme_engine.js" %*
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="apply" (
     if "%~2"=="" (
         goto APPLY_PROMPT
     ) else (
-        node "%~dp0..\core\theme_engine.js" %*
+        node "%~dp0..\..\core\theme_engine.js" %*
         exit /b %ERRORLEVEL%
     )
 )
 if /i "%arg1%"=="apply-preset" (
-    node "%~dp0..\core\theme_engine.js" %*
+    node "%~dp0..\..\core\theme_engine.js" %*
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="load" (
-    node "%~dp0..\core\theme_engine.js" %*
+    node "%~dp0..\..\core\theme_engine.js" %*
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="info" (
     if "%~2"=="" (
         goto INFO_PROMPT
     ) else (
-        node "%~dp0..\core\theme_engine.js" %*
+        node "%~dp0..\..\core\theme_engine.js" %*
         exit /b %ERRORLEVEL%
     )
 )
@@ -53,7 +53,7 @@ if /i "%arg1%"=="show" (
     if "%~2"=="" (
         goto INFO_PROMPT
     ) else (
-        node "%~dp0..\core\theme_engine.js" %*
+        node "%~dp0..\..\core\theme_engine.js" %*
         exit /b %ERRORLEVEL%
     )
 )
@@ -61,7 +61,7 @@ if /i "%arg1%"=="del" (
     if "%~2"=="" (
         goto DEL_PROMPT
     ) else (
-        node "%~dp0..\core\theme_engine.js" %*
+        node "%~dp0..\..\core\theme_engine.js" %*
         exit /b %ERRORLEVEL%
     )
 )
@@ -69,26 +69,26 @@ if /i "%arg1%"=="delete" (
     if "%~2"=="" (
         goto DEL_PROMPT
     ) else (
-        node "%~dp0..\core\theme_engine.js" %*
+        node "%~dp0..\..\core\theme_engine.js" %*
         exit /b %ERRORLEVEL%
     )
 )
 if /i "%arg1%"=="restore-original" (
-    node "%~dp0..\core\theme_engine.js" --restore-original
+    node "%~dp0..\..\core\theme_engine.js" --restore-original
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="vanilla" (
-    node "%~dp0..\core\theme_engine.js" --restore-original
+    node "%~dp0..\..\core\theme_engine.js" --restore-original
     exit /b %ERRORLEVEL%
 )
 if /i "%arg1%"=="original" (
-    node "%~dp0..\core\theme_engine.js" --restore-original
+    node "%~dp0..\..\core\theme_engine.js" --restore-original
     exit /b %ERRORLEVEL%
 )
 if "%arg1:~0,1%"=="-" (
-    node "%~dp0..\core\theme_engine.js" %*
+    node "%~dp0..\..\core\theme_engine.js" %*
 ) else (
-    node "%~dp0..\core\theme_engine.js" --apply-preset "%~1"
+    node "%~dp0..\..\core\theme_engine.js" --apply-preset "%~1"
 )
 exit /b %ERRORLEVEL%
 
@@ -122,7 +122,7 @@ goto MENU
 
 :LIST_PRESETS
 echo.
-node "%~dp0..\core\theme_engine.js" --list-presets
+node "%~dp0..\..\core\theme_engine.js" --list-presets
 echo.
 pause
 goto MENU
@@ -132,7 +132,7 @@ echo.
 echo -------------------------------------------------------
 echo   [2] 一键应用/切换壁纸预设 
 echo -------------------------------------------------------
-node "%~dp0..\core\theme_engine.js" --list-presets
+node "%~dp0..\..\core\theme_engine.js" --list-presets
 echo.
 set "target_preset="
 set /p "target_preset=请输入要应用的预设名称或序号 (输入 0 返回菜单): "
@@ -140,7 +140,7 @@ if not defined target_preset goto MENU
 set "target_preset=%target_preset:"=%"
 if "%target_preset%"=="0" goto MENU
 echo.
-node "%~dp0..\core\theme_engine.js" --apply-preset "%target_preset%"
+node "%~dp0..\..\core\theme_engine.js" --apply-preset "%target_preset%"
 echo.
 pause
 goto MENU
@@ -162,9 +162,9 @@ set /p "pdesc=请输入预设描述 (可选，直接回车使用默认描述): "
 if defined pdesc set "pdesc=%pdesc:"=%"
 echo.
 if defined pdesc (
-    node "%~dp0..\core\theme_engine.js" --save-preset "%pname%" "%pdesc%"
+    node "%~dp0..\..\core\theme_engine.js" --save-preset "%pname%" "%pdesc%"
 ) else (
-    node "%~dp0..\core\theme_engine.js" --save-preset "%pname%"
+    node "%~dp0..\..\core\theme_engine.js" --save-preset "%pname%"
 )
 echo.
 pause
@@ -175,7 +175,7 @@ echo.
 echo -------------------------------------------------------
 echo   [4] 查看预设详细信息 
 echo -------------------------------------------------------
-node "%~dp0..\core\theme_engine.js" --list-presets
+node "%~dp0..\..\core\theme_engine.js" --list-presets
 echo.
 set "info_target="
 set /p "info_target=请输入要查看详情的预设名称或序号 (输入 0 返回): "
@@ -183,7 +183,7 @@ if not defined info_target goto MENU
 set "info_target=%info_target:"=%"
 if "%info_target%"=="0" goto MENU
 echo.
-node "%~dp0..\core\theme_engine.js" --show-preset "%info_target%"
+node "%~dp0..\..\core\theme_engine.js" --show-preset "%info_target%"
 echo.
 pause
 goto MENU
@@ -193,7 +193,7 @@ echo.
 echo -------------------------------------------------------
 echo   [5] 删除指定预设 
 echo -------------------------------------------------------
-node "%~dp0..\core\theme_engine.js" --list-presets
+node "%~dp0..\..\core\theme_engine.js" --list-presets
 echo.
 set "del_target="
 set /p "del_target=请输入要删除的预设名称或序号 (输入 0 返回): "
@@ -209,7 +209,7 @@ if /i not "%confirm_del%"=="y" (
     goto MENU
 )
 echo.
-node "%~dp0..\core\theme_engine.js" --delete-preset "%del_target%"
+node "%~dp0..\..\core\theme_engine.js" --delete-preset "%del_target%"
 echo.
 pause
 goto MENU
@@ -230,7 +230,7 @@ if /i "%confirm_orig%"=="n" (
     goto MENU
 )
 echo.
-node "%~dp0..\core\theme_engine.js" --restore-original
+node "%~dp0..\..\core\theme_engine.js" --restore-original
 echo.
 pause
 goto MENU

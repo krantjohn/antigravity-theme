@@ -9,7 +9,7 @@ const {
   scanWorkshopWallpapers,
   getWallpaperById,
   formatWallpaperTable
-} = require('../core/wallpaper_engine_bridge');
+} = require('../../core/wallpaper_engine_bridge');
 const {
   swapWallpaperFromWE,
   loadSlotsConfig,
@@ -17,7 +17,7 @@ const {
   generateMasterCss,
   triggerLiveHotReload,
   revertToBaseline
-} = require('../core/theme_engine');
+} = require('../../core/theme_engine');
 
 async function runWallpaperEngineTests() {
   console.log('====================================================================');

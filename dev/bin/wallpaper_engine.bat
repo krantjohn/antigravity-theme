@@ -1,13 +1,13 @@
 @echo off
 chcp 65001 >nul
-cd /d "%~dp0.."
+cd /d "%~dp0..\.."
 
 if "%~1"=="" goto MENU
 set "arg1=%~1"
 if "%arg1:~0,1%"=="-" (
-    node "%~dp0..\core\theme_engine.js" %*
+    node "%~dp0..\..\core\theme_engine.js" %*
 ) else (
-    node "%~dp0..\core\theme_engine.js" --swap-we %*
+    node "%~dp0..\..\core\theme_engine.js" --swap-we %*
 )
 exit /b %ERRORLEVEL%
 
@@ -37,7 +37,7 @@ goto MENU
 echo.
 echo 正在扫描 Steam Wallpaper Engine 壁纸库...
 echo.
-node "%~dp0..\core\theme_engine.js" --list-we
+node "%~dp0..\..\core\theme_engine.js" --list-we
 echo.
 goto APPLY_PROMPT
 
@@ -48,7 +48,7 @@ set /p "kw=请输入搜索关键词 (直接回车返回): "
 if not defined kw goto MENU
 set "kw=%kw:"=%"
 echo.
-node "%~dp0..\core\theme_engine.js" --list-we "%kw%"
+node "%~dp0..\..\core\theme_engine.js" --list-we "%kw%"
 echo.
 goto APPLY_PROMPT
 
@@ -66,14 +66,14 @@ set /p "slot=请输入要应用的槽位 (左/中/右/下/设置) [默认 左]: 
 if not defined slot set "slot=左"
 set "slot=%slot:"=%"
 echo.
-node "%~dp0..\core\theme_engine.js" --swap-we "%we_id%" "%slot%"
+node "%~dp0..\..\core\theme_engine.js" --swap-we "%we_id%" "%slot%"
 echo.
 pause
 goto MENU
 
 :VIEW_STATUS
 echo.
-node "%~dp0..\core\theme_engine.js" --status
+node "%~dp0..\..\core\theme_engine.js" --status
 echo.
 pause
 goto MENU

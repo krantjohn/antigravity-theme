@@ -3829,7 +3829,7 @@ function listFontPresets() {
   }
   console.log('\n💡 支持自定义颜色: 可直接输入任意 Hex 颜色值 (例如: #ffffff, #1a1a2e, #ff69b4, #00e5ff)');
   console.log('   CLI 用法: node core/theme_engine.js --set-font-color <预设名/序号/Hex>');
-  console.log('   批处理用法: bin\\swap_wallpaper.bat --font <预设名/序号/Hex>\n');
+  console.log('   批处理用法: dev\\bin\\swap_wallpaper.bat --font <预设名/序号/Hex>\n');
   return FONT_PRESETS;
 }
 
@@ -3846,7 +3846,7 @@ function listSlotsStatus() {
     console.log('💡 随时一键切回个性化壁纸:');
     console.log('   • 恢复原版前的个性化配置: node core/theme_engine.js --apply-preset "恢复原版前的个性化配置"');
     console.log('   • 或应用已有预设: node core/theme_engine.js --apply-preset 1');
-    console.log('   • 或运行批处理菜单: bin\\preset_manager.bat');
+    console.log('   • 或运行批处理菜单: dev\\bin\\preset_manager.bat');
     console.log('=======================================================');
     return;
   }
@@ -4235,7 +4235,7 @@ function formatPresetTable(presets) {
       '',
       '💡 快捷提示:',
       '   • 保存当前配置为新预设: node core/theme_engine.js --save-preset <预设名称> [描述]',
-      '   • 或运行: bin\\preset_manager.bat / bin\\swap_wallpaper.bat 进入交互菜单',
+      '   • 或运行: dev\\bin\\preset_manager.bat / dev\\bin\\swap_wallpaper.bat 进入交互菜单',
       '================================================================================'
     ].join('\n');
   }
@@ -4609,7 +4609,7 @@ async function restoreOriginal() {
   console.log('');
   console.log('💡 随时一键切回壁纸配置:');
   console.log('   • 命令行: node core/theme_engine.js --apply-preset "恢复原版前的个性化配置"');
-  console.log('   • 或运行: bin\\preset_manager.bat / bin\\swap_wallpaper.bat');
+  console.log('   • 或运行: dev\\bin\\preset_manager.bat / dev\\bin\\swap_wallpaper.bat');
   console.log('=======================================================');
   console.log('');
   return reloadPromise;

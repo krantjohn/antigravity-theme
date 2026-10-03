@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { generateMasterCss, triggerLiveHotReload, loadSlotsConfig } = require('../core/theme_engine');
+const { generateMasterCss, triggerLiveHotReload, loadSlotsConfig } = require('../../core/theme_engine');
 
 const config = loadSlotsConfig();
 console.log('Active slots:');

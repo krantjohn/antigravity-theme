@@ -1,9 +1,9 @@
 const assert = require('assert');
 const http = require('http');
 const path = require('path');
-const { startMediaServer, isMediaServerRunning, MIME_TYPES } = require('../core/media_server');
+const { startMediaServer, isMediaServerRunning, MIME_TYPES } = require('../../core/media_server');
 
-const testWallpapersDir = path.join(__dirname, '..', 'wallpapers');
+const testWallpapersDir = path.join(__dirname, '..', '..', 'wallpapers');
 const TEST_PORT = 8321;
 
 async function runTests() {

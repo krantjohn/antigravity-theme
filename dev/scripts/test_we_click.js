@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const chromeExe = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const studio = require('../studio/server');
+const studio = require('../../studio/server');
 
 async function wait(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -11,7 +11,7 @@ async function wait(ms) {
 
 async function testWeClick() {
   console.log('Testing WE Click Preview...');
-  const profileDir = path.join(__dirname, '../.tmp_chrome_test_profile');
+  const profileDir = path.join(__dirname, '../../.tmp_chrome_test_profile');
   if (fs.existsSync(profileDir)) {
     fs.rmSync(profileDir, { recursive: true, force: true });
   }

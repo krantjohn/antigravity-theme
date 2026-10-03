@@ -256,51 +256,26 @@ node core/theme_engine.js --restore-original
 
 ```text
 antigravity-theme/
-├── 主题工作室.exe              # 独立原生 Windows GUI 客户端 (双击即开，零控制台黑框)
-├── AntigravityThemeStudio.exe  # 英文别名启动器 (与主题工作室.exe 功能完全相同)
-├── 双击启动主题工作室.bat      # 批处理快捷启动器 (自适应分辨率无缝全景展开)
-├── 一键注入美化补丁.bat        # ⚡ 一键将美化引擎与流媒体服务注入 Antigravity 底层
-├── 一键恢复官方原版.bat        # 🛡️ 一键 0.3 秒无损切回官方原生深色模式 (自动备份个性配置)
-├── preload.js                  # 核心渲染进程注入层 (视频动态挂载、GPU休眠、无感透明化)
-├── bin/                        # 核心终端 CLI 工具集
-│   ├── install.bat             # 一键自动安装与底层永久固化引导程序
-│   ├── preset_manager.bat      # 预设管理中心 (保存当前全套配置/归档/秒切预设/恢复原版)
-│   ├── swap_wallpaper.bat      # 综合壁纸与字体交互式管理控制台
-│   ├── wallpaper_engine.bat    # Steam Wallpaper Engine 专属工坊壁纸提取选择器
-│   ├── restore_baseline.bat    # 一键还原为初始静态二次元基线
-│   ├── restore_original.bat    # 一键恢复为官方原版纯净模式
-│   └── start_studio.bat        # 主题工坊核心启动脚本
-├── studio/                     # Antigravity 主题工作室可视化平台 (WebUI)
-│   ├── launcher.js             # 启动器守护脚本 (端口检测、智能视口居中最大化)
-│   ├── server.js               # 本地 HTTP API 微服务 (端口 8316)
-│   └── public/                 # 前端应用资产 (1:1 动态实时拟真预览、Steam工坊网格、预设库)
-├── core/                       # 底层核心引擎
-│   ├── theme_engine.js         # 核心主题编译器：CSS 生成、5 槽位控制、CDP 0.3s 热重载
+├── 🎮 AntigravityThemeStudio.exe  # 独立原生 Windows GUI 客户端 (双击即开，零控制台黑框)
+├── 📂 core/                       # 底层美化引擎与流媒体微服务核心
+│   ├── theme_engine.js            # 核心主题编译器：CSS 生成、5 槽位控制、CDP 0.3s 热重载
 │   ├── wallpaper_engine_bridge.js # Steam 跨盘符库自动发现与创意工坊 VDF/JSON 资产解析
-│   ├── media_server.js         # 高性能流媒体微服务：HTTP Range 206 分块、LRU 缓存
-│   └── auto_patcher.js         # 核心补丁引擎：自动化解包 asar、注入主进程/渲染进程、固化
-├── scripts/                    # 维护构建与 UI 自动化实测工具
-│   ├── deploy_patches.js       # 补丁打包与快速固化部署
-│   ├── recompile_theme.js      # CSS 样式重编译
-│   ├── apply_faststart.js      # MP4 FastStart 优化工具 (moov atom 置顶)
-│   ├── test_studio_rendering.js # 多分辨率视口自适应渲染实测
-│   ├── test_we_scroll.js       # Steam 创意工坊无限滚动与滚轮实测
-│   ├── test_we_click.js        # 创意工坊壁纸一键载入与实时预览实测
-│   ├── test_pure_mode.js       # 纯壁纸模式切换实测
-│   └── diagnostics/            # 深入探针与离线诊断辅助工具箱 (24+ 辅助探针脚本)
-├── tests/                      # 严苛自动化回归测试套件
-│   ├── test_suite.js           # 17项端到端严苛回归测试套件 (覆盖 100% 核心生命周期)
-│   ├── test_studio_v3.js       # 主题工作室 WebUI 与后端 API 端到端实测
-│   ├── test_studio_api.js      # 草稿提交与槽位 API 单元测试
-│   ├── test_wallpaper_engine.js # Steam 工坊跨库跨驱动器解析测试
-│   ├── test_media_server.js    # Range 206 纳秒级分块流媒体测速
-│   ├── test_update_button.js   # 官方更新按钮穿透与交互拦截盾测试
-│   ├── sample_wallpaper.mp4    # 测试专用样例动态视频
-│   └── snapshots/              # 自动化测试输出渲染截图与 DOM 快照归档
-├── wallpapers/                 # 默认预设壁纸素材 (未花、普拉娜、妃咲等高颜值原画)
-├── assets/                     # 文档图文与演示预览素材
-├── LICENSE                     # MIT 开源授权协议
-└── README.md                   # 项目官方使用手册
+│   ├── media_server.js            # 高性能流媒体微服务：HTTP Range 206 分块、LRU 缓存
+│   ├── auto_patcher.js            # 核心补丁引擎：自动化解包 asar、注入主进程/渲染进程、固化
+│   └── preload.js                 # 核心渲染进程注入层 (视频动态挂载、GPU休眠、无感透明化)
+├── 📂 studio/                     # 主题工作室 WebUI 可视化平台
+│   ├── launcher.js                # 智能视口启动器守护脚本
+│   ├── server.js                  # 本地 HTTP API 微服务 (端口 8316)
+│   └── public/                    # 前端资产 (1:1 动态实时拟真预览、Steam工坊网格、预设库)
+├── 📂 wallpapers/                 # 默认预设壁纸素材 (原画与高颜值壁纸)
+├── 📂 dev/                        # 🛠️ 开发者工具与测试套件 (内部归档，不干扰日常使用)
+│   ├── bin/                       # 核心 CLI 批处理工具箱 (install, swap, restore 等)
+│   ├── scripts/                   # 维护构建、UI 自动化实测与诊断探针工具集
+│   ├── tests/                     # 17 项端到端严苛回归测试套件与快照归档
+│   ├── docs/                      # 核心架构与技术设计文档
+│   └── assets/                    # 文档预览与展示素材
+├── LICENSE                        # MIT 开源授权协议
+└── README.md                      # 项目官方使用手册
 ```
 
 ---
@@ -310,7 +285,7 @@ antigravity-theme/
 <details>
 <summary><b>Q1: 遇到 Antigravity 官方发布版本更新怎么办？</b></summary>
 不用慌张！你的壁纸素材与保存的预设保存在用户独立目录中，<b>绝不会丢失</b>。<br>
-在 Antigravity 更新后，只需要双击运行一次 <code>bin/install.bat</code>，引擎会自动解包官方最新核心包，将主题引擎与防回滚保护重新注入固化，整个过程仅需 10 秒。
+在 Antigravity 更新后，只需要双击运行根目录的 <code>AntigravityThemeStudio.exe</code>（或 <code>dev/bin/install.bat</code>），引擎会自动解包官方最新核心包，将主题引擎与防回滚保护重新注入固化，整个过程仅需 10 秒。
 </details>
 
 <details>
@@ -320,12 +295,12 @@ antigravity-theme/
 
 <details>
 <summary><b>Q3: 更换了很亮的纯白壁纸，界面文字看不太清怎么办？</b></summary>
-运行 <code>bin/swap_wallpaper.bat</code> 选择 <code>[5] 自定义字体颜色</code>，选择 <code>[2] 暗夜曜黑 (obsidian-black)</code> 预设，或在终端输入 <code>node core/theme_engine.js --font obsidian-black</code>。文字将自动切换为高对比深色并附带柔和白辉光微轮廓，即使在超亮纯白背景上依然清晰锐利。
+打开 <code>AntigravityThemeStudio.exe</code>（或运行 <code>dev/bin/swap_wallpaper.bat</code>），选择 <code>[暗夜曜黑 (obsidian-black)]</code> 配色，文字将自动切换为高对比深色并附带柔和白辉光微轮廓，即使在超亮纯白背景上依然清晰锐利。
 </details>
 
 <details>
 <summary><b>Q4: 如何一键恢复为官方原版或彻底卸载？</b></summary>
-直接双击运行 <code>bin/restore_original.bat</code>（或 <code>bin/一键恢复官方原版.bat</code>），系统会自动为当前的个性化配置建立安全快照预设，并在 0.3 秒内清空所有自定义样式与视频解码器，恢复纯正官方深色原生外观与极致流畅性能；随时可一键恢复个性化壁纸。
+在 <code>AntigravityThemeStudio.exe</code> 的安全与卸载面板中点击「恢复官方原版纯净模式」（或直接双击运行 <code>dev/bin/restore_original.bat</code>），系统会自动为当前的个性化配置建立安全快照预设，并在 0.3 秒内清空所有自定义样式与视频解码器，恢复纯正官方深色原生外观与极致流畅性能；随时可一键恢复个性化壁纸。
 </details>
 
 ---

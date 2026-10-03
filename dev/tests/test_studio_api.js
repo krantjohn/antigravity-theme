@@ -9,7 +9,7 @@ async function runStudioTests() {
   console.log('=======================================================');
 
   // Start studio server directly
-  const { server, PORT } = require('../studio/server');
+  const { server, PORT } = require('../../studio/server');
 
   function request(method, path, body = null) {
     return new Promise((resolve, reject) => {

@@ -1,6 +1,6 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
-const studio = require('../studio/server');
+const studio = require('../../studio/server');
 
 async function testPure() {
   const chromeProc = spawn('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', [

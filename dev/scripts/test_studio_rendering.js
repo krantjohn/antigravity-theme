@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const chromeExe = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const studio = require('../studio/server');
+const studio = require('../../studio/server');
 
 async function wait(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -14,7 +14,7 @@ async function testRendering() {
   console.log('--- Testing Studio Visual Rendering & Layout ---');
   
   // 1. Launch Chrome Headless with CDP on port 9222
-  const profileDir = path.join(__dirname, '../.tmp_chrome_test_profile');
+  const profileDir = path.join(__dirname, '../../.tmp_chrome_test_profile');
   if (fs.existsSync(profileDir)) {
     fs.rmSync(profileDir, { recursive: true, force: true });
   }
