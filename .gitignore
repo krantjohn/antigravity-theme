@@ -33,6 +33,7 @@ slots_config*.json
 *.bak
 
 # Test artifacts and screenshots
+tests/snapshots/
 tests/*.png
 tests/*.jpg
 tests/*.jpeg

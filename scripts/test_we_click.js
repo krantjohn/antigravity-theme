@@ -119,13 +119,17 @@ async function testWeClick() {
     });
     console.log('Preview Status after click:', JSON.stringify(previewStatus.result.value, null, 2));
 
+    const snapshotsDir = path.join(__dirname, '../tests/snapshots');
+    if (!fs.existsSync(snapshotsDir)) fs.mkdirSync(snapshotsDir, { recursive: true });
     const shot = await call('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync('tests/test_we_preview_result.png', Buffer.from(shot.data, 'base64'));
-    console.log('Saved screenshot to tests/test_we_preview_result.png');
+    fs.writeFileSync(path.join(snapshotsDir, 'test_we_preview_result.png'), Buffer.from(shot.data, 'base64'));
+    console.log('Saved screenshot to tests/snapshots/test_we_preview_result.png');
 
     ws.close();
     chromeProc.kill();
     studio.server.close();
+    await wait(400);
+    try { fs.rmSync(profileDir, { recursive: true, force: true }); } catch (e) {}
     process.exit(0);
   });
 }

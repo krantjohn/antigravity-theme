@@ -76,6 +76,9 @@ async function testRendering() {
       { name: '1920x1080 (1080p @ 100%)', w: 1920, h: 1080 }
     ];
 
+    const snapshotsDir = path.join(__dirname, '../tests/snapshots');
+    if (!fs.existsSync(snapshotsDir)) fs.mkdirSync(snapshotsDir, { recursive: true });
+
     for (const vp of testViewports) {
       console.log(`\n================ Testing Viewport: ${vp.name} ================`);
       await call('Emulation.setDeviceMetricsOverride', {
@@ -124,7 +127,7 @@ async function testRendering() {
 
       // Take screenshot of this viewport
       const shot = await call('Page.captureScreenshot', { format: 'png' });
-      const filename = `tests/studio_vp_${vp.w}x${vp.h}.png`;
+      const filename = path.join(snapshotsDir, `studio_vp_${vp.w}x${vp.h}.png`);
       fs.writeFileSync(filename, Buffer.from(shot.data, 'base64'));
       console.log(`Saved screenshot to ${filename}`);
     }
@@ -148,8 +151,8 @@ async function testRendering() {
     });
     console.log('Collapsed Metrics:', JSON.stringify(collapseMetrics.result.value, null, 2));
     const shotCollapsed = await call('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync('tests/studio_collapsed_inspector.png', Buffer.from(shotCollapsed.data, 'base64'));
-    console.log('Saved screenshot to tests/studio_collapsed_inspector.png');
+    fs.writeFileSync(path.join(snapshotsDir, 'studio_collapsed_inspector.png'), Buffer.from(shotCollapsed.data, 'base64'));
+    console.log('Saved screenshot to tests/snapshots/studio_collapsed_inspector.png');
 
     // Test expanding inspector back
     await call('Runtime.evaluate', { expression: `document.getElementById('btn-expand-inspector').click()` });
@@ -171,12 +174,14 @@ async function testRendering() {
     });
     console.log('Aux Pane Closed Metrics:', JSON.stringify(auxClosedMetrics.result.value, null, 2));
     const shotAuxClosed = await call('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync('tests/studio_aux_closed.png', Buffer.from(shotAuxClosed.data, 'base64'));
-    console.log('Saved screenshot to tests/studio_aux_closed.png');
+    fs.writeFileSync(path.join(snapshotsDir, 'studio_aux_closed.png'), Buffer.from(shotAuxClosed.data, 'base64'));
+    console.log('Saved screenshot to tests/snapshots/studio_aux_closed.png');
 
     ws.close();
     chromeProc.kill();
     studio.server.close();
+    await wait(400);
+    try { fs.rmSync(profileDir, { recursive: true, force: true }); } catch (e) {}
     process.exit(0);
   });
 }

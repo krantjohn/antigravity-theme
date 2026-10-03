@@ -61,8 +61,11 @@ async function extract() {
     });
     
     const fs = require('fs');
-    fs.writeFileSync('tests/antigravity_svg_dump.json', JSON.stringify(result.result.value, null, 2), 'utf8');
-    console.log('Saved SVG dump to tests/antigravity_svg_dump.json');
+    const path = require('path');
+    const outDir = path.join(__dirname, '../tests/snapshots');
+    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, 'antigravity_svg_dump.json'), JSON.stringify(result.result.value, null, 2), 'utf8');
+    console.log('Saved SVG dump to tests/snapshots/antigravity_svg_dump.json');
     ws.close();
   });
 }

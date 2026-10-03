@@ -65,8 +65,12 @@ async function inspect() {
     
     // Save to a file so we can view it without console truncation
     const fs = require('fs');
-    fs.writeFileSync('tests/antigravity_dom_dump.json', JSON.stringify(res.result.value, null, 2), 'utf8');
-    console.log('Saved DOM dump to tests/antigravity_dom_dump.json (size:', fs.statSync('tests/antigravity_dom_dump.json').size, 'bytes)');
+    const path = require('path');
+    const outDir = path.join(__dirname, '../tests/snapshots');
+    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+    const outPath = path.join(outDir, 'antigravity_dom_dump.json');
+    fs.writeFileSync(outPath, JSON.stringify(res.result.value, null, 2), 'utf8');
+    console.log('Saved DOM dump to tests/snapshots/antigravity_dom_dump.json (size:', fs.statSync(outPath).size, 'bytes)');
     ws.close();
   });
 }

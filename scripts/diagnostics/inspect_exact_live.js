@@ -46,8 +46,11 @@ async function dumpLive() {
       conversationRow: conversationRow.result.value
     };
 
-    fs.writeFileSync('tests/exact_live_inspection.json', JSON.stringify(res, null, 2));
-    console.log('Saved inspection to tests/exact_live_inspection.json');
+    const path = require('path');
+    const outDir = path.join(__dirname, '../tests/snapshots');
+    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+    fs.writeFileSync(path.join(outDir, 'exact_live_inspection.json'), JSON.stringify(res, null, 2));
+    console.log('Saved inspection to tests/snapshots/exact_live_inspection.json');
 
     ws.close();
     process.exit(0);

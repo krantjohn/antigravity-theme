@@ -256,22 +256,49 @@ node core/theme_engine.js --restore-original
 
 ```text
 antigravity-theme/
-├── bin/
+├── 主题工作室.exe              # 独立原生 Windows GUI 客户端 (双击即开，零控制台黑框)
+├── AntigravityThemeStudio.exe  # 英文别名启动器 (与主题工作室.exe 功能完全相同)
+├── 双击启动主题工作室.bat      # 批处理快捷启动器 (自适应分辨率无缝全景展开)
+├── 一键注入美化补丁.bat        # ⚡ 一键将美化引擎与流媒体服务注入 Antigravity 底层
+├── 一键恢复官方原版.bat        # 🛡️ 一键 0.3 秒无损切回官方原生深色模式 (自动备份个性配置)
+├── preload.js                  # 核心渲染进程注入层 (视频动态挂载、GPU休眠、无感透明化)
+├── bin/                        # 核心终端 CLI 工具集
 │   ├── install.bat             # 一键自动安装与底层永久固化引导程序
-│   ├── preset_manager.bat      # 预设管理中心 (一键保存当前全套配置/归档/秒切预设/恢复原版)
+│   ├── preset_manager.bat      # 预设管理中心 (保存当前全套配置/归档/秒切预设/恢复原版)
 │   ├── swap_wallpaper.bat      # 综合壁纸与字体交互式管理控制台
 │   ├── wallpaper_engine.bat    # Steam Wallpaper Engine 专属工坊壁纸提取选择器
 │   ├── restore_baseline.bat    # 一键还原为初始静态二次元基线
-│   ├── restore_original.bat    # 🛡️ 一键恢复为官方原版纯净模式 (零壁纸/零解码/自动安全快照)
-│   └── 一键恢复官方原版.bat    # 中文命名快捷入口脚本
-├── core/
+│   ├── restore_original.bat    # 一键恢复为官方原版纯净模式
+│   └── start_studio.bat        # 主题工坊核心启动脚本
+├── studio/                     # Antigravity 主题工作室可视化平台 (WebUI)
+│   ├── launcher.js             # 启动器守护脚本 (端口检测、智能视口居中最大化)
+│   ├── server.js               # 本地 HTTP API 微服务 (端口 8316)
+│   └── public/                 # 前端应用资产 (1:1 动态实时拟真预览、Steam工坊网格、预设库)
+├── core/                       # 底层核心引擎
 │   ├── theme_engine.js         # 核心主题编译器：CSS 生成、5 槽位控制、CDP 0.3s 热重载
 │   ├── wallpaper_engine_bridge.js # Steam 跨盘符库自动发现与创意工坊 VDF/JSON 资产解析
 │   ├── media_server.js         # 高性能流媒体微服务：HTTP Range 206 分块、LRU 缓存
 │   └── auto_patcher.js         # 核心补丁引擎：自动化解包 asar、注入主进程/渲染进程、固化
+├── scripts/                    # 维护构建与 UI 自动化实测工具
+│   ├── deploy_patches.js       # 补丁打包与快速固化部署
+│   ├── recompile_theme.js      # CSS 样式重编译
+│   ├── apply_faststart.js      # MP4 FastStart 优化工具 (moov atom 置顶)
+│   ├── test_studio_rendering.js # 多分辨率视口自适应渲染实测
+│   ├── test_we_scroll.js       # Steam 创意工坊无限滚动与滚轮实测
+│   ├── test_we_click.js        # 创意工坊壁纸一键载入与实时预览实测
+│   ├── test_pure_mode.js       # 纯壁纸模式切换实测
+│   └── diagnostics/            # 深入探针与离线诊断辅助工具箱 (24+ 辅助探针脚本)
+├── tests/                      # 严苛自动化回归测试套件
+│   ├── test_suite.js           # 17项端到端严苛回归测试套件 (覆盖 100% 核心生命周期)
+│   ├── test_studio_v3.js       # 主题工作室 WebUI 与后端 API 端到端实测
+│   ├── test_studio_api.js      # 草稿提交与槽位 API 单元测试
+│   ├── test_wallpaper_engine.js # Steam 工坊跨库跨驱动器解析测试
+│   ├── test_media_server.js    # Range 206 纳秒级分块流媒体测速
+│   ├── test_update_button.js   # 官方更新按钮穿透与交互拦截盾测试
+│   ├── sample_wallpaper.mp4    # 测试专用样例动态视频
+│   └── snapshots/              # 自动化测试输出渲染截图与 DOM 快照归档
 ├── wallpapers/                 # 默认预设壁纸素材 (未花、普拉娜、妃咲等高颜值原画)
 ├── assets/                     # 文档图文与演示预览素材
-├── tests/                      # 端到端自动化测试套件 (流媒体性能、CDP 热重载、预设与原版还原测试)
 ├── LICENSE                     # MIT 开源授权协议
 └── README.md                   # 项目官方使用手册
 ```

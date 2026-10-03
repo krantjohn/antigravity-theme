@@ -32,8 +32,10 @@ async function testPure() {
     await call('Runtime.evaluate', { expression: 'document.getElementById("btn-toggle-pure-wallpaper").click()' });
     await new Promise(r => setTimeout(r, 400));
     const shot = await call('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync('tests/studio_pure_wallpaper_mode.png', Buffer.from(shot.data, 'base64'));
-    console.log('Saved tests/studio_pure_wallpaper_mode.png');
+    const snapshotsDir = 'tests/snapshots';
+    if (!fs.existsSync(snapshotsDir)) fs.mkdirSync(snapshotsDir, { recursive: true });
+    fs.writeFileSync('tests/snapshots/studio_pure_wallpaper_mode.png', Buffer.from(shot.data, 'base64'));
+    console.log('Saved tests/snapshots/studio_pure_wallpaper_mode.png');
     ws.close();
     chromeProc.kill();
     studio.server.close();

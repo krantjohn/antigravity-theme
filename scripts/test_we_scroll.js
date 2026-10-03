@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
+const path = require('path');
 const studio = require('../studio/server');
 
 async function wait(ms) {
@@ -8,10 +9,18 @@ async function wait(ms) {
 
 async function testWeScroll() {
   console.log('Testing Steam Workshop Page Scrolling...');
+  const profileDir = path.join(__dirname, '../.tmp_chrome_test_profile');
+  if (fs.existsSync(profileDir)) {
+    fs.rmSync(profileDir, { recursive: true, force: true });
+  }
+
   const chromeProc = spawn('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', [
     '--headless=new',
     '--remote-debugging-port=9222',
     '--window-size=1600,960',
+    `--user-data-dir=${profileDir}`,
+    '--no-first-run',
+    '--no-default-browser-check',
     'http://127.0.0.1:8316'
   ], { stdio: 'ignore' });
 
@@ -89,9 +98,11 @@ async function testWeScroll() {
     console.log('After Scroll Metrics:', JSON.stringify(scrolledMetrics.result.value, null, 2));
 
     // 4. Capture screenshot
+    const snapshotsDir = path.join(__dirname, '../tests/snapshots');
+    if (!fs.existsSync(snapshotsDir)) fs.mkdirSync(snapshotsDir, { recursive: true });
     const shot = await call('Page.captureScreenshot', { format: 'png' });
-    fs.writeFileSync('tests/studio_we_scrolled.png', Buffer.from(shot.data, 'base64'));
-    console.log('Saved screenshot to tests/studio_we_scrolled.png');
+    fs.writeFileSync(path.join(snapshotsDir, 'studio_we_scrolled.png'), Buffer.from(shot.data, 'base64'));
+    console.log('Saved screenshot to tests/snapshots/studio_we_scrolled.png');
 
     // 5. Test mouse wheel event via CDP Input
     console.log('3. Testing mouse wheel dispatch...');
@@ -147,6 +158,8 @@ async function testWeScroll() {
     ws.close();
     chromeProc.kill();
     studio.server.close();
+    await wait(400);
+    try { fs.rmSync(profileDir, { recursive: true, force: true }); } catch (e) {}
     console.log('ALL SCROLL TESTS PASSED SUCCESSFULLY!');
     process.exit(0);
   });
