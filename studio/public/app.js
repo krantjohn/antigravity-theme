@@ -27,6 +27,7 @@ const valPosY = document.getElementById('val-pos-y');
 const btnApplySlot = document.getElementById('btn-apply-slot');
 const btnBrowseNative = document.getElementById('btn-browse-native');
 const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
 const fontPresetsGrid = document.getElementById('font-presets');
 const fontColorPicker = document.getElementById('font-color-picker');
 const fontHexInput = document.getElementById('font-hex-input');
@@ -367,12 +368,24 @@ function setupEvents() {
   };
 
   // Browse Native File Dialog
-  btnBrowseNative.onclick = browseSlotFile;
+  btnBrowseNative.onclick = (e) => {
+    e.stopPropagation();
+    browseSlotFile();
+  };
+
+  // Native file input listener
+  if (fileInput) {
+    fileInput.onchange = async () => {
+      if (fileInput.files && fileInput.files.length > 0) {
+        await uploadSlotWallpaper(fileInput.files[0]);
+      }
+    };
+  }
 
   // Drop zone click triggers file browse
   dropZone.onclick = (e) => {
     if (e.target !== btnBrowseNative && !btnBrowseNative.contains(e.target)) {
-      btnBrowseNative.click();
+      browseSlotFile();
     }
   };
 
@@ -389,12 +402,7 @@ function setupEvents() {
     dropZone.classList.remove('dragover');
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      // In Chromium / Electron or if path property is available
-      if (file.path) {
-        await swapSlotWallpaper(file.path);
-      } else {
-        showToast('提示：请使用“浏览本地文件”按钮精准指定文件路径。');
-      }
+      await uploadSlotWallpaper(file);
     }
   };
 
@@ -491,6 +499,10 @@ function setupEvents() {
 }
 
 async function browseSlotFile() {
+  if (fileInput) {
+    fileInput.click();
+    return;
+  }
   try {
     showToast('正在打开文件选择器...', 2000);
     const res = await fetch('/api/file/browse', { method: 'POST' });
@@ -501,6 +513,30 @@ async function browseSlotFile() {
   } catch (e) {
     showToast('打开文件对话框失败: ' + e.message);
   }
+}
+
+async function uploadSlotWallpaper(file) {
+  const slot = state.activeSlot;
+  const sizeMb = (file.size / 1024 / 1024).toFixed(1);
+  showToast(`正在装配槽位 [${slot}]: ${file.name} (${sizeMb} MB)...`, 5000);
+  try {
+    const url = `/api/upload?slot=${encodeURIComponent(slot)}&filename=${encodeURIComponent(file.name)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      body: file,
+      headers: { 'Content-Type': 'application/octet-stream' }
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`✨ 槽位 [${slot}] 壁纸更换完成，已通过 CDP 0.3s 极速热重载生效！`);
+      await fetchStatus();
+    } else {
+      showToast('更换失败: ' + (data.error || '未知错误'));
+    }
+  } catch (e) {
+    showToast('更换壁纸失败: ' + e.message);
+  }
+  if (fileInput) fileInput.value = '';
 }
 
 async function swapSlotWallpaper(filePath) {
