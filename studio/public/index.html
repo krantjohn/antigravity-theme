@@ -97,17 +97,19 @@
             </button>
           </div>
           <div class="draft-btn-group">
-            <button class="btn btn-primary btn-sm btn-glow" id="btn-commit-draft" title="将当前实时预览的全部槽位壁纸、位置对齐与字体正式应用至 Antigravity">
+            <button class="btn btn-primary btn-sm btn-glow btn-block" id="btn-commit-draft" title="将当前实时预览的全部槽位壁纸、位置对齐与字体正式应用至 Antigravity">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
               正式应用到客户端
             </button>
-            <button class="btn btn-secondary btn-sm" id="btn-discard-draft" title="放弃当前未应用的预览调节，还原为客户端当前生效配置">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-              还原
-            </button>
-            <button class="btn btn-secondary btn-sm" id="btn-draft-save-preset" title="将当前实时预览的方案另存为新预设">
-              💾 另存
-            </button>
+            <div class="draft-sub-btns">
+              <button class="btn btn-secondary btn-sm" id="btn-discard-draft" title="放弃当前未应用的预览调节，还原为客户端当前生效配置">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                还原
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btn-draft-save-preset" title="将当前实时预览的方案另存为新预设">
+                💾 另存预设
+              </button>
+            </div>
           </div>
         </div>
 

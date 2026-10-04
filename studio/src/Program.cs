@@ -105,7 +105,7 @@ namespace AntigravityThemeStudio
                     ProcessStartInfo browserPsi = new ProcessStartInfo();
                     browserPsi.FileName = browserPath;
                     browserPsi.Arguments = string.Format(
-                        "--app={0} --window-size=1440,900 --user-data-dir=\"{1}\" --no-first-run --no-default-browser-check",
+                        "--app={0} --window-size=1366,820 --user-data-dir=\"{1}\" --no-first-run --no-default-browser-check",
                         appUrl,
                         tempProfile
                     );

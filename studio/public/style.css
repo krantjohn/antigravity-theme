@@ -479,10 +479,10 @@ body {
 
 /* Left Inspector Panel */
 .inspector-panel {
-  padding: 10px 12px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   position: relative;
   top: 0;
   height: 100%;
@@ -557,8 +557,8 @@ body {
 .inspector-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-bottom: 11px;
+  gap: 6px;
+  padding-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -571,36 +571,36 @@ body {
 .draft-action-bar {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
-  padding: 10px 12px;
+  padding: 8px 10px;
 }
 
 .draft-status-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 7px;
+  font-size: 11.5px;
   font-weight: 500;
 }
 
 .draft-indicator {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   transition: all 0.3s ease;
 }
 
 .draft-indicator.synced {
   background: var(--accent-emerald);
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.7);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.7);
 }
 
 .draft-indicator.dirty {
   background: var(--accent-amber);
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.85);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.85);
   animation: pulseDot 1.4s infinite;
 }
 
@@ -621,12 +621,31 @@ body {
 
 .draft-btn-group {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
 }
 
 .draft-btn-group .btn-primary {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  justify-content: center;
+}
+
+.draft-sub-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.draft-sub-btns .btn {
   flex: 1;
+  padding: 5px 8px;
+  font-size: 11.5px;
+  justify-content: center;
 }
 
 .btn-glow {
@@ -761,7 +780,7 @@ body {
 .drop-zone {
   border: 1px dashed rgba(255, 255, 255, 0.14);
   border-radius: var(--radius-md);
-  padding: 12px 10px;
+  padding: 10px 8px;
   text-align: center;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.015);
@@ -775,43 +794,66 @@ body {
 
 .drop-icon {
   color: var(--accent-cyan);
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .drop-title {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-muted);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .drop-actions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  width: 100%;
+}
+
+.drop-actions .btn {
+  white-space: nowrap;
+  padding: 5px 6px;
+  font-size: 11px;
+  gap: 3px;
+  flex: 1 1 auto;
+  min-width: 0;
   justify-content: center;
-  gap: 8px;
+}
+
+#btn-browse-native {
+  flex: 1.15;
+}
+
+#btn-open-we-picker {
+  flex: 1.25;
+}
+
+#btn-reset-slot {
+  flex: 0.65;
 }
 
 /* Position Slider Group */
 .pos-control-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .slider-row {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
 
 .slider-label-line {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -3178,6 +3220,7 @@ body {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid transparent;
   outline: none;

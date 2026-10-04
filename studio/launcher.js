@@ -49,6 +49,12 @@ if (browserExe) {
       const prefs = JSON.parse(fs.readFileSync(prefPath, 'utf8'));
       if (prefs.browser && prefs.browser.window_placement) {
         prefs.browser.window_placement.maximized = false;
+        const left = Math.max(20, prefs.browser.window_placement.left || 60);
+        const top = Math.max(20, prefs.browser.window_placement.top || 40);
+        prefs.browser.window_placement.left = left;
+        prefs.browser.window_placement.top = top;
+        prefs.browser.window_placement.right = left + 1366;
+        prefs.browser.window_placement.bottom = top + 820;
         fs.writeFileSync(prefPath, JSON.stringify(prefs));
       }
     }
@@ -56,7 +62,7 @@ if (browserExe) {
 
   const child = spawn(browserExe, [
     `--app=${appUrl}`,
-    '--window-size=1440,900',
+    '--window-size=1366,820',
     `--user-data-dir=${profileDir}`,
     '--no-first-run',
     '--no-default-browser-check'
