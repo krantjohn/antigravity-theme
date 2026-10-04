@@ -333,15 +333,20 @@ function renderSlotInspector() {
   
   if (slotData.stagedFilePath) {
     activeSlotFileEl.textContent = '✨ [草稿] ' + (slotData.stagedFileName || slotData.stagedFilePath.split(/[\\/]/).pop());
+  } else if (slotData.stagedFileName) {
+    activeSlotFileEl.textContent = '✨ [草稿] ' + slotData.stagedFileName;
   } else {
     activeSlotFileEl.textContent = slotData.file || '(未配置壁纸)';
   }
 
-  const isVid = slotData.type === 'video' || (slotData.file && slotData.file.match(/\.(mp4|webm|mov)$/i)) || (slotData.stagedFilePath && slotData.stagedFilePath.match(/\.(mp4|webm|mov)$/i));
+  const isVid = slotData.type === 'video' || 
+    (slotData.file && slotData.file.match(/\.(mp4|webm|mov)$/i)) || 
+    (slotData.stagedFilePath && slotData.stagedFilePath.match(/\.(mp4|webm|mov)$/i)) ||
+    (slotData.stagedFileName && slotData.stagedFileName.match(/\.(mp4|webm|mov)$/i));
   if (isVid) {
     typeBadgeEl.className = 'badge badge-accent';
     typeBadgeEl.textContent = '🎬 4K/2K 动态视频';
-  } else if (slotData.file || slotData.stagedFilePath) {
+  } else if (slotData.file || slotData.stagedFilePath || slotData.stagedFileName) {
     typeBadgeEl.className = 'badge badge-subtle';
     typeBadgeEl.textContent = '🖼️ 静态图像';
   } else {
@@ -485,6 +490,9 @@ function renderMockupPreview() {
 
     // Interactive target highlight
     if (slotContainer) {
+      if (slotKey === 'bottom') {
+        slotContainer.classList.toggle('has-media', Boolean(mediaUrl));
+      }
       if (state.activeSlot === slotKey) {
         slotContainer.classList.add('active-slot-target');
       } else {
@@ -1071,6 +1079,11 @@ function initResponsiveAutoFit() {
 // 11. Material File Handling (Native Browse, Drag & Drop, Blob Preview)
 // =========================================================================
 async function handleNativeBrowse() {
+  if (fileInput) {
+    fileInput.value = '';
+    fileInput.click();
+    return;
+  }
   try {
     showToast('正在打开本地文件选择器...', 2000);
     const res = await fetch('/api/file/browse', { method: 'POST' });

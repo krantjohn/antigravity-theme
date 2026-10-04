@@ -42,13 +42,13 @@ console.log('=======================================================');
 if (browserExe) {
   // Use dedicated temporary profile directory for clean isolated app window
   const profileDir = path.join(os.tmpdir(), 'antigravity_studio_profile');
-  // Ensure profile window_placement does not restore a small or clipped window
+  // Ensure profile window_placement does not force fullscreen / maximized
   try {
     const prefPath = path.join(profileDir, 'Default', 'Preferences');
     if (fs.existsSync(prefPath)) {
       const prefs = JSON.parse(fs.readFileSync(prefPath, 'utf8'));
       if (prefs.browser && prefs.browser.window_placement) {
-        prefs.browser.window_placement.maximized = true;
+        prefs.browser.window_placement.maximized = false;
         fs.writeFileSync(prefPath, JSON.stringify(prefs));
       }
     }
@@ -56,7 +56,7 @@ if (browserExe) {
 
   const child = spawn(browserExe, [
     `--app=${appUrl}`,
-    '--start-maximized',
+    '--window-size=1440,900',
     `--user-data-dir=${profileDir}`,
     '--no-first-run',
     '--no-default-browser-check'

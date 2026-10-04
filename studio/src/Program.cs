@@ -87,10 +87,25 @@ namespace AntigravityThemeStudio
                 if (!string.IsNullOrEmpty(browserPath) && File.Exists(browserPath))
                 {
                     string tempProfile = Path.Combine(Path.GetTempPath(), "antigravity_studio_profile");
+                    try
+                    {
+                        string prefPath = Path.Combine(tempProfile, "Default", "Preferences");
+                        if (File.Exists(prefPath))
+                        {
+                            string json = File.ReadAllText(prefPath);
+                            if (json.Contains("\"maximized\":true"))
+                            {
+                                json = json.Replace("\"maximized\":true", "\"maximized\":false");
+                                File.WriteAllText(prefPath, json);
+                            }
+                        }
+                    }
+                    catch { }
+
                     ProcessStartInfo browserPsi = new ProcessStartInfo();
                     browserPsi.FileName = browserPath;
                     browserPsi.Arguments = string.Format(
-                        "--app={0} --window-size=1280,860 --user-data-dir=\"{1}\" --no-first-run --no-default-browser-check",
+                        "--app={0} --window-size=1440,900 --user-data-dir=\"{1}\" --no-first-run --no-default-browser-check",
                         appUrl,
                         tempProfile
                     );

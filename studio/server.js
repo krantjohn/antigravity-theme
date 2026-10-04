@@ -137,6 +137,10 @@ function openNativeFileDialog() {
     const psLines = [
       'Add-Type -AssemblyName System.Windows.Forms',
       '[System.Windows.Forms.Application]::EnableVisualStyles()',
+      '$f = New-Object System.Windows.Forms.Form',
+      '$f.TopMost = $true',
+      '$f.Opacity = 0',
+      '$f.ShowInTaskbar = $false',
       '$d = New-Object System.Windows.Forms.OpenFileDialog',
       '$d.Filter = "媒体与视频文件 (*.mp4;*.webm;*.jpg;*.png;*.webp)|*.mp4;*.webm;*.jpg;*.png;*.webp|所有文件 (*.*)|*.*"',
       '$d.Title = "🌸 选择要作为 Antigravity 壁纸的素材文件"',
@@ -147,14 +151,15 @@ function openNativeFileDialog() {
       psLines.push(`$d.InitialDirectory = "${lastDir.replace(/\\/g, '\\\\')}"`);
     }
 
-    psLines.push('if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {');
+    psLines.push('if ($d.ShowDialog($f) -eq [System.Windows.Forms.DialogResult]::OK) {');
     psLines.push('    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8');
-    psLines.push('    Write-Host -NoNewline $d.FileName');
+    psLines.push('    [Console]::Out.Write($d.FileName)');
     psLines.push('}');
+    psLines.push('$f.Dispose()');
 
     const script = psLines.join("\r\n");
     const b64 = Buffer.from(script, 'utf16le').toString('base64');
-    exec(`powershell -NoProfile -Sta -EncodedCommand ${b64}`, { encoding: 'utf8', windowsHide: true }, (err, stdout) => {
+    exec(`powershell -NoProfile -Sta -EncodedCommand ${b64}`, { encoding: 'utf8' }, (err, stdout) => {
       let chosen = stdout ? stdout.trim() : '';
       if (chosen) {
         try { fs.writeFileSync(memoryFile, path.dirname(chosen), 'utf8'); } catch (e) {}
