@@ -42,27 +42,62 @@ console.log('=======================================================');
 if (browserExe) {
   // Use dedicated temporary profile directory for clean isolated app window
   const profileDir = path.join(os.tmpdir(), 'antigravity_studio_profile');
-  // Ensure profile window_placement does not force fullscreen / maximized
+  
+  // 智能计算屏幕适中尺寸 (大屏 1400x860，常规屏 1366x820)
+  const targetW = 1400;
+  const targetH = 860;
+  let targetX = 580;
+  let targetY = 260;
+
+  // 启动前强制重置 Chrome/Edge 记忆的 app_window_placement 与全屏尺寸
   try {
     const prefPath = path.join(profileDir, 'Default', 'Preferences');
     if (fs.existsSync(prefPath)) {
       const prefs = JSON.parse(fs.readFileSync(prefPath, 'utf8'));
-      if (prefs.browser && prefs.browser.window_placement) {
-        prefs.browser.window_placement.maximized = false;
-        const left = Math.max(20, prefs.browser.window_placement.left || 60);
-        const top = Math.max(20, prefs.browser.window_placement.top || 40);
-        prefs.browser.window_placement.left = left;
-        prefs.browser.window_placement.top = top;
-        prefs.browser.window_placement.right = left + 1366;
-        prefs.browser.window_placement.bottom = top + 820;
-        fs.writeFileSync(prefPath, JSON.stringify(prefs));
-      }
+      if (!prefs.browser) prefs.browser = {};
+
+      let workW = 2560;
+      let workH = 1392;
+      try {
+        const existingApp = prefs.browser.app_window_placement?.['127']?.['0']?.['0']?.['1_/'];
+        if (existingApp && existingApp.work_area_right) {
+          workW = existingApp.work_area_right;
+          workH = existingApp.work_area_bottom;
+        }
+      } catch (_) {}
+
+      targetX = Math.max(20, Math.round((workW - targetW) / 2));
+      targetY = Math.max(20, Math.round((workH - targetH) / 2));
+
+      delete prefs.browser.window_placement;
+      prefs.browser.app_window_placement = {
+        '127': {
+          '0': {
+            '0': {
+              '1_/': {
+                bottom: targetY + targetH,
+                left: targetX,
+                maximized: false,
+                right: targetX + targetW,
+                top: targetY,
+                work_area_bottom: workH,
+                work_area_left: 0,
+                work_area_right: workW,
+                work_area_top: 0
+              }
+            }
+          }
+        }
+      };
+
+      fs.writeFileSync(prefPath, JSON.stringify(prefs, null, 2));
     }
   } catch (_) {}
 
   const child = spawn(browserExe, [
     `--app=${appUrl}`,
-    '--window-size=1366,820',
+    `--window-size=${targetW},${targetH}`,
+    `--window-position=${targetX},${targetY}`,
     `--user-data-dir=${profileDir}`,
     '--no-first-run',
     '--no-default-browser-check'
@@ -70,6 +105,38 @@ if (browserExe) {
     detached: false,
     stdio: 'ignore'
   });
+
+  // Windows 系统级锁定：后台执行一次微型窗口校准，杜绝任何全屏变异
+  if (process.platform === 'win32') {
+    setTimeout(() => {
+      const psEnforce = `
+        Add-Type -TypeDefinition @"
+          using System;
+          using System.Runtime.InteropServices;
+          using System.Text;
+          public class Win32 {
+            [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+            [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+            [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+            [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+            public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+          }
+"@
+        [Win32]::EnumWindows([Win32+EnumWindowsProc]{
+          param($hWnd, $lParam)
+          $sb = New-Object System.Text.StringBuilder 256
+          [Win32]::GetWindowText($hWnd, $sb, 256) | Out-Null
+          if ($sb.ToString() -like "*Antigravity Theme Studio*") {
+            [Win32]::ShowWindow($hWnd, 9) | Out-Null
+            [Win32]::SetWindowPos($hWnd, [IntPtr]::Zero, ${targetX}, ${targetY}, ${targetW}, ${targetH}, 0x0044) | Out-Null
+            return $false
+          }
+          return $true
+        }, [IntPtr]::Zero) | Out-Null
+      `;
+      exec(`powershell -NoProfile -NonInteractive -Command "${psEnforce.replace(/"/g, '\\"')}"`, () => {});
+    }, 600);
+  }
 
   child.on('error', (err) => {
     console.error('[Studio] 启动应用窗口失败:', err.message);

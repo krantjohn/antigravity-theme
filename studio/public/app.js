@@ -2083,6 +2083,27 @@ function setupEventListeners() {
     }
   };
 
+  // Reset window placement to optimal 1400x860 centered
+  const btnResetWindow = document.getElementById('btn-reset-window');
+  if (btnResetWindow) {
+    btnResetWindow.onclick = async () => {
+      try {
+        const screenW = window.screen?.availWidth || 2560;
+        const screenH = window.screen?.availHeight || 1392;
+        const targetW = 1400;
+        const targetH = 860;
+        const targetX = Math.max(20, Math.round((screenW - targetW) / 2));
+        const targetY = Math.max(20, Math.round((screenH - targetH) / 2));
+        window.resizeTo(targetW, targetH);
+        window.moveTo(targetX, targetY);
+      } catch (_) {}
+      try {
+        await fetch('/api/window/reset', { method: 'POST' });
+      } catch (_) {}
+      showToast('窗口已还原至推荐适中尺寸 (1400x860)');
+    };
+  }
+
   // Reload Studio page
   if (btnReload) {
     btnReload.onclick = () => {
@@ -2116,11 +2137,17 @@ function setupEventListeners() {
 // 20. Bootstrap
 // =========================================================================
 window.addEventListener('DOMContentLoaded', () => {
-  // Ensure standalone app window starts fully maximized without clipping
+  // 杜绝异常全屏：若窗口尺寸接近全屏，自动回缩至舒适适中尺寸 (1400x860)
   try {
-    if (window.screen && (window.outerWidth < window.screen.availWidth * 0.95 || window.outerHeight < window.screen.availHeight * 0.9)) {
-      window.moveTo(0, 0);
-      window.resizeTo(window.screen.availWidth, window.screen.availHeight);
+    const screenW = window.screen?.availWidth || 2560;
+    const screenH = window.screen?.availHeight || 1392;
+    if (window.outerWidth > screenW * 0.85 || window.outerHeight > screenH * 0.88) {
+      const targetW = 1400;
+      const targetH = 860;
+      const targetX = Math.max(20, Math.round((screenW - targetW) / 2));
+      const targetY = Math.max(20, Math.round((screenH - targetH) / 2));
+      window.resizeTo(targetW, targetH);
+      window.moveTo(targetX, targetY);
     }
   } catch (_) {}
 

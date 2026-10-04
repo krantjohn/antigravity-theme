@@ -169,6 +169,92 @@ function openNativeFileDialog() {
   });
 }
 
+// Helper: Reset app window size and position in Windows and update Preferences
+function resetAppWindowPlacement() {
+  return new Promise((resolve) => {
+    const profileDir = path.join(os.tmpdir(), 'antigravity_studio_profile');
+    const prefPath = path.join(profileDir, 'Default', 'Preferences');
+    const targetW = 1400;
+    const targetH = 860;
+    let targetX = 580;
+    let targetY = 260;
+
+    try {
+      if (fs.existsSync(prefPath)) {
+        const prefs = JSON.parse(fs.readFileSync(prefPath, 'utf8'));
+        if (!prefs.browser) prefs.browser = {};
+        let workW = 2560, workH = 1392;
+        try {
+          const ex = prefs.browser.app_window_placement?.['127']?.['0']?.['0']?.['1_/'];
+          if (ex && ex.work_area_right) {
+            workW = ex.work_area_right;
+            workH = ex.work_area_bottom;
+          }
+        } catch (_) {}
+        targetX = Math.max(20, Math.round((workW - targetW) / 2));
+        targetY = Math.max(20, Math.round((workH - targetH) / 2));
+        delete prefs.browser.window_placement;
+        prefs.browser.app_window_placement = {
+          '127': {
+            '0': {
+              '0': {
+                '1_/': {
+                  bottom: targetY + targetH,
+                  left: targetX,
+                  maximized: false,
+                  right: targetX + targetW,
+                  top: targetY,
+                  work_area_bottom: workH,
+                  work_area_left: 0,
+                  work_area_right: workW,
+                  work_area_top: 0
+                }
+              }
+            }
+          }
+        };
+        fs.writeFileSync(prefPath, JSON.stringify(prefs, null, 2));
+      }
+    } catch (_) {}
+
+    if (process.platform === 'win32') {
+      const psLines = [
+        'Add-Type -TypeDefinition @"',
+        '  using System;',
+        '  using System.Runtime.InteropServices;',
+        '  using System.Text;',
+        '  public class Win32 {',
+        '    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);',
+        '    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);',
+        '    [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);',
+        '    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);',
+        '    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);',
+        '  }',
+        '"@',
+        '[Win32]::EnumWindows([Win32+EnumWindowsProc]{',
+        '  param($hWnd, $lParam)',
+        '  $sb = New-Object System.Text.StringBuilder 256',
+        '  [Win32]::GetWindowText($hWnd, $sb, 256) | Out-Null',
+        '  if ($sb.ToString() -like "*Antigravity Theme Studio*") {',
+        '    [Win32]::ShowWindow($hWnd, 9) | Out-Null',
+        `    [Win32]::SetWindowPos($hWnd, [IntPtr]::Zero, ${targetX}, ${targetY}, ${targetW}, ${targetH}, 0x0044) | Out-Null`,
+        '    return $false',
+        '  }',
+        '  return $true',
+        '}, [IntPtr]::Zero) | Out-Null'
+      ];
+      const script = psLines.join("\r\n");
+      const b64 = Buffer.from(script, 'utf16le').toString('base64');
+      exec(`powershell -NoProfile -Sta -EncodedCommand ${b64}`, () => {
+        resolve(true);
+      });
+    } else {
+      resolve(true);
+    }
+  });
+}
+
+
 let lastClientHeartbeat = Date.now();
 let hasEverHeartbeated = false;
 
@@ -594,6 +680,16 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, message: '正在重启 Antigravity 客户端...' });
     } catch (err) {
       console.error('[Studio] 重启 Antigravity 失败:', err);
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 10.8. POST /api/window/reset - Snap window size to optimal 1400x860 centered
+  if (req.method === 'POST' && pathname === '/api/window/reset') {
+    try {
+      await resetAppWindowPlacement();
+      return sendJson(res, 200, { success: true, message: '已重置为适中推荐尺寸 (1400x860)' });
+    } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message });
     }
   }

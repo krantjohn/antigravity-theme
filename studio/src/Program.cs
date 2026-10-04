@@ -87,26 +87,30 @@ namespace AntigravityThemeStudio
                 if (!string.IsNullOrEmpty(browserPath) && File.Exists(browserPath))
                 {
                     string tempProfile = Path.Combine(Path.GetTempPath(), "antigravity_studio_profile");
-                    try
-                    {
-                        string prefPath = Path.Combine(tempProfile, "Default", "Preferences");
-                        if (File.Exists(prefPath))
-                        {
-                            string json = File.ReadAllText(prefPath);
-                            if (json.Contains("\"maximized\":true"))
-                            {
-                                json = json.Replace("\"maximized\":true", "\"maximized\":false");
-                                File.WriteAllText(prefPath, json);
-                            }
-                        }
-                    }
-                    catch { }
+
+                    int screenW = Screen.PrimaryScreen.WorkingArea.Width;
+                    int screenH = Screen.PrimaryScreen.WorkingArea.Height;
+                    int screenX = Screen.PrimaryScreen.WorkingArea.Left;
+                    int screenY = Screen.PrimaryScreen.WorkingArea.Top;
+
+                    // 计算适中舒适的居中窗口尺寸 (大屏 1400x860，常规屏 1366x820)
+                    int targetW = screenW > 2000 ? 1400 : Math.Min(1366, Math.Max(1200, (int)(screenW * 0.72)));
+                    int targetH = screenH > 1100 ? 860 : Math.Min(820, Math.Max(720, (int)(screenH * 0.78)));
+                    int targetX = screenX + Math.Max(20, (screenW - targetW) / 2);
+                    int targetY = screenY + Math.Max(20, (screenH - targetH) / 2);
+
+                    // 启动前强制重置 Chrome/Edge 记忆的窗口状态与全屏尺寸
+                    SanitizeChromePreferences(tempProfile, screenX, screenY, screenW, screenH, targetX, targetY, targetW, targetH);
 
                     ProcessStartInfo browserPsi = new ProcessStartInfo();
                     browserPsi.FileName = browserPath;
                     browserPsi.Arguments = string.Format(
-                        "--app={0} --window-size=1366,820 --user-data-dir=\"{1}\" --no-first-run --no-default-browser-check",
+                        "--app={0} --window-size={1},{2} --window-position={3},{4} --user-data-dir=\"{5}\" --no-first-run --no-default-browser-check",
                         appUrl,
+                        targetW,
+                        targetH,
+                        targetX,
+                        targetY,
                         tempProfile
                     );
                     browserPsi.UseShellExecute = false;
@@ -114,9 +118,15 @@ namespace AntigravityThemeStudio
                     Process browserProc = Process.Start(browserPsi);
                     DateTime startTime = DateTime.Now;
 
+                    // 后台线程使用 Windows 原生 Win32 API 强制锁定窗口大小和位置 (防止浏览器内核抢占全屏)
+                    EnforceOptimalWindowSize(targetX, targetY, targetW, targetH);
+
                     if (browserProc != null)
                     {
                         browserProc.WaitForExit();
+
+                        // 退出后再次清理 Chrome 可能写回的大窗口数据，确保下次启动依然纯净
+                        SanitizeChromePreferences(tempProfile, screenX, screenY, screenW, screenH, targetX, targetY, targetW, targetH);
 
                         // 如果窗口运行时间大于 2 秒后退出，说明是用户主动关闭了窗口
                         if ((DateTime.Now - startTime).TotalSeconds >= 2.0)
@@ -267,5 +277,95 @@ namespace AntigravityThemeStudio
 
             return null;
         }
+
+        private static void SanitizeChromePreferences(string tempProfile, int screenX, int screenY, int screenW, int screenH, int targetX, int targetY, int targetW, int targetH)
+        {
+            try
+            {
+                string prefPath = Path.Combine(tempProfile, "Default", "Preferences");
+                if (!File.Exists(prefPath)) return;
+
+                string json = File.ReadAllText(prefPath);
+
+                // 强制关闭 maximized 标志
+                json = json.Replace("\"maximized\":true", "\"maximized\":false");
+
+                // 构造标准化居中的 app_window_placement 数据结构
+                string targetPlacement = string.Format(
+                    "\"app_window_placement\":{{\"127\":{{\"0\":{{\"0\":{{\"1_/\":{{\"bottom\":{0},\"left\":{1},\"maximized\":false,\"right\":{2},\"top\":{3},\"work_area_bottom\":{4},\"work_area_left\":{5},\"work_area_right\":{6},\"work_area_top\":{7}}}}}}}}}",
+                    targetY + targetH,
+                    targetX,
+                    targetX + targetW,
+                    targetY,
+                    screenY + screenH,
+                    screenX,
+                    screenX + screenW,
+                    screenY
+                );
+
+                // 移除或覆写历史可能残留的大窗口/全屏 app_window_placement
+                json = System.Text.RegularExpressions.Regex.Replace(
+                    json,
+                    "\"app_window_placement\"\\s*:\\s*\\{[^}]*(\\{[^}]*(\\{[^}]*(\\{[^}]*\\})*\\})*\\})*\\}",
+                    targetPlacement
+                );
+
+                // 清理常规 window_placement
+                json = System.Text.RegularExpressions.Regex.Replace(
+                    json,
+                    "\"window_placement\"\\s*:\\s*\\{[^}]*\\}",
+                    "\"window_placement\":{\"bottom\":" + (targetY + targetH) + ",\"left\":" + targetX + ",\"maximized\":false,\"right\":" + (targetX + targetW) + ",\"top\":" + targetY + "}"
+                );
+
+                File.WriteAllText(prefPath, json);
+            }
+            catch { }
+        }
+
+        private static void EnforceOptimalWindowSize(int targetX, int targetY, int targetW, int targetH)
+        {
+            ThreadPool.QueueUserWorkItem((state) =>
+            {
+                for (int i = 0; i < 30; i++) // 轮询最多 3 秒直至检测到窗口生成
+                {
+                    Thread.Sleep(100);
+                    bool found = false;
+                    EnumWindows((hWnd, lParam) =>
+                    {
+                        System.Text.StringBuilder sb = new System.Text.StringBuilder(256);
+                        GetWindowText(hWnd, sb, 256);
+                        string title = sb.ToString();
+                        if (!string.IsNullOrEmpty(title) && title.Contains("Antigravity Theme Studio"))
+                        {
+                            ShowWindow(hWnd, SW_RESTORE);
+                            SetWindowPos(hWnd, IntPtr.Zero, targetX, targetY, targetW, targetH, SWP_NOZORDER | SWP_SHOWWINDOW);
+                            found = true;
+                            return false;
+                        }
+                        return true;
+                    }, IntPtr.Zero);
+
+                    if (found) break;
+                }
+            });
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        private const uint SWP_NOZORDER = 0x0004;
+        private const uint SWP_SHOWWINDOW = 0x0040;
+        private const int SW_RESTORE = 9;
     }
 }
