@@ -709,25 +709,32 @@ async function runTests() {
   assert.ok(cssAfterBlack.includes('#ffffff') || cssAfterBlack.includes('255, 255, 255'), 'custom_theme.css must contain white outline glow for dark text');
   assert.ok(cssAfterBlack.includes('rgba(255, 255, 255, 0.88)'), 'Inline code must have light background in dark text mode');
 
-  await new Promise(r => setTimeout(r, 1200));
-  const cdpFontCheckBlack = await evalCdp(`
-    (() => {
-      const sheet = document.getElementById('antigravity-custom-theme')?.sheet;
-      if (!sheet) return JSON.stringify({ hasSheet: false });
-      let fontFound = false;
-      for (const rule of sheet.cssRules) {
-        if (rule.cssText && (rule.cssText.includes('#0f172a') || rule.cssText.includes('rgb(15, 23, 42)'))) {
-          fontFound = true;
-          break;
+  let fontStateBlack = null;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    await new Promise(r => setTimeout(r, 400));
+    const cdpFontCheckBlack = await evalCdp(`
+      (() => {
+        const el = document.getElementById('antigravity-custom-theme');
+        const sheet = el?.sheet;
+        if (!sheet) return JSON.stringify({ hasSheet: false, fontFound: false });
+        let fontFound = el.textContent && el.textContent.includes('#0f172a');
+        if (!fontFound) {
+          for (const rule of sheet.cssRules) {
+            if (rule.cssText && (rule.cssText.includes('#0f172a') || rule.cssText.includes('rgb(15, 23, 42)'))) {
+              fontFound = true;
+              break;
+            }
+          }
         }
-      }
-      return JSON.stringify({
-        hasSheet: true,
-        fontFound
-      });
-    })()
-  `);
-  const fontStateBlack = JSON.parse(cdpFontCheckBlack);
+        return JSON.stringify({
+          hasSheet: true,
+          fontFound
+        });
+      })()
+    `);
+    fontStateBlack = JSON.parse(cdpFontCheckBlack);
+    if (fontStateBlack && fontStateBlack.fontFound) break;
+  }
   console.log('   CDP 暗夜曜黑字体生效状态:', fontStateBlack);
   assert.strictEqual(fontStateBlack.hasSheet, true, 'Antigravity style tag must exist');
   assert.strictEqual(fontStateBlack.fontFound, true, 'Obsidian-black color must be present in active CDP stylesheet rules');
@@ -741,22 +748,29 @@ async function runTests() {
   const cssAfterHex = fs.readFileSync(path.join(antigravityDir, 'custom_theme.css'), 'utf8');
   assert.ok(cssAfterHex.includes('#ff69b4'), 'custom_theme.css must contain #ff69b4');
 
-  await new Promise(r => setTimeout(r, 1200));
-  const cdpFontCheckHex = await evalCdp(`
-    (() => {
-      const sheet = document.getElementById('antigravity-custom-theme')?.sheet;
-      if (!sheet) return JSON.stringify({ hasSheet: false });
-      let hexFound = false;
-      for (const rule of sheet.cssRules) {
-        if (rule.cssText && (rule.cssText.includes('#ff69b4') || rule.cssText.includes('rgb(255, 105, 180)'))) {
-          hexFound = true;
-          break;
+  let fontStateHex = null;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    await new Promise(r => setTimeout(r, 400));
+    const cdpFontCheckHex = await evalCdp(`
+      (() => {
+        const el = document.getElementById('antigravity-custom-theme');
+        const sheet = el?.sheet;
+        if (!sheet) return JSON.stringify({ hasSheet: false, hexFound: false });
+        let hexFound = el.textContent && el.textContent.includes('#ff69b4');
+        if (!hexFound) {
+          for (const rule of sheet.cssRules) {
+            if (rule.cssText && (rule.cssText.includes('#ff69b4') || rule.cssText.includes('rgb(255, 105, 180)'))) {
+              hexFound = true;
+              break;
+            }
+          }
         }
-      }
-      return JSON.stringify({ hasSheet: true, hexFound });
-    })()
-  `);
-  const fontStateHex = JSON.parse(cdpFontCheckHex);
+        return JSON.stringify({ hasSheet: true, hexFound });
+      })()
+    `);
+    fontStateHex = JSON.parse(cdpFontCheckHex);
+    if (fontStateHex && fontStateHex.hexFound) break;
+  }
   console.log('   CDP 自定义粉色生效状态:', fontStateHex);
   assert.strictEqual(fontStateHex.hexFound, true, 'Custom hex color must be present in active CDP stylesheet rules');
 
