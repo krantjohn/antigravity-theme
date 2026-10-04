@@ -117,61 +117,45 @@ async function runTests() {
   console.log('=======================================================');
   console.log('');
 
-  // CRITICAL USER INTEGRITY: Backup user configuration and wallpaper state
+  // CRITICAL USER INTEGRITY: Dynamically snapshot the user's CURRENT live state right NOW
   const antigravityDir = process.env.ANTIGRAVITY_CONFIG_DIR || path.join(require('os').homedir(), '.gemini', 'antigravity');
-  const userBackupDir = path.join(antigravityDir, 'user_wallpaper_backup');
   const liveWallpapersDir = path.join(antigravityDir, 'wallpapers');
   const customCssPath = path.join(antigravityDir, 'custom_theme.css');
-  const goldenConfigPath = path.join(antigravityDir, 'slots_config.golden_backup.json');
+  const sessionBackupDir = path.join(require('os').tmpdir(), `ag_test_session_${Date.now()}`);
 
-  // Ensure user backup directory exists and has all files
-  if (!fs.existsSync(userBackupDir)) {
-    fs.mkdirSync(userBackupDir, { recursive: true });
-    if (fs.existsSync(liveWallpapersDir)) {
-      fs.readdirSync(liveWallpapersDir).forEach(f => {
-        try { fs.copyFileSync(path.join(liveWallpapersDir, f), path.join(userBackupDir, f)); } catch (e) {}
-      });
-    }
+  fs.mkdirSync(sessionBackupDir, { recursive: true });
+  if (fs.existsSync(liveWallpapersDir)) {
+    fs.readdirSync(liveWallpapersDir).forEach(f => {
+      try { fs.copyFileSync(path.join(liveWallpapersDir, f), path.join(sessionBackupDir, f)); } catch (e) {}
+    });
   }
 
-  let userConfigBackup = loadSlotsConfig();
-  if (fs.existsSync(goldenConfigPath)) {
-    try { userConfigBackup = JSON.parse(fs.readFileSync(goldenConfigPath, 'utf8')); } catch (e) {}
-  } else if (fs.existsSync(path.join(userBackupDir, 'slots_config.json'))) {
-    try { userConfigBackup = JSON.parse(fs.readFileSync(path.join(userBackupDir, 'slots_config.json'), 'utf8')); } catch (e) {}
-  }
+  const userInitialConfig = JSON.parse(JSON.stringify(loadSlotsConfig()));
+  const initialCssContent = fs.existsSync(customCssPath) ? fs.readFileSync(customCssPath, 'utf8') : '';
 
   async function restoreUserWallpaperEnvironment() {
-    console.log('\n[Restore] 正在自动恢复用户原始壁纸与字体配置 (杜绝误重置)...');
-    if (fs.existsSync(userBackupDir)) {
-      fs.readdirSync(userBackupDir).forEach(f => {
-        try {
-          fs.copyFileSync(path.join(userBackupDir, f), path.join(liveWallpapersDir, f));
-        } catch (e) {}
-      });
-    }
-    let targetConfig = userConfigBackup;
-    if (fs.existsSync(goldenConfigPath)) {
-      try { targetConfig = JSON.parse(fs.readFileSync(goldenConfigPath, 'utf8')); } catch (e) {}
-    }
-    for (const [key, slot] of Object.entries(targetConfig)) {
-      if (slot && slot.type === 'video') {
-        const prefix = key === 'bottom' ? 'input' : key;
-        if (slot.poster && slot.poster.toLowerCase().endsWith('.gif')) {
-          slot.poster = null;
-        }
-        const jpgCandidate = `${prefix}_poster.jpg`;
-        if (fs.existsSync(path.join(liveWallpapersDir, jpgCandidate))) {
-          slot.poster = jpgCandidate;
-        }
+    console.log('\n[Restore] 正在恢复测试前用户实时壁纸与配置...');
+    try {
+      if (fs.existsSync(sessionBackupDir)) {
+        fs.readdirSync(sessionBackupDir).forEach(f => {
+          try {
+            fs.copyFileSync(path.join(sessionBackupDir, f), path.join(liveWallpapersDir, f));
+          } catch (e) {}
+        });
       }
+      saveSlotsConfig(userInitialConfig);
+      if (initialCssContent) {
+        fs.writeFileSync(customCssPath, initialCssContent, 'utf-8');
+        try { fs.writeFileSync(path.join(liveWallpapersDir, 'custom_theme.css'), initialCssContent, 'utf-8'); } catch (e) {}
+      } else {
+        const css = generateMasterCss(userInitialConfig);
+        fs.writeFileSync(customCssPath, css, 'utf-8');
+      }
+      await triggerLiveHotReload(initialCssContent || generateMasterCss(userInitialConfig), userInitialConfig);
+      console.log('✓ 测试前用户实时壁纸与配置已 100% 恢复！');
+    } finally {
+      try { fs.rmSync(sessionBackupDir, { recursive: true, force: true }); } catch (e) {}
     }
-    saveSlotsConfig(targetConfig);
-    const userCss = generateMasterCss(targetConfig);
-    fs.writeFileSync(customCssPath, userCss, 'utf-8');
-    try { fs.writeFileSync(path.join(liveWallpapersDir, 'custom_theme.css'), userCss, 'utf-8'); } catch (e) {}
-    await triggerLiveHotReload(userCss, targetConfig);
-    console.log('✓ 用户原始壁纸与配置已 100% 自动恢复！');
   }
 
   try {

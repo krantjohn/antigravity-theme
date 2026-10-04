@@ -9,6 +9,8 @@ async function runTests() {
   const studio = require('../../studio/server');
   const server = studio.server;
   const PORT = studio.PORT;
+  const { loadSlotsConfig, saveSlotsConfig, triggerLiveHotReload, generateMasterCss } = require('../../core/theme_engine');
+  const initialConfig = JSON.parse(JSON.stringify(loadSlotsConfig()));
   
   function get(urlPath, headers = {}) {
     return new Promise((resolve, reject) => {
@@ -126,6 +128,13 @@ async function runTests() {
     console.error('❌ Test failed:', err);
     process.exitCode = 1;
   } finally {
+    if (initialConfig) {
+      try {
+        saveSlotsConfig(initialConfig);
+        const css = generateMasterCss(initialConfig);
+        await triggerLiveHotReload(css, initialConfig);
+      } catch (e) {}
+    }
     if (server.listening) {
       server.close();
     }
