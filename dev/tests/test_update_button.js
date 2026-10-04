@@ -72,7 +72,10 @@ async function main() {
     })()
   `);
 
-  const preloadCode = fs.readFileSync(path.join(__dirname, '..', 'preload.js'), 'utf8');
+  const preloadPath = fs.existsSync(path.join(__dirname, '..', '..', 'core', 'preload.js'))
+    ? path.join(__dirname, '..', '..', 'core', 'preload.js')
+    : path.join(__dirname, '..', 'preload.js');
+  const preloadCode = fs.readFileSync(preloadPath, 'utf8');
   const startMarker = '// ================= Antigravity Update Button & Interactive Modal Handler =================';
   const endMarker = '// =========================================================================';
   const snippet = preloadCode.substring(

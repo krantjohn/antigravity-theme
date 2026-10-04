@@ -94,7 +94,7 @@
           <div class="draft-top-row" style="display:flex; justify-content:space-between; align-items:center;">
             <div class="draft-status-wrap">
               <span class="draft-indicator synced" id="draft-indicator"></span>
-              <span class="draft-status-text" id="draft-status-text">与当前客户端同步</span>
+              <span class="draft-status-text" id="draft-status-text">已同步</span>
             </div>
             <button class="btn-toggle-inspector" id="btn-toggle-inspector" title="收起参数调节面板以获得更大全景预览视口">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -103,7 +103,7 @@
           <div class="draft-btn-group">
             <button class="btn btn-primary btn-sm btn-glow btn-block" id="btn-commit-draft" title="将当前实时预览的全部槽位壁纸、位置对齐与字体正式应用至 Antigravity">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
-              正式应用到客户端
+              应用生效
             </button>
             <div class="draft-sub-btns">
               <button class="btn btn-secondary btn-sm" id="btn-discard-draft" title="放弃当前未应用的预览调节，还原为客户端当前生效配置">
@@ -111,7 +111,7 @@
                 还原
               </button>
               <button class="btn btn-secondary btn-sm" id="btn-draft-save-preset" title="将当前实时预览的方案另存为新预设">
-                💾 另存预设
+                💾 存为预设
               </button>
             </div>
           </div>
@@ -120,15 +120,15 @@
         <!-- Slot Selector Pills -->
         <div class="inspector-section">
           <div class="section-title-row">
-            <span class="section-tag">SLOT SELECTOR</span>
-            <span class="active-focus-label" id="inspector-focus-label">正在调节：左主对话底座</span>
+            <span class="section-tag">SLOTS</span>
+            <span class="active-focus-label" id="inspector-focus-label">主对话 (左)</span>
           </div>
           <div class="slot-pills" id="slot-selector">
-            <button class="slot-pill active" data-slot="left">主对话 (左)</button>
-            <button class="slot-pill" data-slot="mid">活跃终端 (中)</button>
-            <button class="slot-pill" data-slot="right">独立侧栏 (右)</button>
-            <button class="slot-pill" data-slot="bottom">提问框 (底)</button>
-            <button class="slot-pill" data-slot="settings">设置弹窗</button>
+            <button class="slot-pill active" data-slot="left">主对话</button>
+            <button class="slot-pill" data-slot="mid">活跃终端</button>
+            <button class="slot-pill" data-slot="right">独立侧栏</button>
+            <button class="slot-pill" data-slot="bottom">提问框</button>
+            <button class="slot-pill" data-slot="settings">设置</button>
           </div>
         </div>
 
@@ -161,7 +161,7 @@
                   <polyline points="21 15 16 10 5 21"></polyline>
                 </svg>
               </div>
-              <div class="drop-title">拖拽视频/图片到此处，或点击浏览</div>
+              <div class="drop-title">拖拽素材到此处</div>
               <div class="drop-actions">
                 <button class="btn btn-secondary btn-sm" id="btn-browse-native">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -259,7 +259,6 @@
             <h2>Antigravity 界面仿真视窗</h2>
           </div>
           <div class="stage-actions">
-            <span class="hint-pill">💡 画面支持直接点击聚焦 & 鼠标按住直接拖拽位移</span>
             <button class="btn btn-secondary btn-sm" id="btn-toggle-mock-settings" title="打开/收起设置弹窗外观仿真">
               ⚙️ 预览设置弹窗
             </button>
@@ -270,7 +269,7 @@
         <div class="preview-toolbar">
           <div class="toolbar-left-group">
             <div class="quick-preset-wrap" title="工作区内快速载入预设方案">
-              <span class="toolbar-label">⚡ 快速预设:</span>
+              <span class="toolbar-label">预设:</span>
               <select id="quick-preset-select" class="toolbar-select">
                 <option value="">(选择预设方案...)</option>
               </select>
@@ -279,14 +278,14 @@
             <div class="view-mode-pills" id="view-mode-pills">
               <button class="btn-mode-pill active" data-mode="full" title="完整 16:9 全景桌面视口">🖥️ 全景</button>
               <button class="btn-mode-pill" data-mode="compact" title="16:10 紧凑笔记本视口">💻 紧凑</button>
-              <button class="btn-mode-pill" data-mode="focus" title="特写放大当前调节的壁纸槽位">🔍 特写聚焦</button>
+              <button class="btn-mode-pill" data-mode="focus" title="特写放大当前调节的壁纸槽位">🔍 特写</button>
             </div>
 
             <!-- Right Pane View Switcher -->
             <div class="view-mode-pills" id="right-pane-pills">
-              <button class="btn-mode-pill active" data-pane="subagents" title="显示右侧副栏 (槽位: right)">🤖 任务栏<span class="mode-extra">(right)</span></button>
-              <button class="btn-mode-pill" data-pane="terminal" title="显示活跃终端 (槽位: mid)">💻 终端<span class="mode-extra">(mid)</span></button>
-              <button class="btn-mode-pill" data-pane="split" title="分屏对比同时预览终端与任务栏">🪟 双显<span class="mode-extra">分屏</span></button>
+              <button class="btn-mode-pill active" data-pane="subagents" title="显示右侧副栏 (槽位: right)">🤖 任务栏</button>
+              <button class="btn-mode-pill" data-pane="terminal" title="显示活跃终端 (槽位: mid)">💻 终端</button>
+              <button class="btn-mode-pill" data-pane="split" title="分屏对比同时预览终端与任务栏">🪟 双显分屏</button>
             </div>
           </div>
 
@@ -453,24 +452,8 @@
                         </div>
                       </div>
                       <div class="mock-conv-item">
-                        <span class="conv-title">Software Performance Trou...</span>
-                        <span class="conv-time">4h</span>
-                      </div>
-                      <div class="mock-conv-item">
-                        <span class="conv-title">矢量图绘制</span>
-                        <span class="conv-time">4h</span>
-                      </div>
-                      <div class="mock-conv-item">
-                        <span class="conv-title">诗歌八全</span>
-                        <span class="conv-time">2d</span>
-                      </div>
-                      <div class="mock-conv-item">
-                        <span class="conv-title">服务器</span>
-                        <span class="conv-time">2d</span>
-                      </div>
-                      <div class="mock-conv-item">
-                        <span class="conv-title">Help With Homework</span>
-                        <span class="conv-time">5d</span>
+                        <span class="conv-title">Project Assistant</span>
+                        <span class="conv-time">2h</span>
                       </div>
                     </div>
                   </div>
@@ -553,14 +536,14 @@
                     <!-- User Message Bubble -->
                     <div class="mock-msg-user">
                       <div class="user-bubble-box" id="mock-user-text">
-                        你好，请帮我分析代码并优化界面
+                        你好，请优化界面
                       </div>
                     </div>
 
                     <!-- Assistant Markdown Response Card -->
                     <div class="mock-msg-assistant">
                       <div class="assistant-content-card" id="mock-ai-text">
-                        <p class="msg-desc">你好！代码已为你优化完成，半透明毛玻璃与字体阴影已实时对齐。</p>
+                        <p class="msg-desc">界面与主题已就绪，实时对齐生效。</p>
                       </div>
                     </div>
 
@@ -612,7 +595,7 @@
                     <div class="mock-pane-tabs">
                       <button class="mock-pane-tab active" id="tab-pane-subagents" data-target="subagents">
                         <span>Subagents</span>
-                        <span class="pane-badge">7 ▼</span>
+                        <span class="pane-badge">2</span>
                       </button>
                       <button class="mock-pane-tab" id="tab-pane-terminal" data-target="terminal">
                         <span>Terminal</span>
@@ -639,115 +622,18 @@
                         <div class="subagent-cards-list">
                           <div class="subagent-card">
                             <div class="subagent-info">
-                              <span class="subagent-role">Lead Full-Stack Engineer <span class="sub-count">(1 subagent) &gt;</span></span>
-                              <span class="subagent-meta">Worked for 12m</span>
+                              <span class="subagent-role">Full-Stack Engineer</span>
+                              <span class="subagent-meta">Active</span>
                             </div>
                             <span class="subagent-status-check">✓</span>
                           </div>
                           <div class="subagent-card">
                             <div class="subagent-info">
-                              <span class="subagent-role">Lead Debugger <span class="sub-count">(2 subagents) &gt;</span></span>
-                              <span class="subagent-meta">Worked for 22m</span>
+                              <span class="subagent-role">System Debugger</span>
+                              <span class="subagent-meta">Idle</span>
                             </div>
                             <span class="subagent-status-check">✓</span>
                           </div>
-                          <div class="subagent-card">
-                            <div class="subagent-info">
-                              <span class="subagent-role">Lead Debugger <span class="sub-count">(2 subagents) &gt;</span></span>
-                              <span class="subagent-meta">Worked for 1h 5m</span>
-                            </div>
-                            <span class="subagent-status-check">✓</span>
-                          </div>
-                          <div class="subagent-card">
-                            <div class="subagent-info">
-                              <span class="subagent-role">Senior Debugger <span class="sub-count">(2 subagents) &gt;</span></span>
-                              <span class="subagent-meta">Worked for 1h 26m</span>
-                            </div>
-                            <span class="subagent-status-check">✓</span>
-                          </div>
-                          <div class="subagent-card">
-                            <div class="subagent-info">
-                              <span class="subagent-role">Performance Engineer <span class="sub-count">(2 subagents) &gt;</span></span>
-                              <span class="subagent-meta">Worked for 1h 11m</span>
-                            </div>
-                            <span class="subagent-status-check">✓</span>
-                          </div>
-                        </div>
-                        <div class="see-all-link">See all (7)</div>
-                      </div>
-
-                      <!-- Files Changed -->
-                      <div class="pane-section">
-                        <div class="section-row-hdr">
-                          <span class="hdr-title">Files Changed</span>
-                          <span class="hdr-count">27 &gt;</span>
-                        </div>
-                        <div class="file-tree-list">
-                          <div class="file-tree-item">
-                            <span class="file-dot red-dot">◆</span>
-                            <span class="file-name">.gitignore</span>
-                            <span class="file-path">...ers\Administrator\antigravity-theme</span>
-                          </div>
-                          <div class="file-tree-item">
-                            <span class="file-dot orange-dot">JS</span>
-                            <span class="file-name">server.js</span>
-                            <span class="file-path">...dministrator\antigravity-theme\studio</span>
-                          </div>
-                          <div class="file-tree-item">
-                            <span class="file-dot yellow-dot">&lt;&gt;</span>
-                            <span class="file-name">index.html</span>
-                            <span class="file-path">...tor\antigravity-theme\studio\public</span>
-                          </div>
-                          <div class="file-tree-item">
-                            <span class="file-dot blue-dot">{}</span>
-                            <span class="file-name">style.css</span>
-                            <span class="file-path">...trator\antigravity-theme\studio\public</span>
-                          </div>
-                          <div class="file-tree-item">
-                            <span class="file-dot yellow-dot">JS</span>
-                            <span class="file-name">app.js</span>
-                            <span class="file-path">...nistrator\antigravity-theme\studio</span>
-                          </div>
-                        </div>
-                        <div class="see-all-link">See all (27)</div>
-                      </div>
-
-                      <!-- Artifacts -->
-                      <div class="pane-section">
-                        <div class="section-row-hdr">
-                          <span class="hdr-title">Artifacts</span>
-                          <span class="hdr-count">0 &gt;</span>
-                        </div>
-                      </div>
-
-                      <!-- Uploads -->
-                      <div class="pane-section">
-                        <div class="section-row-hdr">
-                          <span class="hdr-title">Uploads</span>
-                          <span class="hdr-count">11 &gt;</span>
-                        </div>
-                        <div class="uploads-list">
-                          <div class="upload-item">
-                            <span class="upload-icon">🖼️</span>
-                            <span class="upload-name">Media (Today 5:32 PM)</span>
-                          </div>
-                          <div class="upload-item">
-                            <span class="upload-icon">🖼️</span>
-                            <span class="upload-name">Media (Today 5:31 PM)</span>
-                          </div>
-                          <div class="upload-item">
-                            <span class="upload-icon">🖼️</span>
-                            <span class="upload-name">Media (Today 5:27 PM)</span>
-                          </div>
-                        </div>
-                        <div class="see-all-link">See all (11)</div>
-                      </div>
-
-                      <!-- Background Tasks -->
-                      <div class="pane-section">
-                        <div class="section-row-hdr">
-                          <span class="hdr-title">Background Tasks</span>
-                          <span class="hdr-count">0 &gt;</span>
                         </div>
                       </div>
                     </div>
