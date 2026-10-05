@@ -2266,13 +2266,16 @@ function setupEventListeners() {
       if (btnShutdown.disabled) return;
       btnShutdown.disabled = true;
       const appShell = document.getElementById('app-shell') || document.body;
-      // 1. Play vintage CRT television power-off animation and synthesized sound
-      await playCrtShutdownAnimation(appShell, { isShutdown: true });
-      // 2. Request server shutdown
+
+      // 1. 0ms 瞬间向后台触发原生操作系统全桌面窗口 CRT 偏转线圈塌陷动效 (桌面窗口同步收缩)
       try {
-        await fetch('/api/shutdown', { method: 'POST' });
+        fetch('/api/shutdown', { method: 'POST' });
       } catch (_) {}
-      // 3. Attempt window close via script
+
+      // 2. 页面视口内同步播放高频回扫放电音效与白炽荧光回扫线/中心光斑动画
+      await playCrtShutdownAnimation(appShell, { isShutdown: true });
+
+      // 3. 兜底关闭浏览器窗口
       setTimeout(() => {
         try { window.open('', '_self', ''); window.close(); } catch (_) {}
       }, 50);

@@ -694,25 +694,30 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 11. POST /api/shutdown - Graceful exit of the tool
+  // 11. POST /api/shutdown - Graceful exit of the tool with CRT desktop window animation
   if (req.method === 'POST' && pathname === '/api/shutdown') {
-    sendJson(res, 200, { success: true, message: 'Studio server is shutting down. Goodbye!' });
-    console.log('[Studio] 用户请求彻底退出，正在完全销毁后台进程与窗口...');
-    setTimeout(() => {
-      if (process.platform === 'win32') {
-        try {
-          const { exec } = require('child_process');
+    sendJson(res, 200, { success: true, message: 'Studio server is shutting down with CRT window animation. Goodbye!' });
+    console.log('[Studio] 用户请求彻底退出，正在执行全桌面窗口 CRT 断电息屏动效并释放进程...');
+
+    if (process.platform === 'win32') {
+      try {
+        const { spawn, exec } = require('child_process');
+        const animatorExe = path.join(__dirname, 'crt_animator.exe');
+        if (fs.existsSync(animatorExe)) {
+          // 0ms 瞬间调起原生 Win32 窗口偏转线圈塌陷动画程序 (连同操作系统外层窗口一起收缩)
+          spawn(animatorExe, [], { detached: true, stdio: 'ignore' });
+        } else {
+          // 降级使用 PowerShell 优雅关闭窗口
           const psClose = `powershell -NoProfile -NonInteractive -Command "Get-Process -Name msedge, chrome -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*Antigravity Theme Studio*' } | ForEach-Object { $_.CloseMainWindow() }"`;
-          exec(psClose, () => {
-            server.close();
-            process.exit(0);
-          });
-          return;
-        } catch (_) {}
-      }
+          exec(psClose, () => {});
+        }
+      } catch (_) {}
+    }
+
+    setTimeout(() => {
       server.close();
       process.exit(0);
-    }, 350);
+    }, 550);
     return;
   }
 
