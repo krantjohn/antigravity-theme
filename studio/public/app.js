@@ -2112,18 +2112,215 @@ function setupEventListeners() {
     };
   }
 
-  // Shutdown Software (Zero background footprint)
-  btnShutdown.onclick = async () => {
+  // =========================================================================
+  // 📺 Retro CRT Television Power-Off & Wake Audio/Visual Engine
+  // =========================================================================
+  function playCrtAudio(type = 'off') {
     try {
-      showToast('正在完全关闭软件并释放所有后台进程...');
-      await fetch('/api/shutdown', { method: 'POST' });
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      if (type === 'off') {
+        // 1. High-frequency coil whine rapidly dropping (11.5kHz -> 50Hz)
+        const osc = ctx.createOscillator();
+        const oscGain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(11500, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.42);
+
+        oscGain.gain.setValueAtTime(0.09, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(3000, now);
+        filter.frequency.exponentialRampToValueAtTime(220, now + 0.38);
+
+        osc.connect(filter);
+        filter.connect(oscGain);
+        oscGain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+
+        // 2. Magnetic deflection relay cut-off "thump/pop"
+        const popOsc = ctx.createOscillator();
+        const popGain = ctx.createGain();
+        popOsc.type = 'sine';
+        popOsc.frequency.setValueAtTime(160, now + 0.05);
+        popOsc.frequency.exponentialRampToValueAtTime(32, now + 0.28);
+
+        popGain.gain.setValueAtTime(0.18, now + 0.05);
+        popGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+
+        popOsc.connect(popGain);
+        popGain.connect(ctx.destination);
+        popOsc.start(now + 0.05);
+        popOsc.stop(now + 0.35);
+
+        // 3. Faint phosphor static hiss
+        const bufferSize = Math.floor(ctx.sampleRate * 0.12);
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.04, now + 0.02);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+        noise.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+        noise.start(now + 0.02);
+      } else {
+        // CRT Power-On Wake Sound ("De-gauss coil hum + warm up bloom")
+        const osc = ctx.createOscillator();
+        const oscGain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(60, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.25);
+        osc.frequency.exponentialRampToValueAtTime(10500, now + 0.55);
+
+        oscGain.gain.setValueAtTime(0.01, now);
+        oscGain.gain.linearRampToValueAtTime(0.08, now + 0.15);
+        oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+
+        osc.connect(oscGain);
+        oscGain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.65);
+      }
+    } catch (_) {}
+  }
+
+  function playCrtShutdownAnimation(targetEl, { isShutdown = false } = {}) {
+    return new Promise((resolve) => {
+      const el = targetEl || document.getElementById('app-shell') || document.body;
+      const overlay = document.getElementById('crt-overlay-layer');
+      const glowBeam = document.getElementById('crt-glow-beam');
+      const spark = document.getElementById('crt-spark');
+
+      // 1. Play retro analog audio
+      playCrtAudio('off');
+
+      // 2. Set dark background and activate overlay
+      document.body.classList.add('crt-active');
+      if (overlay) overlay.classList.add('active');
+      if (glowBeam) {
+        glowBeam.style.animation = 'none';
+        glowBeam.offsetHeight; // trigger reflow
+        glowBeam.style.animation = 'crtBeamPulse 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards';
+      }
+      if (spark) {
+        spark.style.animation = 'none';
+        spark.offsetHeight; // trigger reflow
+        spark.style.animation = 'crtSparkPulse 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards';
+      }
+
+      // 3. Add CRT shutdown class
+      el.classList.remove('crt-powering-on');
+      el.classList.add('crt-shutting-down');
+
+      setTimeout(() => {
+        resolve();
+      }, 650);
+    });
+  }
+
+  function wakeCrtAnimation(targetEl) {
+    return new Promise((resolve) => {
+      const el = targetEl || document.getElementById('app-shell') || document.body;
+      const overlay = document.getElementById('crt-overlay-layer');
+      const glowBeam = document.getElementById('crt-glow-beam');
+      const spark = document.getElementById('crt-spark');
+
+      // 1. Play wake audio
+      playCrtAudio('on');
+
+      if (glowBeam) glowBeam.style.animation = 'none';
+      if (spark) spark.style.animation = 'none';
+
+      // 2. Animate power-on
+      el.classList.remove('crt-shutting-down');
+      el.classList.add('crt-powering-on');
+
+      setTimeout(() => {
+        el.classList.remove('crt-powering-on');
+        if (overlay) overlay.classList.remove('active');
+        document.body.classList.remove('crt-active');
+        resolve();
+      }, 700);
+    });
+  }
+
+  // CRT TV Power-Off Demo Button
+  const btnCrtDemo = document.getElementById('btn-crt-demo');
+  if (btnCrtDemo) {
+    btnCrtDemo.onclick = async () => {
+      btnCrtDemo.disabled = true;
+      showToast('📺 正在演示老式 CRT 显像管电视断电息屏...', 1400);
+      const appShell = document.getElementById('app-shell') || document.body;
+      await playCrtShutdownAnimation(appShell);
+      setTimeout(async () => {
+        showToast('⚡ 显像管重新通电开机！', 1400);
+        await wakeCrtAnimation(appShell);
+        btnCrtDemo.disabled = false;
+      }, 750);
+    };
+  }
+
+  // Shutdown Software with CRT Power-Off Animation (Zero background footprint)
+  if (btnShutdown) {
+    btnShutdown.onclick = async () => {
+      btnShutdown.disabled = true;
+      showToast('📺 正在释放显像管偏转线圈并退出软件...', 1400);
+      const appShell = document.getElementById('app-shell') || document.body;
+      await playCrtShutdownAnimation(appShell, { isShutdown: true });
+      try {
+        await fetch('/api/shutdown', { method: 'POST' });
+      } catch (_) {}
       setTimeout(() => {
         window.close();
-      }, 500);
-    } catch (e) {
-      window.close();
-    }
-  };
+      }, 100);
+    };
+  }
+
+  // Mockup Window Close (CRT Power-Off Simulation)
+  const mockBtnClose = document.getElementById('mock-btn-close');
+  const mockCrtCard = document.getElementById('mock-crt-off-card');
+  const btnMockPowerOn = document.getElementById('btn-mock-power-on');
+  if (mockBtnClose) {
+    mockBtnClose.onclick = (e) => {
+      e.stopPropagation();
+      const agMockup = document.getElementById('ag-mockup');
+      if (!agMockup) return;
+      showToast('📺 客户端显像管已断电息屏！', 1400);
+      playCrtAudio('off');
+      agMockup.classList.remove('crt-powering-on');
+      agMockup.classList.add('crt-shutting-down');
+      setTimeout(() => {
+        if (mockCrtCard) mockCrtCard.style.display = 'flex';
+      }, 650);
+    };
+  }
+
+  if (btnMockPowerOn) {
+    btnMockPowerOn.onclick = (e) => {
+      e.stopPropagation();
+      const agMockup = document.getElementById('ag-mockup');
+      if (mockCrtCard) mockCrtCard.style.display = 'none';
+      if (!agMockup) return;
+      showToast('⚡ 客户端通电开机唤醒！', 1400);
+      playCrtAudio('on');
+      agMockup.classList.remove('crt-shutting-down');
+      agMockup.classList.add('crt-powering-on');
+      setTimeout(() => {
+        agMockup.classList.remove('crt-powering-on');
+      }, 700);
+    };
+  }
 
   // Window close beacon
   window.addEventListener('beforeunload', () => {

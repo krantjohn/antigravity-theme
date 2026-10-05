@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
+  <div class="app-shell" id="app-shell">
   <div class="ambient-glow"></div>
 
   <!-- Header Bar with Segmented Navigation -->
@@ -66,6 +67,10 @@
       <button class="btn btn-secondary btn-sm" id="btn-reload" title="刷新页面">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
         <span class="header-btn-text">刷新</span>
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btn-crt-demo" title="体验老式 CRT 显像管电视断电息屏与通电开机动效">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
+        <span class="header-btn-text">CRT息屏动效</span>
       </button>
       <button class="btn btn-danger-ghost btn-sm" id="btn-shutdown" title="彻底关闭配置软件，退出后台服务，零性能占用">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
@@ -357,7 +362,7 @@
                   <span class="mock-win-btn" title="最大化">
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="9" height="9"/></svg>
                   </span>
-                  <span class="mock-win-btn mock-win-close" title="关闭">
+                  <span class="mock-win-btn mock-win-close" id="mock-btn-close" title="关闭 (体验 CRT 电视断电息屏)">
                     <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.2"><line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/></svg>
                   </span>
                 </div>
@@ -697,6 +702,17 @@
               </div>
             </div>
 
+            <!-- Mockup CRT TV Off State Card (shown when mockup window is shut down) -->
+            <div class="mock-crt-off-card" id="mock-crt-off-card" style="display: none;">
+              <div class="mock-crt-icon">📺</div>
+              <div class="mock-crt-title">CRT 显像管已断电息屏</div>
+              <div class="mock-crt-desc">偏转磁场已切断 · 电子束完全熄灭</div>
+              <button class="btn btn-primary btn-sm" id="btn-mock-power-on">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                <span>通电开机 (Power On)</span>
+              </button>
+            </div>
+
           </div>
         </div>
 
@@ -868,6 +884,14 @@
         <button class="btn btn-secondary" id="btn-cancel-we-picker">关闭</button>
       </div>
     </div>
+  </div> <!-- /#app-shell -->
+
+  <!-- Vintage CRT Television Power-Off & Scanlines Overlay -->
+  <div class="crt-overlay-layer" id="crt-overlay-layer">
+    <div class="crt-vignette"></div>
+    <div class="crt-scanlines"></div>
+    <div class="crt-glow-beam" id="crt-glow-beam"></div>
+    <div class="crt-spark" id="crt-spark"></div>
   </div>
 
   <!-- Toast Notification Container -->

@@ -82,7 +82,14 @@ const electronNativeAPI = {
     maximize: () => electron_1.ipcRenderer.invoke('window:maximize'),
     unmaximize: () => electron_1.ipcRenderer.invoke('window:unmaximize'),
     isMaximized: () => electron_1.ipcRenderer.invoke('window:is-maximized'),
-    close: () => electron_1.ipcRenderer.invoke('window:close'),
+    close: async () => {
+        try {
+            if (typeof window.__playCrtShutdown === 'function') {
+                await window.__playCrtShutdown();
+            }
+        } catch (_) {}
+        return electron_1.ipcRenderer.invoke('window:close');
+    },
     toggleDevTools: () => electron_1.ipcRenderer.invoke('window:toggle-devtools'),
     zoomIn: () => {
         void electron_1.ipcRenderer.invoke('window:zoom-in');
@@ -1710,3 +1717,89 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
   }
 })();
 // =========================================================================
+
+// =========================================================================
+// 📺 Retro CRT Television Power-Off Screen Effect
+// =========================================================================
+(function() {
+  function playCrtAudio() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(11500, now);
+      osc.frequency.exponentialRampToValueAtTime(50, now + 0.42);
+      oscGain.gain.setValueAtTime(0.09, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(3000, now);
+      filter.frequency.exponentialRampToValueAtTime(220, now + 0.38);
+      osc.connect(filter);
+      filter.connect(oscGain);
+      oscGain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+
+      const popOsc = ctx.createOscillator();
+      const popGain = ctx.createGain();
+      popOsc.type = 'sine';
+      popOsc.frequency.setValueAtTime(160, now + 0.05);
+      popOsc.frequency.exponentialRampToValueAtTime(32, now + 0.28);
+      popGain.gain.setValueAtTime(0.18, now + 0.05);
+      popGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+      popOsc.connect(popGain);
+      popGain.connect(ctx.destination);
+      popOsc.start(now + 0.05);
+      popOsc.stop(now + 0.35);
+    } catch (_) {}
+  }
+
+  function injectCrtStyles() {
+    try {
+      if (document.getElementById('antigravity-crt-style')) return;
+      const style = document.createElement('style');
+      style.id = 'antigravity-crt-style';
+      style.textContent = `
+        @keyframes crtTurnOffScreen {
+          0% { transform: scale(1, 1); filter: brightness(1) contrast(1); opacity: 1; }
+          14% { transform: scale(1, 1.025) skewX(0.4deg); filter: brightness(2.5) contrast(1.8) saturate(0.2); opacity: 1; }
+          35% { transform: scale(1, 0.0035); filter: brightness(5) contrast(2.5); background-color: #ffffff !important; box-shadow: 0 0 30px #ffffff, 0 0 70px #38bdf8, 0 0 120px #0284c7; opacity: 1; }
+          65% { transform: scale(0.35, 0.0035); filter: brightness(5.2); background-color: #ffffff !important; box-shadow: 0 0 30px #ffffff, 0 0 80px #38bdf8; opacity: 1; }
+          80% { transform: scale(0.004, 0.0035); filter: brightness(6); background-color: #ffffff !important; box-shadow: 0 0 25px #ffffff, 0 0 50px #38bdf8; opacity: 1; }
+          92% { transform: scale(0.002, 0.002); filter: brightness(2.2) blur(3px); background-color: #e0f2fe !important; opacity: 0.75; }
+          100% { transform: scale(0, 0); filter: brightness(0) blur(8px); opacity: 0; }
+        }
+        .crt-shutting-down {
+          animation: crtTurnOffScreen 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+          transform-origin: 50% 50% !important;
+          will-change: transform, filter, opacity !important;
+        }
+        body.crt-active {
+          background-color: #000000 !important;
+        }
+      `;
+      (document.head || document.documentElement).appendChild(style);
+    } catch (_) {}
+  }
+
+  window.__playCrtShutdown = function() {
+    return new Promise((resolve) => {
+      try {
+        injectCrtStyles();
+        playCrtAudio();
+        document.body.classList.add('crt-active');
+        document.body.classList.add('crt-shutting-down');
+        setTimeout(() => {
+          resolve();
+        }, 650);
+      } catch (_) {
+        resolve();
+      }
+    });
+  };
+})();

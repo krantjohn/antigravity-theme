@@ -3488,3 +3488,264 @@ body {
     transform: translateY(0) scale(1);
   }
 }
+
+/* =========================================================================
+   📺 Vintage CRT Television Power-Off & Wake Screen FX (老式 CRT 电视断电息屏)
+   ========================================================================= */
+
+/* App Shell base */
+.app-shell {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background-color: var(--bg-dark);
+}
+
+/* Body during CRT shutdown is solid deep cathode black */
+body.crt-active {
+  background-color: #000000 !important;
+}
+
+/* Fullscreen CRT Overlay Layer */
+.crt-overlay-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483640;
+  pointer-events: none;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.crt-overlay-layer.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* CRT Screen Curved Glass Vignette */
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.6) 78%,
+    rgba(0, 0, 0, 0.96) 100%
+  );
+  z-index: 2;
+}
+
+/* CRT Phosphor Scanlines */
+.crt-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.45) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.05),
+    rgba(0, 255, 0, 0.03),
+    rgba(0, 0, 255, 0.05)
+  );
+  background-size: 100% 3px, 6px 100%;
+  opacity: 0.85;
+  z-index: 3;
+}
+
+/* Glowing Phosphor Beam (Horizontal Line) */
+.crt-glow-beam {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform: translateY(-50%) scaleX(0);
+  background: #ffffff;
+  box-shadow: 
+    0 0 10px #ffffff,
+    0 0 30px #38bdf8,
+    0 0 70px #0ea5e9,
+    0 0 120px rgba(56, 189, 248, 0.8);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  transform-origin: 50% 50%;
+}
+
+/* Center Phosphor Dot (Concentrated Electron Beam) */
+.crt-spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 
+    0 0 15px #ffffff,
+    0 0 35px #38bdf8,
+    0 0 80px #0284c7;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 11;
+  transform: scale(0);
+}
+
+/* 1. CRT Power-Off Animation (Vertical collapse -> Horizontal collapse -> Dissipate) */
+@keyframes crtTurnOffScreen {
+  0% {
+    transform: scale(1, 1);
+    filter: brightness(1) contrast(1) saturate(1);
+    opacity: 1;
+  }
+  14% {
+    transform: scale(1, 1.025) skewX(0.4deg);
+    filter: brightness(2.5) contrast(1.8) saturate(0.2);
+    opacity: 1;
+  }
+  35% {
+    transform: scale(1, 0.0035);
+    filter: brightness(5) contrast(2.5);
+    background-color: #ffffff !important;
+    box-shadow: 0 0 30px #ffffff, 0 0 70px #38bdf8, 0 0 120px #0284c7;
+    opacity: 1;
+  }
+  65% {
+    transform: scale(0.35, 0.0035);
+    filter: brightness(5.2);
+    background-color: #ffffff !important;
+    box-shadow: 0 0 35px #ffffff, 0 0 80px #38bdf8;
+    opacity: 1;
+  }
+  80% {
+    transform: scale(0.004, 0.0035);
+    filter: brightness(6);
+    background-color: #ffffff !important;
+    box-shadow: 0 0 25px #ffffff, 0 0 50px #38bdf8;
+    opacity: 1;
+  }
+  92% {
+    transform: scale(0.002, 0.002);
+    filter: brightness(2.2) blur(3px);
+    background-color: #e0f2fe !important;
+    box-shadow: 0 0 12px #38bdf8;
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(0, 0);
+    filter: brightness(0) blur(8px);
+    opacity: 0;
+  }
+}
+
+.crt-shutting-down {
+  animation: crtTurnOffScreen 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+  transform-origin: 50% 50% !important;
+  will-change: transform, filter, opacity !important;
+}
+
+/* 2. CRT Power-On Animation (Center dot -> Horizontal beam -> Full bloom) */
+@keyframes crtTurnOnScreen {
+  0% {
+    transform: scale(0, 0);
+    filter: brightness(0) blur(8px);
+    opacity: 0;
+  }
+  18% {
+    transform: scale(0.004, 0.0035);
+    filter: brightness(5) blur(1px);
+    background-color: #ffffff;
+    box-shadow: 0 0 25px #ffffff, 0 0 60px #38bdf8;
+    opacity: 1;
+  }
+  45% {
+    transform: scale(1, 0.0035);
+    filter: brightness(4) contrast(2);
+    box-shadow: 0 0 30px #ffffff, 0 0 60px #38bdf8;
+    opacity: 1;
+  }
+  75% {
+    transform: scale(1, 1.02);
+    filter: brightness(2) contrast(1.4);
+    box-shadow: none;
+    opacity: 1;
+  }
+  90% {
+    transform: scale(1, 0.99);
+    filter: brightness(1.2) contrast(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1, 1);
+    filter: brightness(1) contrast(1) saturate(1);
+    opacity: 1;
+  }
+}
+
+.crt-powering-on {
+  animation: crtTurnOnScreen 0.68s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  transform-origin: 50% 50% !important;
+  will-change: transform, filter, opacity !important;
+}
+
+/* Auxiliary Beam and Spark keyframes */
+@keyframes crtBeamPulse {
+  0% { transform: translateY(-50%) scaleX(0); opacity: 0; }
+  22% { transform: translateY(-50%) scaleX(1); opacity: 1; }
+  55% { transform: translateY(-50%) scaleX(0.4); opacity: 1; }
+  78% { transform: translateY(-50%) scaleX(0.01); opacity: 0.8; }
+  100% { transform: translateY(-50%) scaleX(0); opacity: 0; }
+}
+
+@keyframes crtSparkPulse {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(0); opacity: 0; }
+  78% { transform: scale(1.6); opacity: 1; }
+  90% { transform: scale(0.6); opacity: 0.7; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+/* Mockup CRT Off State Overlay & Card */
+.mock-crt-off-card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #0f172a 0%, #030712 100%);
+  border: 1px dashed rgba(56, 189, 248, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  text-align: center;
+  z-index: 100;
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.mock-crt-icon {
+  font-size: 42px;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.5));
+}
+
+.mock-crt-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.mock-crt-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
