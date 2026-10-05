@@ -141,6 +141,16 @@ if (browserExe) {
   child.on('error', (err) => {
     console.error('[Studio] 启动应用窗口失败:', err.message);
   });
+
+  child.on('exit', () => {
+    console.log('[Studio] 桌面窗口已关闭，正在释放全部后台服务...');
+    try { server.close(); } catch (_) {}
+    process.exit(0);
+  });
+
+  process.on('exit', () => {
+    try { child.kill(); } catch (_) {}
+  });
 } else {
   console.log('未检测到 Edge/Chrome 独立桌面环境，正在使用系统默认浏览器打开...');
   const startCmd = process.platform === 'win32' ? `start "" "${appUrl}"` : `open "${appUrl}"`;

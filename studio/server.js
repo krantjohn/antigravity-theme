@@ -697,11 +697,22 @@ const server = http.createServer(async (req, res) => {
   // 11. POST /api/shutdown - Graceful exit of the tool
   if (req.method === 'POST' && pathname === '/api/shutdown') {
     sendJson(res, 200, { success: true, message: 'Studio server is shutting down. Goodbye!' });
-    console.log('[Studio] 用户请求彻底退出，正在完全销毁后台进程...');
+    console.log('[Studio] 用户请求彻底退出，正在完全销毁后台进程与窗口...');
     setTimeout(() => {
+      if (process.platform === 'win32') {
+        try {
+          const { exec } = require('child_process');
+          const psClose = `powershell -NoProfile -NonInteractive -Command "Get-Process -Name msedge, chrome -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*Antigravity Theme Studio*' } | ForEach-Object { $_.CloseMainWindow() }"`;
+          exec(psClose, () => {
+            server.close();
+            process.exit(0);
+          });
+          return;
+        } catch (_) {}
+      }
       server.close();
       process.exit(0);
-    }, 400);
+    }, 350);
     return;
   }
 

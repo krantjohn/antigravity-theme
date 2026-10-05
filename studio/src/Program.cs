@@ -121,6 +121,27 @@ namespace AntigravityThemeStudio
                     // 后台线程使用 Windows 原生 Win32 API 强制锁定窗口大小和位置 (防止浏览器内核抢占全屏)
                     EnforceOptimalWindowSize(targetX, targetY, targetW, targetH);
 
+                    // 后台线程监听: 若用户在前端通过 CRT 息屏点击 [✕ 关闭软件]，Node 进程先行释放，则同步关闭浏览器窗口
+                    ThreadPool.QueueUserWorkItem((s) =>
+                    {
+                        if (_nodeProcess != null)
+                        {
+                            try
+                            {
+                                _nodeProcess.WaitForExit();
+                                if (browserProc != null && !browserProc.HasExited)
+                                {
+                                    browserProc.CloseMainWindow();
+                                    if (!browserProc.WaitForExit(1000))
+                                    {
+                                        browserProc.Kill();
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                    });
+
                     if (browserProc != null)
                     {
                         browserProc.WaitForExit();

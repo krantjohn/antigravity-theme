@@ -289,23 +289,28 @@ function renderHeaderStatus(data) {
   const cdpText = cdpStatusEl.querySelector('.status-text');
   if (data.isCdpOnline) {
     cdpDot.className = 'status-dot online';
-    cdpText.textContent = 'CDP 8314 在线 (0.3s 热重载就绪)';
+    cdpText.textContent = 'CDP 8314';
+    cdpStatusEl.title = 'CDP 8314 在线 (0.3s 秒级热重载通道就绪)';
   } else if (data.isAntigravityRunning) {
     cdpDot.className = 'status-dot warning';
-    cdpText.textContent = '需完全重启客户端以激活 8314 热重载';
+    cdpText.textContent = 'CDP 待重启';
+    cdpStatusEl.title = '需完全重启客户端以激活 8314 热重载通道';
   } else {
     cdpDot.className = 'status-dot offline';
-    cdpText.textContent = 'Antigravity 未启动';
+    cdpText.textContent = 'CDP 离线';
+    cdpStatusEl.title = 'Antigravity 客户端未启动';
   }
 
   const mediaDot = mediaStatusEl.querySelector('.status-dot');
   const mediaText = mediaStatusEl.querySelector('.status-text');
   if (data.isMediaOnline) {
     mediaDot.className = 'status-dot online';
-    mediaText.textContent = '流媒体 8315 运行中';
+    mediaText.textContent = '流媒体 8315';
+    mediaStatusEl.title = '动态壁纸本地流媒体加速通道 8315 运行中';
   } else {
     mediaDot.className = 'status-dot offline';
-    mediaText.textContent = '流媒体 8315 离线';
+    mediaText.textContent = '流媒体离线';
+    mediaStatusEl.title = '动态壁纸本地流媒体加速服务离线';
   }
 }
 
@@ -2255,37 +2260,35 @@ function setupEventListeners() {
     });
   }
 
-  // CRT TV Power-Off Demo Button
-  const btnCrtDemo = document.getElementById('btn-crt-demo');
-  if (btnCrtDemo) {
-    btnCrtDemo.onclick = async () => {
-      btnCrtDemo.disabled = true;
-      showToast('📺 正在演示老式 CRT 显像管电视断电息屏...', 1400);
-      const appShell = document.getElementById('app-shell') || document.body;
-      await playCrtShutdownAnimation(appShell);
-      setTimeout(async () => {
-        showToast('⚡ 显像管重新通电开机！', 1400);
-        await wakeCrtAnimation(appShell);
-        btnCrtDemo.disabled = false;
-      }, 750);
-    };
-  }
-
   // Shutdown Software with CRT Power-Off Animation (Zero background footprint)
   if (btnShutdown) {
     btnShutdown.onclick = async () => {
+      if (btnShutdown.disabled) return;
       btnShutdown.disabled = true;
-      showToast('📺 正在释放显像管偏转线圈并退出软件...', 1400);
       const appShell = document.getElementById('app-shell') || document.body;
+      // 1. Play vintage CRT television power-off animation and synthesized sound
       await playCrtShutdownAnimation(appShell, { isShutdown: true });
+      // 2. Request server shutdown
       try {
         await fetch('/api/shutdown', { method: 'POST' });
       } catch (_) {}
+      // 3. Attempt window close via script
       setTimeout(() => {
-        window.close();
-      }, 100);
+        try { window.open('', '_self', ''); window.close(); } catch (_) {}
+      }, 50);
     };
   }
+
+  // Global Keyboard Shortcut: Escape to trigger CRT shutdown when no modal is open
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const activeModal = document.querySelector('.modal-overlay.active, .preset-modal.active, .we-picker-modal.active');
+      if (!activeModal && btnShutdown && !btnShutdown.disabled) {
+        e.preventDefault();
+        btnShutdown.click();
+      }
+    }
+  });
 
   // Mockup Window Close (CRT Power-Off Simulation)
   const mockBtnClose = document.getElementById('mock-btn-close');
