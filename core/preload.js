@@ -285,7 +285,8 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           setTimeout(tryRecoverLeft, 1000);
         });
 
-        // 挂载至 document.body (若 DOM 构建中则暂挂 documentElement.prepend，确保绝不遮挡主对话区)
+        // 挂载至 document.body (若 DOM 构建中则挂载至 documentElement)
+        // 关键：一旦挂载成功即保持持久驻留，绝不重复挪动或重新 prepend，避免触发 Chromium 解码管道重置与启动卡顿
         if (!leftVid.isConnected) {
           if (document.body) {
             document.body.prepend(leftVid);
@@ -294,9 +295,12 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           }
           if (!document.hidden) leftVid.play().catch(function(){});
         }
-        if (document.body && leftVid.parentElement !== document.body) {
-          document.body.prepend(leftVid);
-        }
+        leftVid.addEventListener('playing', function() {
+          const zeroStyle = document.getElementById('antigravity-zero-latency-style');
+          if (zeroStyle) {
+            try { zeroStyle.remove(); } catch(e) {}
+          }
+        });
       }
     } catch(e) {}
   }
@@ -505,14 +509,14 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
   // 3. 动态视频槽位自动化挂载与播放引擎 (硬件加速合成层隔离与快速通道)
   function applyVideos() {
-    if (document.body) {
+    const config = (window.__antigravityConfig && window.__antigravityConfig.isOriginal) ? window.__antigravityConfig : (window.__antigravityConfig || cachedConfig);
+    if (!config) return;
+    if (config.isOriginal || !config.left || config.left.type !== 'video') {
       const zeroStyle = document.getElementById('antigravity-zero-latency-style');
       if (zeroStyle) {
         try { zeroStyle.remove(); } catch(e) {}
       }
     }
-    const config = (window.__antigravityConfig && window.__antigravityConfig.isOriginal) ? window.__antigravityConfig : (window.__antigravityConfig || cachedConfig);
-    if (!config) return;
     if (config.isOriginal) {
       const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
       for (let i = 0; i < allVids.length; i++) {
@@ -548,12 +552,6 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           } else if (document.documentElement) {
             document.documentElement.prepend(leftVid);
           }
-        }
-        if (document.body && leftVid.parentElement !== document.body) {
-          document.body.prepend(leftVid);
-        }
-        if (document.body && document.body.firstElementChild !== leftVid && document.body.contains(leftVid)) {
-          document.body.prepend(leftVid);
         }
         if (leftVid.error) {
           const now = Date.now();
@@ -624,6 +622,10 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           }
           leftVid.addEventListener('playing', function() {
             checkAndShowVideo(leftVid);
+            const zeroStyle = document.getElementById('antigravity-zero-latency-style');
+            if (zeroStyle) {
+              try { zeroStyle.remove(); } catch(e) {}
+            }
           });
           leftVid.addEventListener('canplay', function() {
             if (!document.hidden && leftVid.paused) leftVid.play().catch(function(){});
@@ -657,12 +659,6 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           } else if (document.documentElement) {
             document.documentElement.prepend(leftVid);
           }
-        }
-        if (document.body && leftVid.parentElement !== document.body) {
-          document.body.prepend(leftVid);
-        }
-        if (document.body && document.body.firstElementChild !== leftVid && document.body.contains(leftVid)) {
-          document.body.prepend(leftVid);
         }
         if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
           leftVid.poster = posterSrc;
@@ -1167,8 +1163,12 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       earlyBodyChecker = null;
     }
     const lv = document.getElementById('antigravity-video-left');
-    if (lv && document.body && lv.parentElement !== document.body) {
-      document.body.prepend(lv);
+    if (lv && !lv.isConnected) {
+      if (document.body) {
+        document.body.prepend(lv);
+      } else if (document.documentElement) {
+        document.documentElement.prepend(lv);
+      }
     }
     initEngine();
   };

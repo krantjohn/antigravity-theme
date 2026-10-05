@@ -754,13 +754,12 @@ function extractPosterFromVideo(videoPath, targetPosterPath) {
         'import cv2, sys',
         `cap = cv2.VideoCapture(r"${vSafe}")`,
         'if not cap.isOpened(): sys.exit(1)',
-        'cap.set(cv2.CAP_PROP_POS_MSEC, 1000)',
         'ret, f = cap.read()',
-        'if not ret: cap.set(cv2.CAP_PROP_POS_FRAMES, 0); ret, f = cap.read()',
+        'if not ret: cap.set(cv2.CAP_PROP_POS_MSEC, 500); ret, f = cap.read()',
         'if not ret: sys.exit(1)',
         'h, w = f.shape[:2]',
-        'if w > 1920 or h > 1080: scale = min(1920.0 / w, 1080.0 / h); f = cv2.resize(f, (max(1, int(w * scale)), max(1, int(h * scale))), interpolation=cv2.INTER_AREA)',
-        `cv2.imwrite(r"${pSafe}", f, [cv2.IMWRITE_JPEG_QUALITY, 85])`,
+        'if w > 3840 or h > 2160: scale = min(3840.0 / w, 2160.0 / h); f = cv2.resize(f, (max(1, int(w * scale)), max(1, int(h * scale))), interpolation=cv2.INTER_AREA)',
+        `cv2.imwrite(r"${pSafe}", f, [cv2.IMWRITE_JPEG_QUALITY, 92])`,
         'cap.release()'
       ].join('; ');
       cp.execFileSync(py, ['-c', script], { timeout: 8000, stdio: 'pipe', windowsHide: true });
@@ -769,6 +768,16 @@ function extractPosterFromVideo(videoPath, targetPosterPath) {
       }
     } catch (e) {}
   }
+  // Fallback to ffmpeg if available
+  try {
+    cp.execFileSync('ffmpeg', [
+      '-y', '-ss', '00:00:00.000', '-i', videoPath,
+      '-vframes', '1', '-q:v', '2', targetPosterPath
+    ], { timeout: 8000, stdio: 'pipe', windowsHide: true });
+    if (fs.existsSync(targetPosterPath) && fs.statSync(targetPosterPath).size > 1000) {
+      return true;
+    }
+  } catch(e) {}
   return false;
 }
 
@@ -3456,27 +3465,29 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
     }
     const posterPrefix = slotKey === 'bottom' ? 'input' : slotKey;
     const defaultPosterTarget = path.join(wallpapersDir, `${posterPrefix}_poster.jpg`);
-    let companionPoster = customPosterPath || findCompanionPoster(srcPath);
+    let companionPoster = customPosterPath;
 
-    // If companion poster is absent or is a low-res GIF/preview, extract a crystal-clear frame directly from the video
+    // For video wallpapers, always ensure a crystal-clear native 4K/2K frame 0 is extracted as poster
     let needsExtract = !companionPoster || !fs.existsSync(companionPoster);
-    if (companionPoster && fs.existsSync(companionPoster)) {
+    if (!needsExtract && companionPoster) {
       const ext = path.extname(companionPoster).toLowerCase();
       if (ext === '.gif') {
         needsExtract = true;
       } else {
         try {
           const st = fs.statSync(companionPoster);
-          if (st.size < 20 * 1024) needsExtract = true;
+          if (st.size < 150 * 1024) needsExtract = true;
         } catch (e) {}
       }
     }
 
     if (needsExtract) {
-      console.log(`      正在从视频中提取高清静态首帧作为保底...`);
+      console.log(`      正在从视频中提取超清原生 4K/2K 静态首帧作为保底...`);
       const extracted = extractPosterFromVideo(srcPath, defaultPosterTarget);
       if (extracted) {
         companionPoster = defaultPosterTarget;
+      } else {
+        companionPoster = findCompanionPoster(srcPath);
       }
     }
 
