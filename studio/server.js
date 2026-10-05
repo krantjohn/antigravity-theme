@@ -226,6 +226,8 @@ function resetAppWindowPlacement() {
         '  public class Win32 {',
         '    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);',
         '    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);',
+        '    [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);',
+        '    [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);',
         '    [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);',
         '    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);',
         '    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);',
@@ -237,7 +239,9 @@ function resetAppWindowPlacement() {
         '  [Win32]::GetWindowText($hWnd, $sb, 256) | Out-Null',
         '  if ($sb.ToString() -like "*Antigravity Theme Studio*") {',
         '    [Win32]::ShowWindow($hWnd, 9) | Out-Null',
-        `    [Win32]::SetWindowPos($hWnd, [IntPtr]::Zero, ${targetX}, ${targetY}, ${targetW}, ${targetH}, 0x0044) | Out-Null`,
+        '    $style = [Win32]::GetWindowLong($hWnd, -16)',
+        '    [Win32]::SetWindowLong($hWnd, -16, $style -band (-bnot 0x00C00000)) | Out-Null',
+        `    [Win32]::SetWindowPos($hWnd, [IntPtr]::Zero, ${targetX}, ${targetY}, ${targetW}, ${targetH}, 0x0064) | Out-Null`,
         '    return $false',
         '  }',
         '  return $true',
@@ -694,30 +698,23 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 11. POST /api/shutdown - Graceful exit of the tool with CRT desktop window animation
+  // 11. POST /api/shutdown - Graceful exit of the tool and release of all background resources
   if (req.method === 'POST' && pathname === '/api/shutdown') {
-    sendJson(res, 200, { success: true, message: 'Studio server is shutting down with CRT window animation. Goodbye!' });
-    console.log('[Studio] 用户请求彻底退出，正在执行全桌面窗口 CRT 断电息屏动效并释放进程...');
+    sendJson(res, 200, { success: true, message: 'Studio server is shutting down. Goodbye!' });
+    console.log('[Studio] 收到退出指令，CRT 断电息屏已在界面完成，正在关闭应用窗口并释放后台服务...');
 
     if (process.platform === 'win32') {
       try {
-        const { spawn, exec } = require('child_process');
-        const animatorExe = path.join(__dirname, 'crt_animator.exe');
-        if (fs.existsSync(animatorExe)) {
-          // 0ms 瞬间调起原生 Win32 窗口偏转线圈塌陷动画程序 (连同操作系统外层窗口一起收缩)
-          spawn(animatorExe, [], { detached: true, stdio: 'ignore' });
-        } else {
-          // 降级使用 PowerShell 优雅关闭窗口
-          const psClose = `powershell -NoProfile -NonInteractive -Command "Get-Process -Name msedge, chrome -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*Antigravity Theme Studio*' } | ForEach-Object { $_.CloseMainWindow() }"`;
-          exec(psClose, () => {});
-        }
+        const { exec } = require('child_process');
+        const psClose = `powershell -NoProfile -NonInteractive -Command "Get-Process -Name msedge, chrome -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*Antigravity Theme Studio*' } | ForEach-Object { $_.CloseMainWindow() }"`;
+        exec(psClose, () => {});
       } catch (_) {}
     }
 
     setTimeout(() => {
       server.close();
       process.exit(0);
-    }, 550);
+    }, 350);
     return;
   }
 

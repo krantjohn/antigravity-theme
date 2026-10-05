@@ -122,7 +122,7 @@ namespace AntigravityThemeStudio
                     // 后台线程使用 Windows 原生 Win32 API 强制锁定窗口大小和位置 (防止浏览器内核抢占全屏)
                     EnforceOptimalWindowSize(targetX, targetY, targetW, targetH);
 
-                    // 后台线程监听: 若用户在前端通过 CRT 息屏点击 [✕ 关闭软件]，Node 进程先行释放，则同步收缩并关闭浏览器窗口
+                    // 后台线程监听: 若用户在前端通过 CRT 息屏点击 [✕ 关闭软件]，Node 进程先行释放，则同步关闭浏览器窗口
                     ThreadPool.QueueUserWorkItem((s) =>
                     {
                         if (_nodeProcess != null)
@@ -130,14 +130,10 @@ namespace AntigravityThemeStudio
                             try
                             {
                                 _nodeProcess.WaitForExit();
-                                if (_studioHwnd != IntPtr.Zero)
-                                {
-                                    CollapseWindow(_studioHwnd);
-                                }
                                 if (browserProc != null && !browserProc.HasExited)
                                 {
                                     browserProc.CloseMainWindow();
-                                    if (!browserProc.WaitForExit(600))
+                                    if (!browserProc.WaitForExit(400))
                                     {
                                         browserProc.Kill();
                                     }
@@ -365,7 +361,10 @@ namespace AntigravityThemeStudio
                         {
                             _studioHwnd = hWnd;
                             ShowWindow(hWnd, SW_RESTORE);
-                            SetWindowPos(hWnd, IntPtr.Zero, targetX, targetY, targetW, targetH, SWP_NOZORDER | SWP_SHOWWINDOW);
+                            // 彻底剥离原生黑色标题栏 (WS_CAPTION)，打造一体化极简现代无边框工坊视窗
+                            int style = GetWindowLong(hWnd, GWL_STYLE);
+                            SetWindowLong(hWnd, GWL_STYLE, style & ~WS_CAPTION);
+                            SetWindowPos(hWnd, IntPtr.Zero, targetX, targetY, targetW, targetH, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
                             found = true;
                             return false;
                         }
@@ -375,59 +374,6 @@ namespace AntigravityThemeStudio
                     if (found) break;
                 }
             });
-        }
-
-        public static void CollapseWindow(IntPtr hWnd)
-        {
-            if (hWnd == IntPtr.Zero) return;
-            RECT rc;
-            if (!GetWindowRect(hWnd, out rc)) return;
-            int origX = rc.Left;
-            int origY = rc.Top;
-            int origW = rc.Right - rc.Left;
-            int origH = rc.Bottom - rc.Top;
-            if (origW <= 0 || origH <= 0) return;
-
-            int centerY = origY + origH / 2;
-            int centerX = origX + origW / 2;
-
-            try
-            {
-                int style = GetWindowLong(hWnd, GWL_STYLE);
-                SetWindowLong(hWnd, GWL_STYLE, style & ~WS_CAPTION & ~WS_THICKFRAME);
-                int exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
-                SetWindowLong(hWnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
-                SetWindowPos(hWnd, IntPtr.Zero, origX, origY, origW, origH, SWP_NOZORDER | SWP_FRAMECHANGED);
-            }
-            catch { }
-
-            int steps1 = 20;
-            int delay1 = 11;
-            for (int i = 1; i <= steps1; i++)
-            {
-                double p = (double)i / steps1;
-                double ease = p < 0.5 ? 4 * p * p * p : 1 - Math.Pow(-2 * p + 2, 3) / 2;
-                int curH = Math.Max(3, (int)(origH * (1.0 - ease)));
-                int curY = centerY - curH / 2;
-                SetWindowPos(hWnd, IntPtr.Zero, origX, curY, origW, curH, SWP_NOZORDER);
-                Thread.Sleep(delay1);
-            }
-
-            int steps2 = 18;
-            int delay2 = 10;
-            for (int i = 1; i <= steps2; i++)
-            {
-                double p = (double)i / steps2;
-                double ease = p * p;
-                int curW = Math.Max(3, (int)(origW * (1.0 - ease)));
-                int curX = centerX - curW / 2;
-                byte alpha = (byte)Math.Max(0, (int)(255 * (1.0 - ease)));
-                SetWindowPos(hWnd, IntPtr.Zero, curX, centerY - 1, curW, 3, SWP_NOZORDER);
-                try { SetLayeredWindowAttributes(hWnd, 0, alpha, LWA_ALPHA); } catch { }
-                Thread.Sleep(delay2);
-            }
-
-            try { ShowWindow(hWnd, 0); } catch { }
         }
 
         [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]

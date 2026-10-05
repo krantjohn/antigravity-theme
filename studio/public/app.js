@@ -2109,95 +2109,26 @@ function setupEventListeners() {
     };
   }
 
-  // Reload Studio page
+  // Reload Studio data safely (zero reload side-effects)
   if (btnReload) {
-    btnReload.onclick = () => {
-      showToast('正在刷新工坊界面...');
-      setTimeout(() => location.reload(), 200);
+    btnReload.onclick = async () => {
+      showToast('🔄 正在刷新工坊配置与状态...', 900);
+      try {
+        await fetchStatus();
+        showToast('✨ 状态与壁纸数据已刷新！', 1200);
+      } catch (_) {
+        window.__isExplicitReload = true;
+        location.reload();
+      }
     };
   }
 
   // =========================================================================
-  // 📺 Retro CRT Television Power-Off & Wake Audio/Visual Engine
+  // 📺 Retro CRT Television Power-Off & Wake Visual Engine (Silent)
   // =========================================================================
   function playCrtAudio(type = 'off') {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const now = ctx.currentTime;
-
-      if (type === 'off') {
-        // 1. High-frequency coil whine rapidly dropping (11.5kHz -> 50Hz)
-        const osc = ctx.createOscillator();
-        const oscGain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(11500, now);
-        osc.frequency.exponentialRampToValueAtTime(50, now + 0.42);
-
-        oscGain.gain.setValueAtTime(0.09, now);
-        oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(3000, now);
-        filter.frequency.exponentialRampToValueAtTime(220, now + 0.38);
-
-        osc.connect(filter);
-        filter.connect(oscGain);
-        oscGain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.5);
-
-        // 2. Magnetic deflection relay cut-off "thump/pop"
-        const popOsc = ctx.createOscillator();
-        const popGain = ctx.createGain();
-        popOsc.type = 'sine';
-        popOsc.frequency.setValueAtTime(160, now + 0.05);
-        popOsc.frequency.exponentialRampToValueAtTime(32, now + 0.28);
-
-        popGain.gain.setValueAtTime(0.18, now + 0.05);
-        popGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
-
-        popOsc.connect(popGain);
-        popGain.connect(ctx.destination);
-        popOsc.start(now + 0.05);
-        popOsc.stop(now + 0.35);
-
-        // 3. Faint phosphor static hiss
-        const bufferSize = Math.floor(ctx.sampleRate * 0.12);
-        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const output = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
-        }
-        const noise = ctx.createBufferSource();
-        noise.buffer = noiseBuffer;
-        const noiseGain = ctx.createGain();
-        noiseGain.gain.setValueAtTime(0.04, now + 0.02);
-        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
-        noise.connect(noiseGain);
-        noiseGain.connect(ctx.destination);
-        noise.start(now + 0.02);
-      } else {
-        // CRT Power-On Wake Sound ("De-gauss coil hum + warm up bloom")
-        const osc = ctx.createOscillator();
-        const oscGain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(60, now);
-        osc.frequency.exponentialRampToValueAtTime(120, now + 0.25);
-        osc.frequency.exponentialRampToValueAtTime(10500, now + 0.55);
-
-        oscGain.gain.setValueAtTime(0.01, now);
-        oscGain.gain.linearRampToValueAtTime(0.08, now + 0.15);
-        oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
-
-        osc.connect(oscGain);
-        oscGain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.65);
-      }
-    } catch (_) {}
+    // 纯静音模式：根据用户要求，已彻底移除断电音效
+    return;
   }
 
   function playCrtShutdownAnimation(targetEl, { isShutdown = false } = {}) {
@@ -2267,15 +2198,15 @@ function setupEventListeners() {
       btnShutdown.disabled = true;
       const appShell = document.getElementById('app-shell') || document.body;
 
-      // 1. 0ms 瞬间向后台触发原生操作系统全桌面窗口 CRT 偏转线圈塌陷动效 (桌面窗口同步收缩)
-      try {
-        fetch('/api/shutdown', { method: 'POST' });
-      } catch (_) {}
-
-      // 2. 页面视口内同步播放高频回扫放电音效与白炽荧光回扫线/中心光斑动画
+      // 1. 纯静音播放老式 CRT 显像管断电息屏动效 (画面收缩至水平回扫线 -> 聚焦中心光斑 -> 彻底消隐)
       await playCrtShutdownAnimation(appShell, { isShutdown: true });
 
-      // 3. 兜底关闭浏览器窗口
+      // 2. 动效播放完成后通知后台彻底退出并释放全部服务
+      try {
+        await fetch('/api/shutdown', { method: 'POST' });
+      } catch (_) {}
+
+      // 3. 关闭窗口
       setTimeout(() => {
         try { window.open('', '_self', ''); window.close(); } catch (_) {}
       }, 50);
@@ -2328,11 +2259,47 @@ function setupEventListeners() {
     };
   }
 
-  // Window close beacon
-  window.addEventListener('beforeunload', () => {
-    try {
-      navigator.sendBeacon('/api/shutdown');
-    } catch (_) {}
+}
+
+// =========================================================================
+// 19.5 Native-feeling Window Dragging for Borderless Mode
+// =========================================================================
+function initWindowDrag() {
+  const header = document.querySelector('.app-header');
+  if (!header) return;
+
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+
+  header.addEventListener('mousedown', (e) => {
+    // Only drag when clicking blank background or brand text (ignore buttons, inputs, links, tabs)
+    if (e.target.closest('button, input, select, a, .tab-btn, .action-btn, .status-pill, .control-btn')) {
+      return;
+    }
+    if (e.button !== 0) return; // Left click only
+
+    isDragging = true;
+    startX = e.screenX;
+    startY = e.screenY;
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const dx = e.screenX - startX;
+    const dy = e.screenY - startY;
+    if (dx !== 0 || dy !== 0) {
+      try {
+        window.moveTo(window.screenX + dx, window.screenY + dy);
+      } catch (_) {}
+      startX = e.screenX;
+      startY = e.screenY;
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
   });
 }
 
@@ -2354,6 +2321,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   } catch (_) {}
 
+  initWindowDrag();
   initTabs();
   initSpotlightEffect();
   initMockupInteractions();

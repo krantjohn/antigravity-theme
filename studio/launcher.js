@@ -117,6 +117,8 @@ if (browserExe) {
           public class Win32 {
             [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
             [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+            [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+            [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
             [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
             [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
             public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
@@ -128,7 +130,9 @@ if (browserExe) {
           [Win32]::GetWindowText($hWnd, $sb, 256) | Out-Null
           if ($sb.ToString() -like "*Antigravity Theme Studio*") {
             [Win32]::ShowWindow($hWnd, 9) | Out-Null
-            [Win32]::SetWindowPos($hWnd, [IntPtr]::Zero, ${targetX}, ${targetY}, ${targetW}, ${targetH}, 0x0044) | Out-Null
+            $style = [Win32]::GetWindowLong($hWnd, -16)
+            [Win32]::SetWindowLong($hWnd, -16, $style -band (-bnot 0x00C00000)) | Out-Null
+            [Win32]::SetWindowPos($hWnd, [IntPtr]::Zero, ${targetX}, ${targetY}, ${targetW}, ${targetH}, 0x0064) | Out-Null
             return $false
           }
           return $true
