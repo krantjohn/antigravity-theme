@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Diagnostics;
 using System.Windows.Forms;
@@ -348,20 +349,23 @@ namespace AntigravityThemeStudio
         {
             ThreadPool.QueueUserWorkItem((state) =>
             {
-                // 轮询最多 6 秒，确保 Chromium 渲染器就绪后即刻锁定
+                // 轮询最多 6 秒，确保定位到真实主视窗 (排除 Chromium 内部 524x494 气泡/弹窗)
                 for (int i = 0; i < 60; i++)
                 {
                     Thread.Sleep(100);
                     bool found = false;
                     EnumWindows((hWnd, lParam) =>
                     {
-                        System.Text.StringBuilder sbClass = new System.Text.StringBuilder(256);
+                        StringBuilder sbClass = new StringBuilder(256);
                         GetClassName(hWnd, sbClass, 256);
                         string cls = sbClass.ToString();
                         if (cls != "Chrome_WidgetWin_1") return true;
 
+                        if (!IsWindowVisible(hWnd)) return true;
+
                         uint pid = 0;
                         GetWindowThreadProcessId(hWnd, out pid);
+                        if (pid == 0) return true;
 
                         string procName = "";
                         try
@@ -373,8 +377,22 @@ namespace AntigravityThemeStudio
 
                         // ABSOLUTE SAFETY GUARD: NEVER touch Google Antigravity!
                         if (procName.Contains("antigravity")) return true;
+                        if (procName != "msedge" && procName != "chrome") return true;
 
-                        System.Text.StringBuilder sb = new System.Text.StringBuilder(256);
+                        // 关键过滤：排除被宿主拥有的气泡/子弹窗
+                        IntPtr owner = GetWindow(hWnd, GW_OWNER);
+                        if (owner != IntPtr.Zero) return true;
+
+                        int style = GetWindowLong(hWnd, GWL_STYLE);
+                        if ((style & WS_POPUP) != 0 && (style & WS_CAPTION) == 0) return true;
+
+                        RECT rc;
+                        GetWindowRect(hWnd, out rc);
+                        int w = rc.Right - rc.Left;
+                        int ht = rc.Bottom - rc.Top;
+                        if (w < 600 || ht < 400) return true;
+
+                        StringBuilder sb = new StringBuilder(256);
                         GetWindowText(hWnd, sb, 256);
                         string title = sb.ToString();
 
@@ -383,8 +401,7 @@ namespace AntigravityThemeStudio
                         {
                             isMatch = true;
                         }
-                        else if ((procName == "msedge" || procName == "chrome") &&
-                                 (title.Contains("Theme Studio") || title.Contains("8316") || title.Contains("127.0.0.1") || title.Contains("localhost")))
+                        else if (title.Contains("Theme Studio") || title.Contains("8316") || title.Contains("127.0.0.1") || title.Contains("localhost"))
                         {
                             isMatch = true;
                         }
@@ -394,17 +411,26 @@ namespace AntigravityThemeStudio
                             _studioHwnd = hWnd;
                             ShowWindow(hWnd, SW_RESTORE);
 
-                            // 剥离系统原生标题栏样式
-                            int style = GetWindowLong(hWnd, GWL_STYLE);
-                            SetWindowLong(hWnd, GWL_STYLE, style & ~WS_CAPTION & ~WS_THICKFRAME);
+                            // 1. 剥离系统原生标题栏样式
+                            SetWindowLong(hWnd, GWL_STYLE, style & ~WS_CAPTION & ~WS_THICKFRAME & ~WS_SYSMENU);
 
-                            // 视窗顶部向上位移 34px，高度延伸 34px，并通过 SetWindowRgn 物理切除 Chromium 自绘顶栏
+                            // 2. 视窗向上位移 34px 并延伸 34px 高度，通过 SetWindowRgn 将 Chromium 顶部栏彻底切除出可视区域
                             int finalH = targetH + 34;
                             int finalY = Math.Max(0, targetY - 34);
                             SetWindowPos(hWnd, IntPtr.Zero, targetX, finalY, targetW, finalH, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 
                             IntPtr hRgn = CreateRectRgn(0, 34, targetW, finalH);
                             SetWindowRgn(hWnd, hRgn, true);
+
+                            // 3. 向 Node 后台注册此主视窗句柄，便于 CRT 退出时 0ms 瞬间寻址
+                            try
+                            {
+                                var regReq = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:8316/api/window/register-hwnd?hwnd=" + _studioHwnd.ToInt64());
+                                regReq.Method = "POST";
+                                regReq.Timeout = 400;
+                                using (regReq.GetResponse()) { }
+                            }
+                            catch { }
 
                             found = true;
                             return false;
@@ -414,15 +440,19 @@ namespace AntigravityThemeStudio
 
                     if (found)
                     {
-                        // 额外确认保持一次，防止 Chromium 完成导航重排视口时重置区域
-                        Thread.Sleep(200);
-                        if (_studioHwnd != IntPtr.Zero)
+                        // 强化保持机制：在导航完成初期连续加固裁切区域，杜绝 Chromium 页面重排时区域回弹
+                        int[] checkDelays = new int[] { 250, 600, 1500 };
+                        foreach (int cd in checkDelays)
                         {
-                            int finalH = targetH + 34;
-                            int finalY = Math.Max(0, targetY - 34);
-                            SetWindowPos(_studioHwnd, IntPtr.Zero, targetX, finalY, targetW, finalH, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
-                            IntPtr hRgn = CreateRectRgn(0, 34, targetW, finalH);
-                            SetWindowRgn(_studioHwnd, hRgn, true);
+                            Thread.Sleep(cd);
+                            if (_studioHwnd != IntPtr.Zero)
+                            {
+                                int finalH = targetH + 34;
+                                int finalY = Math.Max(0, targetY - 34);
+                                SetWindowPos(_studioHwnd, IntPtr.Zero, targetX, finalY, targetW, finalH, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+                                IntPtr hRgn = CreateRectRgn(0, 34, targetW, finalH);
+                                SetWindowRgn(_studioHwnd, hRgn, true);
+                            }
                         }
                         break;
                     }
@@ -466,6 +496,12 @@ namespace AntigravityThemeStudio
         [System.Runtime.InteropServices.DllImport("gdi32.dll")]
         private static extern IntPtr CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
 
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool IsWindowVisible(IntPtr hWnd);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
         private struct RECT { public int Left, Top, Right, Bottom; }
 
@@ -479,7 +515,10 @@ namespace AntigravityThemeStudio
         private const int GWL_EXSTYLE = -20;
         private const int WS_CAPTION = 0x00C00000;
         private const int WS_THICKFRAME = 0x00040000;
+        private const int WS_SYSMENU = 0x00080000;
+        private const int WS_POPUP = unchecked((int)0x80000000);
         private const int WS_EX_LAYERED = 0x00080000;
         private const int LWA_ALPHA = 0x00000002;
+        private const uint GW_OWNER = 4;
     }
 }

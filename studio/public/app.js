@@ -2208,13 +2208,20 @@ function setupEventListeners() {
     };
   }
 
-  // Global Keyboard Shortcut: Escape to trigger CRT shutdown when no modal is open
+  // Global Keyboard Shortcuts: Escape to trigger CRT shutdown, F5/Ctrl+R to refresh in-place
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       const activeModal = document.querySelector('.modal-overlay.active, .preset-modal.active, .we-picker-modal.active');
       if (!activeModal && btnShutdown && !btnShutdown.disabled) {
         e.preventDefault();
         btnShutdown.click();
+      }
+    }
+    // Prevent accidental browser reload from exiting or clearing page state
+    if (e.key === 'F5' || (e.ctrlKey && (e.key === 'r' || e.key === 'R'))) {
+      e.preventDefault();
+      if (btnReload) {
+        btnReload.click();
       }
     }
   });
