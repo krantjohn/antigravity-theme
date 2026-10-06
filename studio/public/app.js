@@ -2115,10 +2115,12 @@ function setupEventListeners() {
       showToast('🔄 正在刷新工坊配置与状态...', 900);
       try {
         await fetchStatus();
+        if (state.activeTab === 'view-we') {
+          await fetchWeList();
+        }
         showToast('✨ 状态与壁纸数据已刷新！', 1200);
       } catch (_) {
-        window.__isExplicitReload = true;
-        location.reload();
+        showToast('⚠️ 刷新失败，请检查网络或后端服务', 1500);
       }
     };
   }
@@ -2138,30 +2140,30 @@ function setupEventListeners() {
       const glowBeam = document.getElementById('crt-glow-beam');
       const spark = document.getElementById('crt-spark');
 
-      // 1. Play retro analog audio
+      // 1. 纯静音模式
       playCrtAudio('off');
 
-      // 2. Set dark background and activate overlay
+      // 2. 激活高光荧光回扫线与中心光斑图层
       document.body.classList.add('crt-active');
       if (overlay) overlay.classList.add('active');
       if (glowBeam) {
         glowBeam.style.animation = 'none';
         glowBeam.offsetHeight; // trigger reflow
-        glowBeam.style.animation = 'crtBeamPulse 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards';
+        glowBeam.style.animation = 'crtBeamPulse 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards';
       }
       if (spark) {
         spark.style.animation = 'none';
         spark.offsetHeight; // trigger reflow
-        spark.style.animation = 'crtSparkPulse 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards';
+        spark.style.animation = 'crtSparkPulse 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards';
       }
 
-      // 3. Add CRT shutdown class
+      // 3. 内容白炽荧光闪烁放电，与物理视窗同步塌陷
       el.classList.remove('crt-powering-on');
       el.classList.add('crt-shutting-down');
 
       setTimeout(() => {
         resolve();
-      }, 650);
+      }, 380);
     });
   }
 
@@ -2198,15 +2200,15 @@ function setupEventListeners() {
       btnShutdown.disabled = true;
       const appShell = document.getElementById('app-shell') || document.body;
 
-      // 1. 纯静音播放老式 CRT 显像管断电息屏动效 (画面收缩至水平回扫线 -> 聚焦中心光斑 -> 彻底消隐)
-      await playCrtShutdownAnimation(appShell, { isShutdown: true });
-
-      // 2. 动效播放完成后通知后台彻底退出并释放全部服务
+      // 1. 0ms 瞬间向后台触发原生操作系统物理视窗 CRT 塌陷动效 (/api/shutdown 调起 crt_animator.exe)
       try {
-        await fetch('/api/shutdown', { method: 'POST' });
+        fetch('/api/shutdown', { method: 'POST' });
       } catch (_) {}
 
-      // 3. 关闭窗口
+      // 2. 界面同步激活高亮荧光回扫线与光斑动效，与操作系统物理视窗收缩完全无缝同步
+      await playCrtShutdownAnimation(appShell, { isShutdown: true });
+
+      // 3. 兜底关闭当前窗口
       setTimeout(() => {
         try { window.open('', '_self', ''); window.close(); } catch (_) {}
       }, 50);
@@ -2236,7 +2238,7 @@ function setupEventListeners() {
       showToast('📺 客户端显像管已断电息屏！', 1400);
       playCrtAudio('off');
       agMockup.classList.remove('crt-powering-on');
-      agMockup.classList.add('crt-shutting-down');
+      agMockup.classList.add('crt-shutting-down-mock');
       setTimeout(() => {
         if (mockCrtCard) mockCrtCard.style.display = 'flex';
       }, 650);
@@ -2251,7 +2253,7 @@ function setupEventListeners() {
       if (!agMockup) return;
       showToast('⚡ 客户端通电开机唤醒！', 1400);
       playCrtAudio('on');
-      agMockup.classList.remove('crt-shutting-down');
+      agMockup.classList.remove('crt-shutting-down-mock');
       agMockup.classList.add('crt-powering-on');
       setTimeout(() => {
         agMockup.classList.remove('crt-powering-on');
@@ -2273,8 +2275,8 @@ function initWindowDrag() {
   let startY = 0;
 
   header.addEventListener('mousedown', (e) => {
-    // Only drag when clicking blank background or brand text (ignore buttons, inputs, links, tabs)
-    if (e.target.closest('button, input, select, a, .tab-btn, .action-btn, .status-pill, .control-btn')) {
+    // Only drag when clicking blank background or brand text (ignore buttons, inputs, links, tabs, pills)
+    if (e.target.closest('button, input, select, a, .nav-tab, .tab-btn, .action-btn, .status-pill, .control-btn, .btn-header-action, .btn-header-close')) {
       return;
     }
     if (e.button !== 0) return; // Left click only
@@ -2287,11 +2289,11 @@ function initWindowDrag() {
 
   window.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
-    const dx = e.screenX - startX;
-    const dy = e.screenY - startY;
+    const dx = Math.round(e.screenX - startX);
+    const dy = Math.round(e.screenY - startY);
     if (dx !== 0 || dy !== 0) {
       try {
-        window.moveTo(window.screenX + dx, window.screenY + dy);
+        window.moveTo(Math.round(window.screenX + dx), Math.round(window.screenY + dy));
       } catch (_) {}
       startX = e.screenX;
       startY = e.screenY;
@@ -2299,6 +2301,10 @@ function initWindowDrag() {
   });
 
   window.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+
+  window.addEventListener('blur', () => {
     isDragging = false;
   });
 }

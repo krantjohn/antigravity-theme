@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Antigravity Theme Studio
+title Antigravity Launcher CLI
 cd /d "%~dp0..\.."
 
 where node >nul 2>nul

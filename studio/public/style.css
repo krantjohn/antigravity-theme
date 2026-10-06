@@ -3552,9 +3552,9 @@ body {
   background-color: var(--bg-dark);
 }
 
-/* Body during CRT shutdown is solid deep cathode black */
+/* Body during CRT shutdown keeps clean seamless backdrop */
 body.crt-active {
-  background-color: #000000 !important;
+  background-color: transparent !important;
 }
 
 /* Fullscreen CRT Overlay Layer */
@@ -3647,8 +3647,38 @@ body.crt-active {
   transform: scale(0);
 }
 
-/* 1. CRT Power-Off Animation (Vertical collapse -> Horizontal collapse -> Dissipate) */
+/* 1. CRT Power-Off Animation (Phosphor Flash & Scanline Beam, physical window shrinks concurrently) */
 @keyframes crtTurnOffScreen {
+  0% {
+    filter: brightness(1) contrast(1) saturate(1);
+    opacity: 1;
+  }
+  15% {
+    filter: brightness(2.8) contrast(1.8) saturate(0.2);
+    opacity: 1;
+  }
+  45% {
+    filter: brightness(4.5) contrast(2.2);
+    opacity: 0.95;
+  }
+  75% {
+    filter: brightness(3.2);
+    opacity: 0.8;
+  }
+  100% {
+    filter: brightness(0);
+    opacity: 0;
+  }
+}
+
+.crt-shutting-down {
+  animation: crtTurnOffScreen 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+  transform-origin: 50% 50% !important;
+  will-change: filter, opacity !important;
+}
+
+/* 1.1 CRT Mockup Window Simulation (In-page preview card collapse) */
+@keyframes crtTurnOffMockScreen {
   0% {
     transform: scale(1, 1);
     filter: brightness(1) contrast(1) saturate(1);
@@ -3694,8 +3724,8 @@ body.crt-active {
   }
 }
 
-.crt-shutting-down {
-  animation: crtTurnOffScreen 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+.crt-shutting-down-mock {
+  animation: crtTurnOffMockScreen 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
   transform-origin: 50% 50% !important;
   will-change: transform, filter, opacity !important;
 }

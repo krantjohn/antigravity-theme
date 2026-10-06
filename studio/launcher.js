@@ -106,40 +106,59 @@ if (browserExe) {
     stdio: 'ignore'
   });
 
-  // Windows 系统级锁定：后台执行一次微型窗口校准，杜绝任何全屏变异
+  // Windows 系统级锁定：后台执行窗口校准，剥离系统边框并切除 Chromium 自绘顶栏
   if (process.platform === 'win32') {
     setTimeout(() => {
-      const psEnforce = `
-        Add-Type -TypeDefinition @"
-          using System;
-          using System.Runtime.InteropServices;
-          using System.Text;
-          public class Win32 {
-            [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-            [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-            [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-            [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-            [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-            [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-            public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-          }
-"@
-        [Win32]::EnumWindows([Win32+EnumWindowsProc]{
-          param($hWnd, $lParam)
-          $sb = New-Object System.Text.StringBuilder 256
-          [Win32]::GetWindowText($hWnd, $sb, 256) | Out-Null
-          if ($sb.ToString() -like "*Antigravity Theme Studio*") {
-            [Win32]::ShowWindow($hWnd, 9) | Out-Null
-            $style = [Win32]::GetWindowLong($hWnd, -16)
-            [Win32]::SetWindowLong($hWnd, -16, $style -band (-bnot 0x00C00000)) | Out-Null
-            [Win32]::SetWindowPos($hWnd, [IntPtr]::Zero, ${targetX}, ${targetY}, ${targetW}, ${targetH}, 0x0064) | Out-Null
-            return $false
-          }
-          return $true
-        }, [IntPtr]::Zero) | Out-Null
-      `;
-      exec(`powershell -NoProfile -NonInteractive -Command "${psEnforce.replace(/"/g, '\\"')}"`, () => {});
-    }, 600);
+      const psLines = [
+        'Add-Type -TypeDefinition @"',
+        '  using System;',
+        '  using System.Runtime.InteropServices;',
+        '  using System.Text;',
+        '  public class Win32 {',
+        '    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);',
+        '    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);',
+        '    [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);',
+        '    [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);',
+        '    [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);',
+        '    [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetClassName(IntPtr hWnd, StringBuilder lpString, int nMaxCount);',
+        '    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);',
+        '    [DllImport("user32.dll")] public static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);',
+        '    [DllImport("gdi32.dll")] public static extern IntPtr CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);',
+        '    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);',
+        '  }',
+        '"@',
+        'for ($i = 0; $i -lt 30; $i++) {',
+        '  $found = $false',
+        '  [Win32]::EnumWindows([Win32+EnumWindowsProc]{',
+        '    param($hWnd, $lParam)',
+        '    $sbClass = New-Object System.Text.StringBuilder 256',
+        '    [Win32]::GetClassName($hWnd, $sbClass, 256) | Out-Null',
+        '    $cls = $sbClass.ToString()',
+        '    $sb = New-Object System.Text.StringBuilder 256',
+        '    [Win32]::GetWindowText($hWnd, $sb, 256) | Out-Null',
+        '    $title = $sb.ToString()',
+        '    if ($cls -eq "Chrome_WidgetWin_1" -and ($title -like "*Antigravity*" -or $title -like "*127.0.0.1*" -or $title -like "*localhost*")) {',
+        '      [Win32]::ShowWindow($hWnd, 9) | Out-Null',
+        '      $style = [Win32]::GetWindowLong($hWnd, -16)',
+        '      [Win32]::SetWindowLong($hWnd, -16, $style -band (-bnot 0x00C40000)) | Out-Null',
+        `      $finalH = ${targetH} + 34`,
+        `      $finalY = [Math]::Max(0, ${targetY} - 34)`,
+        `      [Win32]::SetWindowPos($hWnd, [IntPtr]::Zero, ${targetX}, $finalY, ${targetW}, $finalH, 0x0064) | Out-Null`,
+        `      $hRgn = [Win32]::CreateRectRgn(0, 34, ${targetW}, $finalH)`,
+        '      [Win32]::SetWindowRgn($hWnd, $hRgn, $true) | Out-Null',
+        '      $script:found = $true',
+        '      return $false',
+        '    }',
+        '    return $true',
+        '  }, [IntPtr]::Zero) | Out-Null',
+        '  if ($found) { break }',
+        '  Start-Sleep -Milliseconds 150',
+        '}'
+      ];
+      const script = psLines.join("\r\n");
+      const b64 = Buffer.from(script, 'utf16le').toString('base64');
+      exec(`powershell -NoProfile -Sta -EncodedCommand ${b64}`, () => {});
+    }, 300);
   }
 
   child.on('error', (err) => {

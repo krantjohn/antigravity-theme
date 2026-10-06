@@ -348,23 +348,38 @@ namespace AntigravityThemeStudio
         {
             ThreadPool.QueueUserWorkItem((state) =>
             {
-                for (int i = 0; i < 30; i++) // 轮询最多 3 秒直至检测到窗口生成
+                // 轮询最多 6 秒，确保 Chromium 渲染器就绪后即刻锁定
+                for (int i = 0; i < 60; i++)
                 {
                     Thread.Sleep(100);
                     bool found = false;
                     EnumWindows((hWnd, lParam) =>
                     {
+                        System.Text.StringBuilder sbClass = new System.Text.StringBuilder(256);
+                        GetClassName(hWnd, sbClass, 256);
+                        string cls = sbClass.ToString();
+
                         System.Text.StringBuilder sb = new System.Text.StringBuilder(256);
                         GetWindowText(hWnd, sb, 256);
                         string title = sb.ToString();
-                        if (!string.IsNullOrEmpty(title) && title.Contains("Antigravity Theme Studio"))
+
+                        if (cls == "Chrome_WidgetWin_1" && (title.Contains("Antigravity") || title.Contains("127.0.0.1") || title.Contains("localhost")))
                         {
                             _studioHwnd = hWnd;
                             ShowWindow(hWnd, SW_RESTORE);
-                            // 彻底剥离原生黑色标题栏 (WS_CAPTION)，打造一体化极简现代无边框工坊视窗
+
+                            // 剥离系统原生标题栏样式
                             int style = GetWindowLong(hWnd, GWL_STYLE);
-                            SetWindowLong(hWnd, GWL_STYLE, style & ~WS_CAPTION);
-                            SetWindowPos(hWnd, IntPtr.Zero, targetX, targetY, targetW, targetH, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+                            SetWindowLong(hWnd, GWL_STYLE, style & ~WS_CAPTION & ~WS_THICKFRAME);
+
+                            // 视窗顶部向上位移 34px，高度延伸 34px，并通过 SetWindowRgn 物理切除 Chromium 自绘顶栏
+                            int finalH = targetH + 34;
+                            int finalY = Math.Max(0, targetY - 34);
+                            SetWindowPos(hWnd, IntPtr.Zero, targetX, finalY, targetW, finalH, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+
+                            IntPtr hRgn = CreateRectRgn(0, 34, targetW, finalH);
+                            SetWindowRgn(hWnd, hRgn, true);
+
                             found = true;
                             return false;
                         }
@@ -385,6 +400,9 @@ namespace AntigravityThemeStudio
         [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
         private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
 
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+        private static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
@@ -399,6 +417,12 @@ namespace AntigravityThemeStudio
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
+
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        private static extern IntPtr CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
 
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
         private struct RECT { public int Left, Top, Right, Bottom; }

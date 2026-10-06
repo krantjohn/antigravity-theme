@@ -14,6 +14,9 @@ namespace AntigravityThemeStudio
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern int GetClassName(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
         [DllImport("user32.dll", SetLastError = true)]
         static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
@@ -34,6 +37,15 @@ namespace AntigravityThemeStudio
 
         [DllImport("user32.dll")]
         static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
+
+        [DllImport("gdi32.dll")]
+        static extern IntPtr CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
+
+        [DllImport("user32.dll")]
+        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
         delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
@@ -56,19 +68,38 @@ namespace AntigravityThemeStudio
         {
             IntPtr targetHwnd = IntPtr.Zero;
 
-            // Search for Theme Studio window
-            EnumWindows((hWnd, lParam) =>
+            long h;
+            if (args.Length > 0 && long.TryParse(args[0], out h))
             {
-                StringBuilder sb = new StringBuilder(256);
-                GetWindowText(hWnd, sb, 256);
-                string title = sb.ToString();
-                if (!string.IsNullOrEmpty(title) && title.Contains("Antigravity Theme Studio"))
+                targetHwnd = new IntPtr(h);
+            }
+            else
+            {
+                // Search specifically for the Theme Studio Chromium window
+                for (int r = 0; r < 15; r++)
                 {
-                    targetHwnd = hWnd;
-                    return false;
+                    EnumWindows((hWnd, lParam) =>
+                    {
+                        StringBuilder sbClass = new StringBuilder(256);
+                        GetClassName(hWnd, sbClass, 256);
+                        string cls = sbClass.ToString();
+
+                        StringBuilder sb = new StringBuilder(256);
+                        GetWindowText(hWnd, sb, 256);
+                        string title = sb.ToString();
+
+                        if (cls == "Chrome_WidgetWin_1" && (title.Contains("Antigravity") || title.Contains("127.0.0.1") || title.Contains("localhost")))
+                        {
+                            targetHwnd = hWnd;
+                            return false;
+                        }
+                        return true;
+                    }, IntPtr.Zero);
+
+                    if (targetHwnd != IntPtr.Zero) break;
+                    Thread.Sleep(30);
                 }
-                return true;
-            }, IntPtr.Zero);
+            }
 
             if (targetHwnd != IntPtr.Zero)
             {
@@ -91,9 +122,12 @@ namespace AntigravityThemeStudio
             int centerY = origY + origH / 2;
             int centerX = origX + origW / 2;
 
+            uint pid = 0;
+            try { GetWindowThreadProcessId(hWnd, out pid); } catch { }
+
             try
             {
-                // 1. Remove OS caption and resizing frame so window can collapse freely
+                // Ensure borderless style
                 int style = GetWindowLong(hWnd, GWL_STYLE);
                 SetWindowLong(hWnd, GWL_STYLE, style & ~WS_CAPTION & ~WS_THICKFRAME);
                 int exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
@@ -102,8 +136,8 @@ namespace AntigravityThemeStudio
             }
             catch { }
 
-            // Phase 1: Rapid vertical collapse into 3px horizontal beam (~220ms)
-            int steps1 = 20;
+            // Phase 1: Rapid vertical collapse into 3px horizontal scanline (~200ms)
+            int steps1 = 18;
             int delay1 = 11;
             for (int i = 1; i <= steps1; i++)
             {
@@ -115,11 +149,21 @@ namespace AntigravityThemeStudio
                 int curY = centerY - curH / 2;
 
                 SetWindowPos(hWnd, IntPtr.Zero, origX, curY, origW, curH, SWP_NOZORDER);
+
+                // Keep clipping any top Chromium chrome during collapse
+                try
+                {
+                    int topClip = Math.Min(34, Math.Max(0, curH - 3));
+                    IntPtr hRgn = CreateRectRgn(0, topClip, origW, curH);
+                    SetWindowRgn(hWnd, hRgn, true);
+                }
+                catch { }
+
                 Thread.Sleep(delay1);
             }
 
-            // Phase 2: Rapid horizontal collapse into central spark & fade to black (~190ms)
-            int steps2 = 18;
+            // Phase 2: Rapid horizontal collapse into central spark & fade to black (~160ms)
+            int steps2 = 16;
             int delay2 = 10;
             for (int i = 1; i <= steps2; i++)
             {
@@ -135,9 +179,24 @@ namespace AntigravityThemeStudio
                 Thread.Sleep(delay2);
             }
 
-            // Phase 3: Hide and close
+            // Phase 3: Hide and close immediately
             try { ShowWindow(hWnd, SW_HIDE); } catch { }
             try { PostMessage(hWnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero); } catch { }
+
+            // Cleanly terminate the specific browser process to prevent background lingering
+            try
+            {
+                Thread.Sleep(50);
+                if (pid != 0)
+                {
+                    Process p = Process.GetProcessById((int)pid);
+                    if (!p.HasExited)
+                    {
+                        p.Kill();
+                    }
+                }
+            }
+            catch { }
         }
     }
 }
