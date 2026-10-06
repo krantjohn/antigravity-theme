@@ -120,7 +120,7 @@ namespace AntigravityThemeStudio
                     DateTime startTime = DateTime.Now;
 
                     // 后台线程使用 Windows 原生 Win32 API 强制锁定窗口大小和位置 (防止浏览器内核抢占全屏)
-                    EnforceOptimalWindowSize(targetX, targetY, targetW, targetH);
+                    EnforceOptimalWindowSize(targetX, targetY, targetW, targetH, browserProc != null ? browserProc.Id : 0);
 
                     // 后台线程监听: 若用户在前端通过 CRT 息屏点击 [✕ 关闭软件]，Node 进程先行释放，则同步关闭浏览器窗口
                     ThreadPool.QueueUserWorkItem((s) =>
@@ -344,7 +344,7 @@ namespace AntigravityThemeStudio
             catch { }
         }
 
-        private static void EnforceOptimalWindowSize(int targetX, int targetY, int targetW, int targetH)
+        private static void EnforceOptimalWindowSize(int targetX, int targetY, int targetW, int targetH, int targetPid)
         {
             ThreadPool.QueueUserWorkItem((state) =>
             {
@@ -358,12 +358,38 @@ namespace AntigravityThemeStudio
                         System.Text.StringBuilder sbClass = new System.Text.StringBuilder(256);
                         GetClassName(hWnd, sbClass, 256);
                         string cls = sbClass.ToString();
+                        if (cls != "Chrome_WidgetWin_1") return true;
+
+                        uint pid = 0;
+                        GetWindowThreadProcessId(hWnd, out pid);
+
+                        string procName = "";
+                        try
+                        {
+                            Process proc = Process.GetProcessById((int)pid);
+                            procName = proc.ProcessName.ToLower();
+                        }
+                        catch { }
+
+                        // ABSOLUTE SAFETY GUARD: NEVER touch Google Antigravity!
+                        if (procName.Contains("antigravity")) return true;
 
                         System.Text.StringBuilder sb = new System.Text.StringBuilder(256);
                         GetWindowText(hWnd, sb, 256);
                         string title = sb.ToString();
 
-                        if (cls == "Chrome_WidgetWin_1" && (title.Contains("Antigravity") || title.Contains("127.0.0.1") || title.Contains("localhost")))
+                        bool isMatch = false;
+                        if (targetPid > 0 && pid == (uint)targetPid)
+                        {
+                            isMatch = true;
+                        }
+                        else if ((procName == "msedge" || procName == "chrome") &&
+                                 (title.Contains("Theme Studio") || title.Contains("8316") || title.Contains("127.0.0.1") || title.Contains("localhost")))
+                        {
+                            isMatch = true;
+                        }
+
+                        if (isMatch)
                         {
                             _studioHwnd = hWnd;
                             ShowWindow(hWnd, SW_RESTORE);
@@ -386,10 +412,26 @@ namespace AntigravityThemeStudio
                         return true;
                     }, IntPtr.Zero);
 
-                    if (found) break;
+                    if (found)
+                    {
+                        // 额外确认保持一次，防止 Chromium 完成导航重排视口时重置区域
+                        Thread.Sleep(200);
+                        if (_studioHwnd != IntPtr.Zero)
+                        {
+                            int finalH = targetH + 34;
+                            int finalY = Math.Max(0, targetY - 34);
+                            SetWindowPos(_studioHwnd, IntPtr.Zero, targetX, finalY, targetW, finalH, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+                            IntPtr hRgn = CreateRectRgn(0, 34, targetW, finalH);
+                            SetWindowRgn(_studioHwnd, hRgn, true);
+                        }
+                        break;
+                    }
                 }
             });
         }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
         [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);

@@ -76,19 +76,38 @@ namespace AntigravityThemeStudio
             else
             {
                 // Search specifically for the Theme Studio Chromium window
-                for (int r = 0; r < 15; r++)
+                for (int r = 0; r < 20; r++)
                 {
                     EnumWindows((hWnd, lParam) =>
                     {
                         StringBuilder sbClass = new StringBuilder(256);
                         GetClassName(hWnd, sbClass, 256);
                         string cls = sbClass.ToString();
+                        if (cls != "Chrome_WidgetWin_1") return true;
+
+                        uint pid = 0;
+                        GetWindowThreadProcessId(hWnd, out pid);
+                        if (pid == 0) return true;
+
+                        string procName = "";
+                        try
+                        {
+                            Process proc = Process.GetProcessById((int)pid);
+                            procName = proc.ProcessName.ToLower();
+                        }
+                        catch { }
+
+                        // ABSOLUTE SAFETY GUARD: NEVER touch Google Antigravity!
+                        if (procName.Contains("antigravity")) return true;
+
+                        // Must be msedge or chrome
+                        if (procName != "msedge" && procName != "chrome") return true;
 
                         StringBuilder sb = new StringBuilder(256);
                         GetWindowText(hWnd, sb, 256);
                         string title = sb.ToString();
 
-                        if (cls == "Chrome_WidgetWin_1" && (title.Contains("Antigravity") || title.Contains("127.0.0.1") || title.Contains("localhost")))
+                        if (title.Contains("Theme Studio") || title.Contains("8316") || title.Contains("127.0.0.1") || title.Contains("localhost"))
                         {
                             targetHwnd = hWnd;
                             return false;
@@ -97,7 +116,7 @@ namespace AntigravityThemeStudio
                     }, IntPtr.Zero);
 
                     if (targetHwnd != IntPtr.Zero) break;
-                    Thread.Sleep(30);
+                    Thread.Sleep(25);
                 }
             }
 
@@ -119,7 +138,10 @@ namespace AntigravityThemeStudio
 
             if (origW <= 0 || origH <= 0) return;
 
-            int centerY = origY + origH / 2;
+            // The window top was positioned at targetY - 34 and height was targetH + 34
+            int targetH = origH > 34 ? origH - 34 : origH;
+            int visibleTop = origY + (origH > 34 ? 34 : 0);
+            int visibleCenterY = visibleTop + targetH / 2;
             int centerX = origX + origW / 2;
 
             uint pid = 0;
@@ -145,16 +167,17 @@ namespace AntigravityThemeStudio
                 // Ease in-out cubic
                 double ease = p < 0.5 ? 4 * p * p * p : 1 - Math.Pow(-2 * p + 2, 3) / 2;
 
-                int curH = Math.Max(3, (int)(origH * (1.0 - ease)));
-                int curY = centerY - curH / 2;
+                int curVisibleH = Math.Max(3, (int)(targetH * (1.0 - ease)));
+                int curTop = visibleCenterY - curVisibleH / 2;
+                int winY = curTop - 34;
+                int winH = curVisibleH + 34;
 
-                SetWindowPos(hWnd, IntPtr.Zero, origX, curY, origW, curH, SWP_NOZORDER);
+                SetWindowPos(hWnd, IntPtr.Zero, origX, winY, origW, winH, SWP_NOZORDER);
 
                 // Keep clipping any top Chromium chrome during collapse
                 try
                 {
-                    int topClip = Math.Min(34, Math.Max(0, curH - 3));
-                    IntPtr hRgn = CreateRectRgn(0, topClip, origW, curH);
+                    IntPtr hRgn = CreateRectRgn(0, 34, origW, winH);
                     SetWindowRgn(hWnd, hRgn, true);
                 }
                 catch { }
@@ -174,7 +197,13 @@ namespace AntigravityThemeStudio
                 int curX = centerX - curW / 2;
                 byte alpha = (byte)Math.Max(0, (int)(255 * (1.0 - ease)));
 
-                SetWindowPos(hWnd, IntPtr.Zero, curX, centerY - 1, curW, 3, SWP_NOZORDER);
+                SetWindowPos(hWnd, IntPtr.Zero, curX, visibleCenterY - 1 - 34, curW, 37, SWP_NOZORDER);
+                try
+                {
+                    IntPtr hRgn = CreateRectRgn(0, 34, curW, 37);
+                    SetWindowRgn(hWnd, hRgn, true);
+                }
+                catch { }
                 try { SetLayeredWindowAttributes(hWnd, 0, alpha, LWA_ALPHA); } catch { }
                 Thread.Sleep(delay2);
             }
@@ -190,7 +219,7 @@ namespace AntigravityThemeStudio
                 if (pid != 0)
                 {
                     Process p = Process.GetProcessById((int)pid);
-                    if (!p.HasExited)
+                    if (!p.ProcessName.ToLower().Contains("antigravity") && !p.HasExited)
                     {
                         p.Kill();
                     }

@@ -1723,40 +1723,8 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 // =========================================================================
 (function() {
   function playCrtAudio() {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const oscGain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(11500, now);
-      osc.frequency.exponentialRampToValueAtTime(50, now + 0.42);
-      oscGain.gain.setValueAtTime(0.09, now);
-      oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(3000, now);
-      filter.frequency.exponentialRampToValueAtTime(220, now + 0.38);
-      osc.connect(filter);
-      filter.connect(oscGain);
-      oscGain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.5);
-
-      const popOsc = ctx.createOscillator();
-      const popGain = ctx.createGain();
-      popOsc.type = 'sine';
-      popOsc.frequency.setValueAtTime(160, now + 0.05);
-      popOsc.frequency.exponentialRampToValueAtTime(32, now + 0.28);
-      popGain.gain.setValueAtTime(0.18, now + 0.05);
-      popGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
-      popOsc.connect(popGain);
-      popGain.connect(ctx.destination);
-      popOsc.start(now + 0.05);
-      popOsc.stop(now + 0.35);
-    } catch (_) {}
+    // 纯静音模式：100% 保持完全静音，彻底移除断电与开机音效
+    return;
   }
 
   function injectCrtStyles() {

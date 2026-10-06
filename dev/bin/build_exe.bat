@@ -13,4 +13,8 @@ if %ERRORLEVEL% equ 0 (
 ) else (
     echo [ERROR] Build failed with error code %ERRORLEVEL%
 )
-pause
+
+if "%1" neq "--no-pause" (
+    pause
+)
+exit /b %ERRORLEVEL%

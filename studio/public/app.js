@@ -2093,19 +2093,12 @@ function setupEventListeners() {
   if (btnResetWindow) {
     btnResetWindow.onclick = async () => {
       try {
-        const screenW = window.screen?.availWidth || 2560;
-        const screenH = window.screen?.availHeight || 1392;
-        const targetW = 1400;
-        const targetH = 860;
-        const targetX = Math.max(20, Math.round((screenW - targetW) / 2));
-        const targetY = Math.max(20, Math.round((screenH - targetH) / 2));
-        window.resizeTo(targetW, targetH);
-        window.moveTo(targetX, targetY);
-      } catch (_) {}
-      try {
+        showToast('正在校准并还原推荐视窗 (1400x860)...', 900);
         await fetch('/api/window/reset', { method: 'POST' });
-      } catch (_) {}
-      showToast('窗口已还原至推荐适中尺寸 (1400x860)');
+        showToast('✨ 窗口已还原至推荐适中尺寸 (1400x860)');
+      } catch (_) {
+        showToast('⚠️ 窗口还原失败');
+      }
     };
   }
 
@@ -2273,6 +2266,7 @@ function initWindowDrag() {
   let isDragging = false;
   let startX = 0;
   let startY = 0;
+  let rafId = null;
 
   header.addEventListener('mousedown', (e) => {
     // Only drag when clicking blank background or brand text (ignore buttons, inputs, links, tabs, pills)
@@ -2289,41 +2283,47 @@ function initWindowDrag() {
 
   window.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
-    const dx = Math.round(e.screenX - startX);
-    const dy = Math.round(e.screenY - startY);
-    if (dx !== 0 || dy !== 0) {
-      try {
-        window.moveTo(Math.round(window.screenX + dx), Math.round(window.screenY + dy));
-      } catch (_) {}
-      startX = e.screenX;
-      startY = e.screenY;
+    const curX = e.screenX;
+    const curY = e.screenY;
+    if (!rafId) {
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (!isDragging) return;
+        const dx = Math.round(curX - startX);
+        const dy = Math.round(curY - startY);
+        if (dx !== 0 || dy !== 0) {
+          try {
+            window.moveTo(Math.round(window.screenX + dx), Math.round(window.screenY + dy));
+          } catch (_) {}
+          startX = curX;
+          startY = curY;
+        }
+      });
     }
   });
 
-  window.addEventListener('mouseup', () => {
+  const stopDrag = () => {
     isDragging = false;
-  });
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  };
 
-  window.addEventListener('blur', () => {
-    isDragging = false;
-  });
+  window.addEventListener('mouseup', stopDrag);
+  window.addEventListener('blur', stopDrag);
 }
 
 // =========================================================================
 // 20. Bootstrap
 // =========================================================================
 window.addEventListener('DOMContentLoaded', () => {
-  // 杜绝异常全屏：若窗口尺寸接近全屏，自动回缩至舒适适中尺寸 (1400x860)
+  // 杜绝异常全屏：若窗口在启动时被系统或浏览器恢复为全屏，后台静默校准为适中尺寸 (1400x860)
   try {
     const screenW = window.screen?.availWidth || 2560;
     const screenH = window.screen?.availHeight || 1392;
-    if (window.outerWidth > screenW * 0.85 || window.outerHeight > screenH * 0.88) {
-      const targetW = 1400;
-      const targetH = 860;
-      const targetX = Math.max(20, Math.round((screenW - targetW) / 2));
-      const targetY = Math.max(20, Math.round((screenH - targetH) / 2));
-      window.resizeTo(targetW, targetH);
-      window.moveTo(targetX, targetY);
+    if (window.outerWidth > screenW * 0.95 || window.outerHeight > screenH * 0.95) {
+      fetch('/api/window/reset', { method: 'POST' });
     }
   } catch (_) {}
 

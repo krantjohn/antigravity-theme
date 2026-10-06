@@ -230,6 +230,7 @@ function resetAppWindowPlacement() {
         '    [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);',
         '    [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);',
         '    [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetClassName(IntPtr hWnd, StringBuilder lpString, int nMaxCount);',
+        '    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);',
         '    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);',
         '    [DllImport("user32.dll")] public static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);',
         '    [DllImport("gdi32.dll")] public static extern IntPtr CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);',
@@ -241,10 +242,17 @@ function resetAppWindowPlacement() {
         '  $sbClass = New-Object System.Text.StringBuilder 256',
         '  [Win32]::GetClassName($hWnd, $sbClass, 256) | Out-Null',
         '  $cls = $sbClass.ToString()',
+        '  if ($cls -ne "Chrome_WidgetWin_1") { return $true }',
+        '  $pId = 0',
+        '  [Win32]::GetWindowThreadProcessId($hWnd, [ref]$pId) | Out-Null',
+        '  $pName = ""',
+        '  try { $pName = (Get-Process -Id $pId -ErrorAction SilentlyContinue).ProcessName.ToLower() } catch {}',
+        '  if ($pName -like "*antigravity*") { return $true }',
+        '  if ($pName -ne "msedge" -and $pName -ne "chrome") { return $true }',
         '  $sb = New-Object System.Text.StringBuilder 256',
         '  [Win32]::GetWindowText($hWnd, $sb, 256) | Out-Null',
         '  $title = $sb.ToString()',
-        '  if ($cls -eq "Chrome_WidgetWin_1" -and ($title -like "*Antigravity*" -or $title -like "*127.0.0.1*" -or $title -like "*localhost*")) {',
+        '  if ($title -like "*Theme Studio*" -or $title -like "*8316*" -or $title -like "*127.0.0.1*" -or $title -like "*localhost*") {',
         '    [Win32]::ShowWindow($hWnd, 9) | Out-Null',
         '    $style = [Win32]::GetWindowLong($hWnd, -16)',
         '    [Win32]::SetWindowLong($hWnd, -16, $style -band (-bnot 0x00C40000)) | Out-Null',
@@ -723,7 +731,7 @@ const server = http.createServer(async (req, res) => {
           spawn(animatorExe, [], { detached: true, stdio: 'ignore' });
         } else {
           // 降级使用 PowerShell 优雅关闭窗口
-          const psClose = `powershell -NoProfile -NonInteractive -Command "Get-Process -Name msedge, chrome -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*Antigravity*' } | ForEach-Object { $_.CloseMainWindow() }"`;
+          const psClose = `powershell -NoProfile -NonInteractive -Command "Get-Process -Name msedge, chrome -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*Theme Studio*' } | ForEach-Object { $_.CloseMainWindow() }"`;
           exec(psClose, () => {});
         }
       } catch (_) {}
