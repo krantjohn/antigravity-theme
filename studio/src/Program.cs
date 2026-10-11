@@ -1,20 +1,105 @@
 using System;
 using System.IO;
 using System.Net;
-using System.Text;
+using System.Drawing;
+using System.Reflection;
 using System.Threading;
 using System.Diagnostics;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
+using Microsoft.Web.WebView2.WinForms;
+using Microsoft.Web.WebView2.Core;
 
 namespace AntigravityThemeStudio
 {
     static class Program
     {
         private static Process _nodeProcess;
-        private static IntPtr _studioHwnd = IntPtr.Zero;
 
         [STAThread]
         static void Main()
+        {
+            // 1. 注册内嵌 DLL 资源解析器 (实现纯单文件 EXE 自包含运行)
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(OnResolveAssembly);
+
+            // 2. 提取原生 WebView2Loader.dll 到专属安全目录
+            EnsureNativeLoader();
+
+            // 3. 启动应用主生命周期 (解耦 JIT 避免提前加载 WebView2 程序集)
+            RunApp();
+        }
+
+        private static Assembly OnResolveAssembly(object sender, ResolveEventArgs args)
+        {
+            try
+            {
+                string assemblyName = new AssemblyName(args.Name).Name;
+                string resourceName = assemblyName + ".dll";
+
+                using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
+                {
+                    if (stream != null)
+                    {
+                        byte[] bytes = new byte[stream.Length];
+                        stream.Read(bytes, 0, (int)stream.Length);
+                        return Assembly.Load(bytes);
+                    }
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern bool SetDllDirectory(string lpPathName);
+
+        private static void EnsureNativeLoader()
+        {
+            try
+            {
+                // 如果当前目录已经有 WebView2Loader.dll 则直接使用
+                string localLoader = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WebView2Loader.dll");
+                if (File.Exists(localLoader)) return;
+
+                // 否则从嵌入资源释放到用户的 LocalAppData 目录中
+                string cacheDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "antigravity_studio_host"
+                );
+                if (!Directory.Exists(cacheDir))
+                {
+                    Directory.CreateDirectory(cacheDir);
+                }
+
+                string targetLoader = Path.Combine(cacheDir, "WebView2Loader.dll");
+                if (!File.Exists(targetLoader))
+                {
+                    using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("WebView2Loader.dll"))
+                    {
+                        if (stream != null)
+                        {
+                            using (FileStream fs = new FileStream(targetLoader, FileMode.Create, FileAccess.Write))
+                            {
+                                byte[] buffer = new byte[8192];
+                                int read;
+                                while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+                                {
+                                    fs.Write(buffer, 0, read);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (File.Exists(targetLoader))
+                {
+                    SetDllDirectory(cacheDir);
+                }
+            }
+            catch { }
+        }
+
+        private static void RunApp()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
@@ -24,7 +109,6 @@ namespace AntigravityThemeStudio
 
             if (!File.Exists(serverScript))
             {
-                // In case exe is in bin/ or another subdirectory
                 string altServer = Path.Combine(appDir, "..", "studio", "server.js");
                 if (File.Exists(altServer))
                 {
@@ -44,7 +128,7 @@ namespace AntigravityThemeStudio
                 return;
             }
 
-            // 1. 查找 Node.js 路径
+            // 查找 Node.js 运行环境
             string nodePath = FindNodeExecutable(appDir);
             if (string.IsNullOrEmpty(nodePath) || !File.Exists(nodePath))
             {
@@ -61,15 +145,12 @@ namespace AntigravityThemeStudio
                 return;
             }
 
-            // 2. 查找 Edge / Chrome 独立应用桌面运行器
-            string browserPath = FindBrowserExecutable();
-
-            // 3. 注册退出清理钩子 (确保无论何种退出均释放 Node 进程)
-            AppDomain.CurrentDomain.ProcessExit += (s, e) => CleanupNodeProcess();
+            // 注册退出清理
+            AppDomain.CurrentDomain.ProcessExit += new EventHandler((s, e) => CleanupNodeProcess());
 
             try
             {
-                // 4. 以完全无黑窗方式启动本地后台服务器
+                // 启动后台 Node 服务
                 ProcessStartInfo nodePsi = new ProcessStartInfo();
                 nodePsi.FileName = nodePath;
                 nodePsi.Arguments = "\"" + serverScript + "\"";
@@ -80,101 +161,22 @@ namespace AntigravityThemeStudio
 
                 _nodeProcess = Process.Start(nodePsi);
 
-                // 5. 等待本地服务就绪 (最长等待 3 秒)
-                bool isReady = WaitForServerReady("http://127.0.0.1:8316/api/status", 3000);
-
-                string appUrl = "http://127.0.0.1:8316";
-
-                // 6. 调起桌面窗口
-                if (!string.IsNullOrEmpty(browserPath) && File.Exists(browserPath))
+                // 绑定到 Windows Job Object，内核级保证宿主关闭时自动销毁子进程
+                if (_nodeProcess != null)
                 {
-                    string tempProfile = Path.Combine(Path.GetTempPath(), "antigravity_studio_profile");
-
-                    int screenW = Screen.PrimaryScreen.WorkingArea.Width;
-                    int screenH = Screen.PrimaryScreen.WorkingArea.Height;
-                    int screenX = Screen.PrimaryScreen.WorkingArea.Left;
-                    int screenY = Screen.PrimaryScreen.WorkingArea.Top;
-
-                    // 计算适中舒适的居中窗口尺寸 (大屏 1400x860，常规屏 1366x820)
-                    int targetW = screenW > 2000 ? 1400 : Math.Min(1366, Math.Max(1200, (int)(screenW * 0.72)));
-                    int targetH = screenH > 1100 ? 860 : Math.Min(820, Math.Max(720, (int)(screenH * 0.78)));
-                    int targetX = screenX + Math.Max(20, (screenW - targetW) / 2);
-                    int targetY = screenY + Math.Max(20, (screenH - targetH) / 2);
-
-                    // 启动前强制重置 Chrome/Edge 记忆的窗口状态与全屏尺寸
-                    SanitizeChromePreferences(tempProfile, screenX, screenY, screenW, screenH, targetX, targetY, targetW, targetH);
-
-                    ProcessStartInfo browserPsi = new ProcessStartInfo();
-                    browserPsi.FileName = browserPath;
-                    browserPsi.Arguments = string.Format(
-                        "--app={0} --window-size={1},{2} --window-position={3},{4} --user-data-dir=\"{5}\" --no-first-run --no-default-browser-check",
-                        appUrl,
-                        targetW,
-                        targetH,
-                        targetX,
-                        targetY,
-                        tempProfile
-                    );
-                    browserPsi.UseShellExecute = false;
-
-                    Process browserProc = Process.Start(browserPsi);
-                    DateTime startTime = DateTime.Now;
-
-                    // 后台线程使用 Windows 原生 Win32 API 强制锁定窗口大小和位置 (防止浏览器内核抢占全屏)
-                    EnforceOptimalWindowSize(targetX, targetY, targetW, targetH, browserProc != null ? browserProc.Id : 0);
-
-                    // 后台线程监听: 若用户在前端通过 CRT 息屏点击 [✕ 关闭软件]，Node 进程先行释放，则同步关闭浏览器窗口
-                    ThreadPool.QueueUserWorkItem((s) =>
-                    {
-                        if (_nodeProcess != null)
-                        {
-                            try
-                            {
-                                _nodeProcess.WaitForExit();
-                                if (browserProc != null && !browserProc.HasExited)
-                                {
-                                    browserProc.CloseMainWindow();
-                                    if (!browserProc.WaitForExit(400))
-                                    {
-                                        browserProc.Kill();
-                                    }
-                                }
-                            }
-                            catch { }
-                        }
-                    });
-
-                    if (browserProc != null)
-                    {
-                        browserProc.WaitForExit();
-
-                        // 退出后再次清理 Chrome 可能写回的大窗口数据，确保下次启动依然纯净
-                        SanitizeChromePreferences(tempProfile, screenX, screenY, screenW, screenH, targetX, targetY, targetW, targetH);
-
-                        // 如果窗口运行时间大于 2 秒后退出，说明是用户主动关闭了窗口
-                        if ((DateTime.Now - startTime).TotalSeconds >= 2.0)
-                        {
-                            CleanupNodeProcess();
-                            return;
-                        }
-                    }
-                }
-                else
-                {
-                    // 降级使用系统默认浏览器
-                    try { Process.Start(appUrl); } catch { }
+                    JobObjectManager.BindProcess(_nodeProcess);
                 }
 
-                // 7. 若浏览器托管进程提早脱钩，则等待 nodeProcess 退出 (例如用户在前端点了 [✕ 退出软件])
-                if (_nodeProcess != null && !_nodeProcess.HasExited)
-                {
-                    _nodeProcess.WaitForExit();
-                }
+                // 等待本地服务就绪
+                WaitForServerReady("http://127.0.0.1:8316/api/status", 3500);
+
+                // 启动 WebView2 原生暗黑窗体
+                Application.Run(new StudioForm(appDir));
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    "启动工作室时发生异常:\n" + ex.Message,
+                    "启动工作室桌面宿主时发生异常:\n" + ex.Message,
                     "Antigravity Theme Studio",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
@@ -186,13 +188,12 @@ namespace AntigravityThemeStudio
             }
         }
 
-        private static void CleanupNodeProcess()
+        public static void CleanupNodeProcess()
         {
             if (_nodeProcess != null && !_nodeProcess.HasExited)
             {
                 try
                 {
-                    // 尝试优雅关闭
                     var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:8316/api/shutdown");
                     req.Method = "POST";
                     req.Timeout = 500;
@@ -202,7 +203,7 @@ namespace AntigravityThemeStudio
 
                 try
                 {
-                    if (!_nodeProcess.WaitForExit(500))
+                    if (!_nodeProcess.WaitForExit(400))
                     {
                         _nodeProcess.Kill();
                     }
@@ -214,13 +215,13 @@ namespace AntigravityThemeStudio
         private static bool WaitForServerReady(string url, int timeoutMs)
         {
             int elapsed = 0;
-            int interval = 150;
+            int interval = 120;
             while (elapsed < timeoutMs)
             {
                 try
                 {
                     HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
-                    req.Timeout = 400;
+                    req.Timeout = 300;
                     using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
                     {
                         if (resp.StatusCode == HttpStatusCode.OK)
@@ -239,11 +240,9 @@ namespace AntigravityThemeStudio
 
         private static string FindNodeExecutable(string appDir)
         {
-            // 1. 检查应用目录内
             string localNode = Path.Combine(appDir, "bin", "node.exe");
             if (File.Exists(localNode)) return localNode;
 
-            // 2. 检查常见安装位置
             string[] knownPaths = new string[]
             {
                 @"D:\720721\nodejs\node.exe",
@@ -258,7 +257,6 @@ namespace AntigravityThemeStudio
                 if (!string.IsNullOrEmpty(p) && File.Exists(p)) return p;
             }
 
-            // 3. 检查系统 PATH 环境变量
             string pathEnv = Environment.GetEnvironmentVariable("PATH");
             if (!string.IsNullOrEmpty(pathEnv))
             {
@@ -280,245 +278,252 @@ namespace AntigravityThemeStudio
 
             return null;
         }
+    }
 
-        private static string FindBrowserExecutable()
+    public class StudioForm : Form
+    {
+        private WebView2 _webView;
+        private string _appDir;
+
+        public StudioForm(string appDir)
         {
-            string[] knownPaths = new string[]
-            {
-                @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-                @"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-                @"C:\Program Files\Google\Chrome\Application\chrome.exe",
-                @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Microsoft\Edge\Application\msedge.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Google\Chrome\Application\chrome.exe")
-            };
-
-            foreach (string p in knownPaths)
-            {
-                if (!string.IsNullOrEmpty(p) && File.Exists(p)) return p;
-            }
-
-            return null;
+            _appDir = appDir;
+            InitializeComponent();
         }
 
-        private static void SanitizeChromePreferences(string tempProfile, int screenX, int screenY, int screenW, int screenH, int targetX, int targetY, int targetW, int targetH)
+        private void InitializeComponent()
+        {
+            this.Text = "Antigravity Theme Studio";
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.BackColor = Color.FromArgb(8, 10, 16);
+            this.ForeColor = Color.White;
+            this.KeyPreview = true;
+
+            // 适中舒适尺寸：自适应屏幕居中
+            ResetToOptimalSize();
+            this.MinimumSize = new Size(1024, 680);
+
+            // 加载图标
+            string icoPath = Path.Combine(_appDir, "studio", "app.ico");
+            if (File.Exists(icoPath))
+            {
+                try { this.Icon = new Icon(icoPath); } catch { }
+            }
+
+            // 创建并嵌入 WebView2 控件
+            _webView = new WebView2();
+            _webView.Dock = DockStyle.Fill;
+            _webView.DefaultBackgroundColor = Color.FromArgb(8, 10, 16);
+            this.Controls.Add(_webView);
+
+            // 监听窗体句柄生成事件与关闭事件
+            this.HandleCreated += new EventHandler(StudioForm_HandleCreated);
+            this.FormClosing += new FormClosingEventHandler(StudioForm_FormClosing);
+            this.KeyDown += new KeyEventHandler(StudioForm_KeyDown);
+
+            // 初始化 WebView2 核心环境
+            InitWebViewCore();
+        }
+
+        public void ResetToOptimalSize()
+        {
+            Rectangle screen = Screen.PrimaryScreen.WorkingArea;
+            int targetW = screen.Width > 2000 ? 1400 : Math.Min(1366, Math.Max(1200, (int)(screen.Width * 0.75)));
+            int targetH = screen.Height > 1100 ? 860 : Math.Min(820, Math.Max(720, (int)(screen.Height * 0.8)));
+
+            this.WindowState = FormWindowState.Normal;
+            this.ClientSize = new Size(targetW, targetH);
+            this.Location = new Point(
+                screen.Left + Math.Max(20, (screen.Width - targetW) / 2),
+                screen.Top + Math.Max(20, (screen.Height - targetH) / 2)
+            );
+        }
+
+        private void StudioForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            // 原生快捷键处理：F12 开启开发者工具，F5 刷新
+            if (e.KeyCode == Keys.F12 && _webView != null && _webView.CoreWebView2 != null)
+            {
+                _webView.CoreWebView2.OpenDevToolsWindow();
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.F5 && _webView != null && _webView.CoreWebView2 != null)
+            {
+                _webView.Reload();
+                e.Handled = true;
+            }
+        }
+
+        private void StudioForm_HandleCreated(object sender, EventArgs e)
+        {
+            EnableImmersiveDarkMode(this.Handle);
+        }
+
+        private void StudioForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Program.CleanupNodeProcess();
+        }
+
+        private async void InitWebViewCore()
         {
             try
             {
-                string prefPath = Path.Combine(tempProfile, "Default", "Preferences");
-                if (!File.Exists(prefPath)) return;
-
-                string json = File.ReadAllText(prefPath);
-
-                // 强制关闭 maximized 标志
-                json = json.Replace("\"maximized\":true", "\"maximized\":false");
-
-                // 构造标准化居中的 app_window_placement 数据结构
-                string targetPlacement = string.Format(
-                    "\"app_window_placement\":{{\"127\":{{\"0\":{{\"0\":{{\"1_/\":{{\"bottom\":{0},\"left\":{1},\"maximized\":false,\"right\":{2},\"top\":{3},\"work_area_bottom\":{4},\"work_area_left\":{5},\"work_area_right\":{6},\"work_area_top\":{7}}}}}}}}}",
-                    targetY + targetH,
-                    targetX,
-                    targetX + targetW,
-                    targetY,
-                    screenY + screenH,
-                    screenX,
-                    screenX + screenW,
-                    screenY
+                string userDataFolder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "antigravity_studio_wv2"
                 );
 
-                // 移除或覆写历史可能残留的大窗口/全屏 app_window_placement
-                json = System.Text.RegularExpressions.Regex.Replace(
-                    json,
-                    "\"app_window_placement\"\\s*:\\s*\\{[^}]*(\\{[^}]*(\\{[^}]*(\\{[^}]*\\})*\\})*\\})*\\}",
-                    targetPlacement
-                );
+                // 配置 WebView2 高性能 GPU 加速参数与干净环境
+                string browserArgs = "--enable-gpu-rasterization --enable-zero-copy --disable-features=msSmartScreenProtection";
+                var options = new CoreWebView2EnvironmentOptions(browserArgs);
 
-                // 清理常规 window_placement
-                json = System.Text.RegularExpressions.Regex.Replace(
-                    json,
-                    "\"window_placement\"\\s*:\\s*\\{[^}]*\\}",
-                    "\"window_placement\":{\"bottom\":" + (targetY + targetH) + ",\"left\":" + targetX + ",\"maximized\":false,\"right\":" + (targetX + targetW) + ",\"top\":" + targetY + "}"
-                );
+                var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
+                await _webView.EnsureCoreWebView2Async(env);
 
-                File.WriteAllText(prefPath, json);
+                // 优化内置体验
+                _webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+                _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
+                _webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
+
+                // 监听前端 window.close() 事件
+                _webView.CoreWebView2.WindowCloseRequested += (s, e) =>
+                {
+                    this.Close();
+                };
+
+                // 监听前端与原生宿主的消息桥接
+                _webView.CoreWebView2.WebMessageReceived += (s, e) =>
+                {
+                    try
+                    {
+                        string msg = e.TryGetWebMessageAsString();
+                        if (msg == "reset-window")
+                        {
+                            this.Invoke(new Action(() => ResetToOptimalSize()));
+                        }
+                    }
+                    catch { }
+                };
+
+                // 导航到 Studio 主页
+                _webView.Source = new Uri("http://127.0.0.1:8316");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "WebView2 引擎初始化失败:\n" + ex.Message + "\n\n请确认系统已安装 Microsoft Edge WebView2 运行时。",
+                    "Antigravity Theme Studio",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+            }
+        }
+
+        private static void EnableImmersiveDarkMode(IntPtr hWnd)
+        {
+            try
+            {
+                int darkMode = 1;
+                // DWMWA_USE_IMMERSIVE_DARK_MODE (20 on Win11, 19 on Win10 1903+)
+                if (DwmSetWindowAttribute(hWnd, 20, ref darkMode, sizeof(int)) != 0)
+                {
+                    DwmSetWindowAttribute(hWnd, 19, ref darkMode, sizeof(int));
+                }
             }
             catch { }
         }
 
-        private static void EnforceOptimalWindowSize(int targetX, int targetY, int targetW, int targetH, int targetPid)
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+    }
+
+    /// <summary>
+    /// Windows Job Object 内核监督器：保证父进程无论何种方式终止，子进程均由内核瞬间关闭
+    /// </summary>
+    public static class JobObjectManager
+    {
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr CreateJobObject(IntPtr lpJobAttributes, string lpName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetInformationJobObject(IntPtr hJob, int JobObjectInfoClass, IntPtr lpJobObjectInfo, uint cbJobObjectInfoLength);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool AssignProcessToJobObject(IntPtr hJob, IntPtr hProcess);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct JOBOBJECT_BASIC_LIMIT_INFORMATION
         {
-            ThreadPool.QueueUserWorkItem((state) =>
-            {
-                // 轮询最多 6 秒，确保定位到真实主视窗 (排除 Chromium 内部 524x494 气泡/弹窗)
-                for (int i = 0; i < 60; i++)
-                {
-                    Thread.Sleep(100);
-                    bool found = false;
-                    EnumWindows((hWnd, lParam) =>
-                    {
-                        StringBuilder sbClass = new StringBuilder(256);
-                        GetClassName(hWnd, sbClass, 256);
-                        string cls = sbClass.ToString();
-                        if (cls != "Chrome_WidgetWin_1") return true;
-
-                        if (!IsWindowVisible(hWnd)) return true;
-
-                        uint pid = 0;
-                        GetWindowThreadProcessId(hWnd, out pid);
-                        if (pid == 0) return true;
-
-                        string procName = "";
-                        try
-                        {
-                            Process proc = Process.GetProcessById((int)pid);
-                            procName = proc.ProcessName.ToLower();
-                        }
-                        catch { }
-
-                        // ABSOLUTE SAFETY GUARD: NEVER touch Google Antigravity!
-                        if (procName.Contains("antigravity")) return true;
-                        if (procName != "msedge" && procName != "chrome") return true;
-
-                        // 关键过滤：排除被宿主拥有的气泡/子弹窗
-                        IntPtr owner = GetWindow(hWnd, GW_OWNER);
-                        if (owner != IntPtr.Zero) return true;
-
-                        int style = GetWindowLong(hWnd, GWL_STYLE);
-                        if ((style & WS_POPUP) != 0 && (style & WS_CAPTION) == 0) return true;
-
-                        RECT rc;
-                        GetWindowRect(hWnd, out rc);
-                        int w = rc.Right - rc.Left;
-                        int ht = rc.Bottom - rc.Top;
-                        if (w < 600 || ht < 400) return true;
-
-                        StringBuilder sb = new StringBuilder(256);
-                        GetWindowText(hWnd, sb, 256);
-                        string title = sb.ToString();
-
-                        bool isMatch = false;
-                        if (targetPid > 0 && pid == (uint)targetPid)
-                        {
-                            isMatch = true;
-                        }
-                        else if (title.Contains("Theme Studio") || title.Contains("8316") || title.Contains("127.0.0.1") || title.Contains("localhost"))
-                        {
-                            isMatch = true;
-                        }
-
-                        if (isMatch)
-                        {
-                            _studioHwnd = hWnd;
-                            ShowWindow(hWnd, SW_RESTORE);
-
-                            // 1. 剥离系统原生标题栏样式
-                            SetWindowLong(hWnd, GWL_STYLE, style & ~WS_CAPTION & ~WS_THICKFRAME & ~WS_SYSMENU);
-
-                            // 2. 视窗向上位移 34px 并延伸 34px 高度，通过 SetWindowRgn 将 Chromium 顶部栏彻底切除出可视区域
-                            int finalH = targetH + 34;
-                            int finalY = Math.Max(0, targetY - 34);
-                            SetWindowPos(hWnd, IntPtr.Zero, targetX, finalY, targetW, finalH, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
-
-                            IntPtr hRgn = CreateRectRgn(0, 34, targetW, finalH);
-                            SetWindowRgn(hWnd, hRgn, true);
-
-                            // 3. 向 Node 后台注册此主视窗句柄，便于 CRT 退出时 0ms 瞬间寻址
-                            try
-                            {
-                                var regReq = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:8316/api/window/register-hwnd?hwnd=" + _studioHwnd.ToInt64());
-                                regReq.Method = "POST";
-                                regReq.Timeout = 400;
-                                using (regReq.GetResponse()) { }
-                            }
-                            catch { }
-
-                            found = true;
-                            return false;
-                        }
-                        return true;
-                    }, IntPtr.Zero);
-
-                    if (found)
-                    {
-                        // 强化保持机制：在导航完成初期连续加固裁切区域，杜绝 Chromium 页面重排时区域回弹
-                        int[] checkDelays = new int[] { 250, 600, 1500 };
-                        foreach (int cd in checkDelays)
-                        {
-                            Thread.Sleep(cd);
-                            if (_studioHwnd != IntPtr.Zero)
-                            {
-                                int finalH = targetH + 34;
-                                int finalY = Math.Max(0, targetY - 34);
-                                SetWindowPos(_studioHwnd, IntPtr.Zero, targetX, finalY, targetW, finalH, SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
-                                IntPtr hRgn = CreateRectRgn(0, 34, targetW, finalH);
-                                SetWindowRgn(_studioHwnd, hRgn, true);
-                            }
-                        }
-                        break;
-                    }
-                }
-            });
+            public Int64 PerProcessUserTimeLimit;
+            public Int64 PerJobUserTimeLimit;
+            public UInt32 LimitFlags;
+            public UIntPtr MinimumWorkingSetSize;
+            public UIntPtr MaximumWorkingSetSize;
+            public UInt32 ActiveProcessLimit;
+            public UIntPtr Affinity;
+            public UInt32 PriorityClass;
+            public UInt32 SchedulingClass;
         }
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+        [StructLayout(LayoutKind.Sequential)]
+        private struct IO_COUNTERS
+        {
+            public UInt64 ReadOperationCount;
+            public UInt64 WriteOperationCount;
+            public UInt64 OtherOperationCount;
+            public UInt64 ReadTransferCount;
+            public UInt64 WriteTransferCount;
+            public UInt64 OtherTransferCount;
+        }
 
-        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+        [StructLayout(LayoutKind.Sequential)]
+        private struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+        {
+            public JOBOBJECT_BASIC_LIMIT_INFORMATION BasicLimitInformation;
+            public IO_COUNTERS IoInfo;
+            public UIntPtr ProcessMemoryLimit;
+            public UIntPtr JobMemoryLimit;
+            public UIntPtr PeakProcessMemoryLimit;
+            public UIntPtr PeakJobMemoryLimit;
+        }
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        private const int JobObjectExtendedLimitInformation = 9;
+        private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000;
 
-        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+        private static IntPtr _jobHandle = IntPtr.Zero;
+        private static object _lock = new object();
 
-        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        private static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+        public static void BindProcess(Process process)
+        {
+            if (process == null || process.HasExited) return;
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+            try
+            {
+                lock (_lock)
+                {
+                    if (_jobHandle == IntPtr.Zero)
+                    {
+                        _jobHandle = CreateJobObject(IntPtr.Zero, null);
+                        var info = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION();
+                        info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+                        int length = Marshal.SizeOf(typeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+                        IntPtr extendedInfoPtr = Marshal.AllocHGlobal(length);
+                        try
+                        {
+                            Marshal.StructureToPtr(info, extendedInfoPtr, false);
+                            SetInformationJobObject(_jobHandle, JobObjectExtendedLimitInformation, extendedInfoPtr, (uint)length);
+                        }
+                        finally
+                        {
+                            Marshal.FreeHGlobal(extendedInfoPtr);
+                        }
+                    }
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
-
-        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
-        private static extern IntPtr CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern bool IsWindowVisible(IntPtr hWnd);
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
-
-        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-        private struct RECT { public int Left, Top, Right, Bottom; }
-
-        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-        private const uint SWP_NOZORDER = 0x0004;
-        private const uint SWP_SHOWWINDOW = 0x0040;
-        private const uint SWP_FRAMECHANGED = 0x0020;
-        private const int SW_RESTORE = 9;
-        private const int GWL_STYLE = -16;
-        private const int GWL_EXSTYLE = -20;
-        private const int WS_CAPTION = 0x00C00000;
-        private const int WS_THICKFRAME = 0x00040000;
-        private const int WS_SYSMENU = 0x00080000;
-        private const int WS_POPUP = unchecked((int)0x80000000);
-        private const int WS_EX_LAYERED = 0x00080000;
-        private const int LWA_ALPHA = 0x00000002;
-        private const uint GW_OWNER = 4;
+                    AssignProcessToJobObject(_jobHandle, process.Handle);
+                }
+            }
+            catch { }
+        }
     }
 }

@@ -30,8 +30,10 @@ console.log('[1/5] Synchronizing latest patched source files to app/dist and use
 fs.copyFileSync(sourcePreload, targetPreload);
 console.log('✓ Successfully copied preload.js -> app/dist/preload.js');
 
-fs.copyFileSync(sourceMain, targetMain);
-console.log('✓ Successfully copied main.js -> app/dist/main.js');
+if (fs.existsSync(sourceMain)) {
+  fs.copyFileSync(sourceMain, targetMain);
+  console.log('✓ Successfully copied main.js -> app/dist/main.js');
+}
 
 fs.copyFileSync(sourceMediaServer, targetMediaServer);
 try { fs.copyFileSync(sourceMediaServer, userMediaServer); } catch(e) {}

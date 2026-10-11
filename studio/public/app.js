@@ -289,15 +289,15 @@ function renderHeaderStatus(data) {
   const cdpText = cdpStatusEl.querySelector('.status-text');
   if (data.isCdpOnline) {
     cdpDot.className = 'status-dot online';
-    cdpText.textContent = 'CDP 8314';
-    cdpStatusEl.title = 'CDP 8314 在线 (0.3s 秒级热重载通道就绪)';
+    cdpText.textContent = 'CDP 在线';
+    cdpStatusEl.title = 'CDP 8314 在线 (0.3s 秒级热重载就绪)';
   } else if (data.isAntigravityRunning) {
     cdpDot.className = 'status-dot warning';
     cdpText.textContent = 'CDP 待重启';
     cdpStatusEl.title = '需完全重启客户端以激活 8314 热重载通道';
   } else {
     cdpDot.className = 'status-dot offline';
-    cdpText.textContent = 'CDP 离线';
+    cdpText.textContent = '客户端离线';
     cdpStatusEl.title = 'Antigravity 客户端未启动';
   }
 
@@ -2093,248 +2093,75 @@ function setupEventListeners() {
   if (btnResetWindow) {
     btnResetWindow.onclick = async () => {
       try {
-        showToast('正在校准并还原推荐视窗 (1400x860)...', 900);
-        await fetch('/api/window/reset', { method: 'POST' });
-        showToast('✨ 窗口已还原至推荐适中尺寸 (1400x860)');
-      } catch (_) {
-        showToast('⚠️ 窗口还原失败');
-      }
-    };
-  }
-
-  // Reload Studio data safely (zero reload side-effects)
-  if (btnReload) {
-    btnReload.onclick = async () => {
-      showToast('🔄 正在刷新工坊配置与状态...', 900);
-      try {
-        await fetchStatus();
-        if (state.activeTab === 'view-we') {
-          await fetchWeList();
-        }
-        showToast('✨ 状态与壁纸数据已刷新！', 1200);
-      } catch (_) {
-        showToast('⚠️ 刷新失败，请检查网络或后端服务', 1500);
-      }
-    };
-  }
-
-  // =========================================================================
-  // 📺 Retro CRT Television Power-Off & Wake Visual Engine (Silent)
-  // =========================================================================
-  function playCrtAudio(type = 'off') {
-    // 纯静音模式：根据用户要求，已彻底移除断电音效
-    return;
-  }
-
-  function playCrtShutdownAnimation(targetEl, { isShutdown = false } = {}) {
-    return new Promise((resolve) => {
-      const el = targetEl || document.getElementById('app-shell') || document.body;
-      const overlay = document.getElementById('crt-overlay-layer');
-      const glowBeam = document.getElementById('crt-glow-beam');
-      const spark = document.getElementById('crt-spark');
-
-      // 1. 纯静音模式
-      playCrtAudio('off');
-
-      // 2. 激活高光荧光回扫线与中心光斑图层
-      document.body.classList.add('crt-active');
-      if (overlay) overlay.classList.add('active');
-      if (glowBeam) {
-        glowBeam.style.animation = 'none';
-        glowBeam.offsetHeight; // trigger reflow
-        glowBeam.style.animation = 'crtBeamPulse 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards';
-      }
-      if (spark) {
-        spark.style.animation = 'none';
-        spark.offsetHeight; // trigger reflow
-        spark.style.animation = 'crtSparkPulse 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards';
-      }
-
-      // 3. 内容白炽荧光闪烁放电，与物理视窗同步塌陷
-      el.classList.remove('crt-powering-on');
-      el.classList.add('crt-shutting-down');
-
-      setTimeout(() => {
-        resolve();
-      }, 380);
-    });
-  }
-
-  function wakeCrtAnimation(targetEl) {
-    return new Promise((resolve) => {
-      const el = targetEl || document.getElementById('app-shell') || document.body;
-      const overlay = document.getElementById('crt-overlay-layer');
-      const glowBeam = document.getElementById('crt-glow-beam');
-      const spark = document.getElementById('crt-spark');
-
-      // 1. Play wake audio
-      playCrtAudio('on');
-
-      if (glowBeam) glowBeam.style.animation = 'none';
-      if (spark) spark.style.animation = 'none';
-
-      // 2. Animate power-on
-      el.classList.remove('crt-shutting-down');
-      el.classList.add('crt-powering-on');
-
-      setTimeout(() => {
-        el.classList.remove('crt-powering-on');
-        if (overlay) overlay.classList.remove('active');
-        document.body.classList.remove('crt-active');
-        resolve();
-      }, 700);
-    });
-  }
-
-  // Shutdown Software with CRT Power-Off Animation (Zero background footprint)
-  if (btnShutdown) {
-    btnShutdown.onclick = async () => {
-      if (btnShutdown.disabled) return;
-      btnShutdown.disabled = true;
-      const appShell = document.getElementById('app-shell') || document.body;
-
-      // 1. 0ms 瞬间向后台触发原生操作系统物理视窗 CRT 塌陷动效 (/api/shutdown 调起 crt_animator.exe)
-      try {
-        fetch('/api/shutdown', { method: 'POST' });
-      } catch (_) {}
-
-      // 2. 界面同步激活高亮荧光回扫线与光斑动效，与操作系统物理视窗收缩完全无缝同步
-      await playCrtShutdownAnimation(appShell, { isShutdown: true });
-
-      // 3. 兜底关闭当前窗口
-      setTimeout(() => {
-        try { window.open('', '_self', ''); window.close(); } catch (_) {}
-      }, 50);
-    };
-  }
-
-  // Global Keyboard Shortcuts: Escape to trigger CRT shutdown, F5/Ctrl+R to refresh in-place
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      const activeModal = document.querySelector('.modal-overlay.active, .preset-modal.active, .we-picker-modal.active');
-      if (!activeModal && btnShutdown && !btnShutdown.disabled) {
-        e.preventDefault();
-        btnShutdown.click();
-      }
-    }
-    // Prevent accidental browser reload from exiting or clearing page state
-    if (e.key === 'F5' || (e.ctrlKey && (e.key === 'r' || e.key === 'R'))) {
-      e.preventDefault();
-      if (btnReload) {
-        btnReload.click();
-      }
-    }
-  });
-
-  // Mockup Window Close (CRT Power-Off Simulation)
-  const mockBtnClose = document.getElementById('mock-btn-close');
-  const mockCrtCard = document.getElementById('mock-crt-off-card');
-  const btnMockPowerOn = document.getElementById('btn-mock-power-on');
-  if (mockBtnClose) {
-    mockBtnClose.onclick = (e) => {
-      e.stopPropagation();
-      const agMockup = document.getElementById('ag-mockup');
-      if (!agMockup) return;
-      showToast('📺 客户端显像管已断电息屏！', 1400);
-      playCrtAudio('off');
-      agMockup.classList.remove('crt-powering-on');
-      agMockup.classList.add('crt-shutting-down-mock');
-      setTimeout(() => {
-        if (mockCrtCard) mockCrtCard.style.display = 'flex';
-      }, 650);
-    };
-  }
-
-  if (btnMockPowerOn) {
-    btnMockPowerOn.onclick = (e) => {
-      e.stopPropagation();
-      const agMockup = document.getElementById('ag-mockup');
-      if (mockCrtCard) mockCrtCard.style.display = 'none';
-      if (!agMockup) return;
-      showToast('⚡ 客户端通电开机唤醒！', 1400);
-      playCrtAudio('on');
-      agMockup.classList.remove('crt-shutting-down-mock');
-      agMockup.classList.add('crt-powering-on');
-      setTimeout(() => {
-        agMockup.classList.remove('crt-powering-on');
-      }, 700);
-    };
-  }
-
-}
-
-// =========================================================================
-// 19.5 Native-feeling Window Dragging for Borderless Mode
-// =========================================================================
-function initWindowDrag() {
-  const header = document.querySelector('.app-header');
-  if (!header) return;
-
-  let isDragging = false;
-  let startX = 0;
-  let startY = 0;
-  let rafId = null;
-
-  header.addEventListener('mousedown', (e) => {
-    // Only drag when clicking blank background or brand text (ignore buttons, inputs, links, tabs, pills)
-    if (e.target.closest('button, input, select, a, .nav-tab, .tab-btn, .action-btn, .status-pill, .control-btn, .btn-header-action, .btn-header-close')) {
-      return;
-    }
-    if (e.button !== 0) return; // Left click only
-
-    isDragging = true;
-    startX = e.screenX;
-    startY = e.screenY;
-    e.preventDefault();
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    const curX = e.screenX;
-    const curY = e.screenY;
-    if (!rafId) {
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        if (!isDragging) return;
-        const dx = Math.round(curX - startX);
-        const dy = Math.round(curY - startY);
-        if (dx !== 0 || dy !== 0) {
+        if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+          window.chrome.webview.postMessage('reset-window');
+        } else {
+          const screenW = window.screen?.availWidth || 2560;
+          const screenH = window.screen?.availHeight || 1392;
+          const targetW = 1400;
+          const targetH = 860;
+          const targetX = Math.max(20, Math.round((screenW - targetW) / 2));
+          const targetY = Math.max(20, Math.round((screenH - targetH) / 2));
+          window.resizeTo(targetW, targetH);
+          window.moveTo(targetX, targetY);
           try {
-            window.moveTo(Math.round(window.screenX + dx), Math.round(window.screenY + dy));
+            await fetch('/api/window/reset', { method: 'POST' });
           } catch (_) {}
-          startX = curX;
-          startY = curY;
         }
-      });
-    }
-  });
+      } catch (_) {}
+      showToast('窗口已还原至推荐适中尺寸 (1400x860)');
+    };
+  }
 
-  const stopDrag = () => {
-    isDragging = false;
-    if (rafId) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-    }
+  // Reload Studio page
+  if (btnReload) {
+    btnReload.onclick = () => {
+      showToast('正在刷新工坊界面...');
+      setTimeout(() => location.reload(), 200);
+    };
+  }
+
+  // Shutdown Software (Instant clean exit, zero background footprint)
+  btnShutdown.onclick = async () => {
+    if (btnShutdown.disabled) return;
+    btnShutdown.disabled = true;
+
+    try {
+      showToast('正在退出软件并释放所有后台服务...', 800);
+      await fetch('/api/shutdown', { method: 'POST' });
+    } catch (_) {}
+
+    try {
+      window.close();
+    } catch (_) {}
   };
 
-  window.addEventListener('mouseup', stopDrag);
-  window.addEventListener('blur', stopDrag);
+  // Window close beacon
+  window.addEventListener('beforeunload', () => {
+    try {
+      navigator.sendBeacon('/api/shutdown');
+    } catch (_) {}
+  });
 }
 
 // =========================================================================
 // 20. Bootstrap
 // =========================================================================
 window.addEventListener('DOMContentLoaded', () => {
-  // 杜绝异常全屏：若窗口在启动时被系统或浏览器恢复为全屏，后台静默校准为适中尺寸 (1400x860)
+  // 杜绝异常全屏：若窗口尺寸接近全屏，自动回缩至舒适适中尺寸 (1400x860)
   try {
     const screenW = window.screen?.availWidth || 2560;
     const screenH = window.screen?.availHeight || 1392;
-    if (window.outerWidth > screenW * 0.95 || window.outerHeight > screenH * 0.95) {
-      fetch('/api/window/reset', { method: 'POST' });
+    if (window.outerWidth > screenW * 0.85 || window.outerHeight > screenH * 0.88) {
+      const targetW = 1400;
+      const targetH = 860;
+      const targetX = Math.max(20, Math.round((screenW - targetW) / 2));
+      const targetY = Math.max(20, Math.round((screenH - targetH) / 2));
+      window.resizeTo(targetW, targetH);
+      window.moveTo(targetX, targetY);
     }
   } catch (_) {}
 
-  initWindowDrag();
   initTabs();
   initSpotlightEffect();
   initMockupInteractions();

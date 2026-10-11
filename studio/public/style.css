@@ -99,14 +99,14 @@ body {
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
 .brand-icon {
-  font-size: 16px;
-  width: 28px;
-  height: 28px;
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -120,12 +120,12 @@ body {
 .brand-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   white-space: nowrap;
 }
 
 .brand-info h1 {
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: #fff;
@@ -137,29 +137,31 @@ body {
 .nav-segmented {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   background: rgba(255, 255, 255, 0.035);
-  padding: 2px 3px;
+  padding: 3px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
   white-space: nowrap;
 }
 
 .nav-tab {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
+  gap: 6px;
+  padding: 5px 13px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 500;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
 }
 
 .nav-tab svg {
@@ -194,59 +196,46 @@ body {
   font-weight: 700;
   background: rgba(56, 189, 248, 0.2);
   color: var(--accent-cyan);
-  padding: 1px 5px;
+  padding: 1px 6px;
   border-radius: var(--radius-full);
 }
 
 .header-status {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex-shrink: 0;
+  margin-left: auto;
   white-space: nowrap;
 }
 
-.btn-header-action {
-  padding: 3px 8px;
-  font-size: 11px;
-  gap: 4px;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-}
-
-.btn-header-close {
-  padding: 3px 9px;
-  font-size: 11.5px;
-  font-weight: 600;
-  gap: 4px;
-  background: rgba(239, 68, 68, 0.22) !important;
-  border: 1px solid rgba(239, 68, 68, 0.55) !important;
-  color: #fca5a5 !important;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-  cursor: pointer;
+.btn-header {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  height: 28px;
+  min-height: 28px;
+  box-sizing: border-box;
+  font-size: 11.5px;
+  gap: 5px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  white-space: nowrap;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-header-close:hover {
-  background: rgba(239, 68, 68, 0.4) !important;
-  border-color: rgba(239, 68, 68, 0.85) !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
-  transform: translateY(-1px);
-}
-
-.btn-header-close:active {
-  transform: translateY(0);
+.btn-header svg {
+  flex-shrink: 0;
 }
 
 .status-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   padding: 3px 8px;
+  height: 26px;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
@@ -254,31 +243,7 @@ body {
   font-weight: 500;
   color: var(--text-muted);
   white-space: nowrap;
-}
-
-/* Responsive Header Auto-Fit across resolutions */
-@media (max-width: 1420px) {
-  .brand-info .badge {
-    display: none;
-  }
-}
-
-@media (max-width: 1260px) {
-  .header-btn-text {
-    display: none;
-  }
-  .nav-tab {
-    padding: 4px 7px;
-  }
-}
-
-@media (max-width: 1140px) {
-  .status-pill .status-text {
-    display: none;
-  }
-  .status-pill {
-    padding: 3px 5px;
-  }
+  flex-shrink: 0;
 }
 
 .status-dot {
@@ -405,9 +370,33 @@ body {
   grid-template-columns: 44px minmax(0, 1fr);
 }
 
-@media (max-width: 1440px) {
+/* =========================================================================
+   Responsive Header & Workspace Layout Engine
+   ========================================================================= */
+
+@media (max-width: 1560px) {
   .brand-info .badge {
     display: none;
+  }
+  .status-pill .status-text {
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1460px) {
+  .header-btn-text {
+    display: none;
+  }
+  .btn-header {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    padding: 0;
+    justify-content: center;
   }
   .hint-pill {
     display: none;
@@ -425,54 +414,28 @@ body {
   }
 }
 
-@media (max-width: 1480px) {
-  .brand-info .badge {
-    display: none;
-  }
-}
-
-@media (max-width: 1366px) {
-  .header-btn-text {
-    display: none;
-  }
-  .status-pill .status-text {
-    max-width: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-@media (max-width: 1200px) {
-  .header-close-text {
-    display: none;
-  }
-}
-
-@media (max-width: 1280px) {
+@media (max-width: 1260px) {
   .app-header {
-    padding: 6px 10px;
+    padding: 0 10px;
     gap: 8px;
   }
+  .status-pill {
+    padding: 4px 7px;
+  }
+  .status-pill .status-text {
+    display: none;
+  }
   .brand-info h1 {
-    font-size: 13px;
+    font-size: 13.5px;
   }
   .nav-tab {
-    padding: 4px 8px;
-    font-size: 11px;
+    padding: 5px 9px;
+    font-size: 11.5px;
     gap: 4px;
   }
   .nav-tab svg {
     width: 13px;
     height: 13px;
-  }
-  .status-pill {
-    padding: 3px 6px;
-    font-size: 10.5px;
-    gap: 4px;
-  }
-  .status-pill .status-text {
-    max-width: 75px;
   }
   .workspace-container {
     grid-template-columns: 260px minmax(0, 1fr);
@@ -513,7 +476,16 @@ body {
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1080px) {
+  .brand-info h1 {
+    font-size: 12.5px;
+  }
+  .nav-tab span:not(.nav-badge) {
+    display: none;
+  }
+  .nav-tab {
+    padding: 6px 9px;
+  }
   .workspace-container {
     grid-template-columns: 250px minmax(0, 1fr);
     height: calc(100vh - 48px);
@@ -3562,293 +3534,3 @@ body {
   }
 }
 
-/* =========================================================================
-   📺 Vintage CRT Television Power-Off & Wake Screen FX (老式 CRT 电视断电息屏)
-   ========================================================================= */
-
-/* App Shell base */
-.app-shell {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-  background-color: var(--bg-dark);
-}
-
-/* Body during CRT shutdown keeps clean seamless backdrop */
-body.crt-active {
-  background-color: transparent !important;
-}
-
-/* Fullscreen CRT Overlay Layer */
-.crt-overlay-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 2147483640;
-  pointer-events: none;
-  background: transparent;
-  opacity: 0;
-  transition: opacity 0.12s ease;
-}
-
-.crt-overlay-layer.active {
-  opacity: 1;
-  pointer-events: all;
-}
-
-/* CRT Screen Curved Glass Vignette */
-.crt-vignette {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(255, 255, 255, 0) 50%,
-    rgba(0, 0, 0, 0.6) 78%,
-    rgba(0, 0, 0, 0.96) 100%
-  );
-  z-index: 2;
-}
-
-/* CRT Phosphor Scanlines */
-.crt-scanlines {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    rgba(18, 16, 16, 0) 50%, 
-    rgba(0, 0, 0, 0.45) 50%
-  ), linear-gradient(
-    90deg,
-    rgba(255, 0, 0, 0.05),
-    rgba(0, 255, 0, 0.03),
-    rgba(0, 0, 255, 0.05)
-  );
-  background-size: 100% 3px, 6px 100%;
-  opacity: 0.85;
-  z-index: 3;
-}
-
-/* Glowing Phosphor Beam (Horizontal Line) */
-.crt-glow-beam {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  transform: translateY(-50%) scaleX(0);
-  background: #ffffff;
-  box-shadow: 
-    0 0 10px #ffffff,
-    0 0 30px #38bdf8,
-    0 0 70px #0ea5e9,
-    0 0 120px rgba(56, 189, 248, 0.8);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 10;
-  transform-origin: 50% 50%;
-}
-
-/* Center Phosphor Dot (Concentrated Electron Beam) */
-.crt-spark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  margin-top: -4px;
-  margin-left: -4px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 
-    0 0 15px #ffffff,
-    0 0 35px #38bdf8,
-    0 0 80px #0284c7;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 11;
-  transform: scale(0);
-}
-
-/* 1. CRT Power-Off Animation (Phosphor Flash & Scanline Beam, physical window shrinks concurrently) */
-@keyframes crtTurnOffScreen {
-  0% {
-    filter: brightness(1) contrast(1) saturate(1);
-    opacity: 1;
-  }
-  15% {
-    filter: brightness(2.8) contrast(1.8) saturate(0.2);
-    opacity: 1;
-  }
-  45% {
-    filter: brightness(4.5) contrast(2.2);
-    opacity: 0.95;
-  }
-  75% {
-    filter: brightness(3.2);
-    opacity: 0.8;
-  }
-  100% {
-    filter: brightness(0);
-    opacity: 0;
-  }
-}
-
-.crt-shutting-down {
-  animation: crtTurnOffScreen 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
-  transform-origin: 50% 50% !important;
-  will-change: filter, opacity !important;
-}
-
-/* 1.1 CRT Mockup Window Simulation (In-page preview card collapse) */
-@keyframes crtTurnOffMockScreen {
-  0% {
-    transform: scale(1, 1);
-    filter: brightness(1) contrast(1) saturate(1);
-    opacity: 1;
-  }
-  14% {
-    transform: scale(1, 1.025) skewX(0.4deg);
-    filter: brightness(2.5) contrast(1.8) saturate(0.2);
-    opacity: 1;
-  }
-  35% {
-    transform: scale(1, 0.0035);
-    filter: brightness(5) contrast(2.5);
-    background-color: #ffffff !important;
-    box-shadow: 0 0 30px #ffffff, 0 0 70px #38bdf8, 0 0 120px #0284c7;
-    opacity: 1;
-  }
-  65% {
-    transform: scale(0.35, 0.0035);
-    filter: brightness(5.2);
-    background-color: #ffffff !important;
-    box-shadow: 0 0 35px #ffffff, 0 0 80px #38bdf8;
-    opacity: 1;
-  }
-  80% {
-    transform: scale(0.004, 0.0035);
-    filter: brightness(6);
-    background-color: #ffffff !important;
-    box-shadow: 0 0 25px #ffffff, 0 0 50px #38bdf8;
-    opacity: 1;
-  }
-  92% {
-    transform: scale(0.002, 0.002);
-    filter: brightness(2.2) blur(3px);
-    background-color: #e0f2fe !important;
-    box-shadow: 0 0 12px #38bdf8;
-    opacity: 0.75;
-  }
-  100% {
-    transform: scale(0, 0);
-    filter: brightness(0) blur(8px);
-    opacity: 0;
-  }
-}
-
-.crt-shutting-down-mock {
-  animation: crtTurnOffMockScreen 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
-  transform-origin: 50% 50% !important;
-  will-change: transform, filter, opacity !important;
-}
-
-/* 2. CRT Power-On Animation (Center dot -> Horizontal beam -> Full bloom) */
-@keyframes crtTurnOnScreen {
-  0% {
-    transform: scale(0, 0);
-    filter: brightness(0) blur(8px);
-    opacity: 0;
-  }
-  18% {
-    transform: scale(0.004, 0.0035);
-    filter: brightness(5) blur(1px);
-    background-color: #ffffff;
-    box-shadow: 0 0 25px #ffffff, 0 0 60px #38bdf8;
-    opacity: 1;
-  }
-  45% {
-    transform: scale(1, 0.0035);
-    filter: brightness(4) contrast(2);
-    box-shadow: 0 0 30px #ffffff, 0 0 60px #38bdf8;
-    opacity: 1;
-  }
-  75% {
-    transform: scale(1, 1.02);
-    filter: brightness(2) contrast(1.4);
-    box-shadow: none;
-    opacity: 1;
-  }
-  90% {
-    transform: scale(1, 0.99);
-    filter: brightness(1.2) contrast(1.1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1, 1);
-    filter: brightness(1) contrast(1) saturate(1);
-    opacity: 1;
-  }
-}
-
-.crt-powering-on {
-  animation: crtTurnOnScreen 0.68s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-  transform-origin: 50% 50% !important;
-  will-change: transform, filter, opacity !important;
-}
-
-/* Auxiliary Beam and Spark keyframes */
-@keyframes crtBeamPulse {
-  0% { transform: translateY(-50%) scaleX(0); opacity: 0; }
-  22% { transform: translateY(-50%) scaleX(1); opacity: 1; }
-  55% { transform: translateY(-50%) scaleX(0.4); opacity: 1; }
-  78% { transform: translateY(-50%) scaleX(0.01); opacity: 0.8; }
-  100% { transform: translateY(-50%) scaleX(0); opacity: 0; }
-}
-
-@keyframes crtSparkPulse {
-  0% { transform: scale(0); opacity: 0; }
-  60% { transform: scale(0); opacity: 0; }
-  78% { transform: scale(1.6); opacity: 1; }
-  90% { transform: scale(0.6); opacity: 0.7; }
-  100% { transform: scale(0); opacity: 0; }
-}
-
-/* Mockup CRT Off State Overlay & Card */
-.mock-crt-off-card {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at center, #0f172a 0%, #030712 100%);
-  border: 1px dashed rgba(56, 189, 248, 0.25);
-  border-radius: var(--radius-lg);
-  padding: 40px;
-  text-align: center;
-  z-index: 100;
-  animation: fadeIn 0.4s ease forwards;
-}
-
-.mock-crt-icon {
-  font-size: 42px;
-  margin-bottom: 12px;
-  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.5));
-}
-
-.mock-crt-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 6px;
-  letter-spacing: 0.5px;
-}
-
-.mock-crt-desc {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 20px;
-}

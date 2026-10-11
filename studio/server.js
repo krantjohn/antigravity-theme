@@ -169,8 +169,6 @@ function openNativeFileDialog() {
   });
 }
 
-let registeredStudioHwnd = null;
-
 // Helper: Reset app window size and position in Windows and update Preferences
 function resetAppWindowPlacement() {
   return new Promise((resolve) => {
@@ -228,50 +226,18 @@ function resetAppWindowPlacement() {
         '  public class Win32 {',
         '    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);',
         '    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);',
-        '    [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);',
-        '    [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);',
         '    [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);',
-        '    [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern int GetClassName(IntPtr hWnd, StringBuilder lpString, int nMaxCount);',
-        '    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);',
         '    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);',
-        '    [DllImport("user32.dll")] public static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);',
-        '    [DllImport("gdi32.dll")] public static extern IntPtr CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);',
-        '    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);',
-        '    [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);',
-        '    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);',
-        '    public struct RECT { public int Left, Top, Right, Bottom; }',
         '    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);',
         '  }',
         '"@',
         '[Win32]::EnumWindows([Win32+EnumWindowsProc]{',
         '  param($hWnd, $lParam)',
-        '  $sbClass = New-Object System.Text.StringBuilder 256',
-        '  [Win32]::GetClassName($hWnd, $sbClass, 256) | Out-Null',
-        '  $cls = $sbClass.ToString()',
-        '  if ($cls -ne "Chrome_WidgetWin_1") { return $true }',
-        '  if (![Win32]::IsWindowVisible($hWnd)) { return $true }',
-        '  if ([Win32]::GetWindow($hWnd, 4) -ne [IntPtr]::Zero) { return $true }',
-        '  $pId = 0',
-        '  [Win32]::GetWindowThreadProcessId($hWnd, [ref]$pId) | Out-Null',
-        '  $pName = ""',
-        '  try { $pName = (Get-Process -Id $pId -ErrorAction SilentlyContinue).ProcessName.ToLower() } catch {}',
-        '  if ($pName -like "*antigravity*") { return $true }',
-        '  if ($pName -ne "msedge" -and $pName -ne "chrome") { return $true }',
-        '  $rc = New-Object Win32+RECT',
-        '  [Win32]::GetWindowRect($hWnd, [ref]$rc) | Out-Null',
-        '  if (($rc.Right - $rc.Left) -lt 600 -or ($rc.Bottom - $rc.Top) -lt 400) { return $true }',
         '  $sb = New-Object System.Text.StringBuilder 256',
         '  [Win32]::GetWindowText($hWnd, $sb, 256) | Out-Null',
-        '  $title = $sb.ToString()',
-        '  if ($title -like "*Theme Studio*" -or $title -like "*8316*" -or $title -like "*127.0.0.1*" -or $title -like "*localhost*") {',
+        '  if ($sb.ToString() -like "*Antigravity Theme Studio*") {',
         '    [Win32]::ShowWindow($hWnd, 9) | Out-Null',
-        '    $style = [Win32]::GetWindowLong($hWnd, -16)',
-        '    [Win32]::SetWindowLong($hWnd, -16, $style -band (-bnot 0x00CF0000)) | Out-Null',
-        `    $finalH = ${targetH} + 34`,
-        `    $finalY = [Math]::Max(0, ${targetY} - 34)`,
-        `    [Win32]::SetWindowPos($hWnd, [IntPtr]::Zero, ${targetX}, $finalY, ${targetW}, $finalH, 0x0064) | Out-Null`,
-        `    $hRgn = [Win32]::CreateRectRgn(0, 34, ${targetW}, $finalH)`,
-        '    [Win32]::SetWindowRgn($hWnd, $hRgn, $true) | Out-Null',
+        `    [Win32]::SetWindowPos($hWnd, [IntPtr]::Zero, ${targetX}, ${targetY}, ${targetW}, ${targetH}, 0x0044) | Out-Null`,
         '    return $false',
         '  }',
         '  return $true',
@@ -287,6 +253,7 @@ function resetAppWindowPlacement() {
     }
   });
 }
+
 
 let lastClientHeartbeat = Date.now();
 let hasEverHeartbeated = false;
@@ -717,26 +684,6 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 10.7. POST /api/window/register-hwnd - Register exact HWND of main studio window
-  if (req.method === 'POST' && pathname === '/api/window/register-hwnd') {
-    try {
-      const qHwnd = parsedUrl.searchParams.get('hwnd');
-      let bodyHwnd = null;
-      try {
-        const body = await parseBody(req);
-        if (body && body.hwnd) bodyHwnd = body.hwnd;
-      } catch (_) {}
-      const finalHwnd = qHwnd || bodyHwnd;
-      if (finalHwnd) {
-        registeredStudioHwnd = finalHwnd.toString();
-        console.log('[Studio] 成功登记主视窗原生 HWND:', registeredStudioHwnd);
-      }
-      return sendJson(res, 200, { success: true, hwnd: registeredStudioHwnd });
-    } catch (err) {
-      return sendJson(res, 500, { success: false, error: err.message });
-    }
-  }
-
   // 10.8. POST /api/window/reset - Snap window size to optimal 1400x860 centered
   if (req.method === 'POST' && pathname === '/api/window/reset') {
     try {
@@ -747,31 +694,14 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 11. POST /api/shutdown - Graceful exit of the tool and release of all background resources
+  // 11. POST /api/shutdown - Graceful exit of the tool
   if (req.method === 'POST' && pathname === '/api/shutdown') {
     sendJson(res, 200, { success: true, message: 'Studio server is shutting down. Goodbye!' });
-    console.log('[Studio] 收到退出指令，正在调起 CRT 原生视窗塌陷动效并释放全部后台服务...');
-
-    if (process.platform === 'win32') {
-      try {
-        const { spawn, exec } = require('child_process');
-        const animatorExe = path.join(__dirname, 'crt_animator.exe');
-        if (fs.existsSync(animatorExe)) {
-          // 0ms 瞬间调起原生 Win32 窗口偏转线圈塌陷动画程序 (带上精确登记的 HWND，0ms 直达)
-          const animArgs = registeredStudioHwnd ? [registeredStudioHwnd] : [];
-          spawn(animatorExe, animArgs, { detached: true, stdio: 'ignore' });
-        } else {
-          // 降级使用 PowerShell 优雅关闭窗口
-          const psClose = `powershell -NoProfile -NonInteractive -Command "Get-Process -Name msedge, chrome -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like '*Theme Studio*' } | ForEach-Object { $_.CloseMainWindow() }"`;
-          exec(psClose, () => {});
-        }
-      } catch (_) {}
-    }
-
+    console.log('[Studio] 用户请求彻底退出，正在完全销毁后台进程...');
     setTimeout(() => {
       server.close();
       process.exit(0);
-    }, 550);
+    }, 400);
     return;
   }
 

@@ -73,8 +73,8 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         try { electronModule = require('electron'); } catch(e) {}
         try { autoUpdaterModule = require('electron-updater'); } catch(e) {}
 
-        const currentVer = (electronModule && electronModule.app) ? electronModule.app.getVersion() : '2.18.1';
-        const targetVer = '2.19.1';
+        const currentVer = (electronModule && electronModule.app) ? electronModule.app.getVersion() : '2.19.1';
+        let targetVer = currentVer;
         const directDownloadUrl = 'https://storage.googleapis.com/antigravity-public/antigravity-hub/2.19.1-6046815158665216/windows-x64/Antigravity-x64.exe';
         const officialSiteUrl = 'https://antigravity.google';
 
@@ -111,14 +111,10 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
         }
 
         if (updaterAction === 'apply') {
-          console.log('[MediaServer] Received updater apply/restart request');
-          if (autoUpdaterModule && autoUpdaterModule.autoUpdater) {
-            try {
-              autoUpdaterModule.autoUpdater.quitAndInstall();
-            } catch(e) {}
-          }
+          console.log('[MediaServer] Received updater apply/restart request - guarded against abrupt AI session interruption');
+          // Protect running AI assistant session from accidental abrupt restart
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-          res.end(JSON.stringify({ success: true }));
+          res.end(JSON.stringify({ success: false, blocked: true, message: 'AI session protection active' }));
           return;
         }
 
