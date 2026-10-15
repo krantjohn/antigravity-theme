@@ -932,19 +932,6 @@ div.settings-modal-container {
   
   function getInlineOrUrl(imgFile) {
     if (!imgFile) return '';
-    try {
-      const pPath = path.join(wallpapersDir, imgFile);
-      if (fs.existsSync(pPath)) {
-        const ext = path.extname(pPath).toLowerCase();
-        if (IMAGE_EXTS.has(ext)) {
-          const stat = fs.statSync(pPath);
-          if (stat.size <= 500 * 1024) {
-            const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
-            return `data:${mime};base64,` + fs.readFileSync(pPath).toString('base64');
-          }
-        }
-      }
-    } catch(e) {}
     return `${serverBase}/${encodeURIComponent(imgFile)}`;
   }
 
@@ -2404,18 +2391,12 @@ function getClientVideoScript(config) {
   const posBottom = getSlotPosition(config, 'bottom');
   const posSettings = getSlotPosition(config, 'settings');
 
+  const serverBase = `http://127.0.0.1:${DEFAULT_PORT}`;
   const slotPosters = {};
   ['left', 'mid', 'right', 'bottom', 'settings'].forEach(slotKey => {
     const slotData = config && config[slotKey];
     if (slotData && slotData.poster) {
-      try {
-        const pPath = path.join(wallpapersDir, slotData.poster);
-        if (fs.existsSync(pPath)) {
-          const ext = path.extname(pPath).toLowerCase();
-          const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : (ext === '.gif' ? 'image/gif' : 'image/jpeg'));
-          slotPosters[slotKey] = 'data:' + mime + ';base64,' + fs.readFileSync(pPath).toString('base64');
-        }
-      } catch (e) {}
+      slotPosters[slotKey] = `${serverBase}/${encodeURIComponent(slotData.poster)}`;
     }
   });
   const slotPostersJson = JSON.stringify(slotPosters);
@@ -2441,11 +2422,51 @@ function getClientVideoScript(config) {
       }
     }
 
+    // 视频无缝循环自愈与意外暂停恢复守护 (Loop & Freeze Watchdog)
+    function setupVideoLoopGuards(videoEl) {
+      if (!videoEl || videoEl._loopGuardsAttached) return;
+      videoEl._loopGuardsAttached = true;
+
+      // 1. 原生 ended 事件兜底 (处理任何到达终点的极速重启)
+      videoEl.addEventListener('ended', function() {
+        videoEl.currentTime = 0;
+        videoEl.play().catch(function(){});
+      });
+
+      // 2. 提前 150ms 优雅循环，规避 Chromium / Blink 在 MP4 末尾 EOF 掉帧停顿
+      videoEl.addEventListener('timeupdate', function() {
+        if (videoEl.duration > 0 && videoEl.currentTime >= videoEl.duration - 0.15) {
+          videoEl.currentTime = 0;
+          if (videoEl.paused) videoEl.play().catch(function(){});
+        }
+      });
+
+      // 3. 异常意外暂停自愈守护 (只要视频在 DOM 中且可见，若意外暂停自动唤醒)
+      videoEl.addEventListener('pause', function() {
+        if (!document.hidden && videoEl.isConnected && (videoEl.id === 'antigravity-video-left' || (typeof isVideoVisible === 'function' && isVideoVisible(videoEl)))) {
+          if (videoEl.currentTime >= videoEl.duration - 0.2 || videoEl.ended || videoEl.currentTime === 0) {
+            videoEl.currentTime = 0;
+            videoEl.play().catch(function(){});
+          }
+        }
+      });
+
+      // 4. 卡顿与等待自愈
+      videoEl.addEventListener('waiting', function() {
+        if (videoEl._waitingTimer) clearTimeout(videoEl._waitingTimer);
+        videoEl._waitingTimer = setTimeout(function() {
+          if (!document.hidden && videoEl.paused && videoEl.isConnected && (videoEl.id === 'antigravity-video-left' || (typeof isVideoVisible === 'function' && isVideoVisible(videoEl)))) {
+            videoEl.play().catch(function(){});
+          }
+        }, 500);
+      });
+    }
+
     // 智能可视性判定引擎：无重排轻量检测，精确感知折叠、弹窗关闭、祖先隐藏与视口相交
     function isVideoVisible(v) {
       if (!v || !v.isConnected) return false;
-      if (document.hidden) return false;
       if (v.id === 'antigravity-video-left') return true;
+      if (document.hidden) return false;
       if (v._isIntersecting === false) return false;
       if (v.style.display === 'none' || v.style.visibility === 'hidden') return false;
       const p = v.parentElement;
@@ -2461,11 +2482,14 @@ function getClientVideoScript(config) {
       if (!v) return;
       if (isVideoVisible(v)) {
         if (v.paused && v.readyState >= 1) {
+          if (v.currentTime >= v.duration - 0.2 || v.ended) {
+            v.currentTime = 0;
+          }
           v.play().catch(function() {});
         }
         checkAndShowVideo(v);
       } else {
-        if (!v.paused) {
+        if (v.id !== 'antigravity-video-left' && !v.paused) {
           v.pause();
         }
       }
@@ -2582,6 +2606,17 @@ function getClientVideoScript(config) {
           }
           leftVid.dataset.currentSrc = src;
           leftVid.src = src;
+          setupVideoLoopGuards(leftVid);
+          leftVid.addEventListener('playing', function() {
+            checkAndShowVideo(leftVid);
+            const zeroStyle = document.getElementById('antigravity-zero-latency-style');
+            if (zeroStyle) {
+              try { zeroStyle.remove(); } catch(e) {}
+            }
+          });
+          leftVid.addEventListener('canplay', function() {
+            if (!document.hidden && leftVid.paused) leftVid.play().catch(function(){});
+          });
           leftVid.addEventListener('error', function() {
             setTimeout(function() {
               if (leftVid.error) {
@@ -2633,18 +2668,22 @@ function getClientVideoScript(config) {
 
     if (!window.__antigravityDocVisibilityListener) {
       window.__antigravityDocVisibilityListener = true;
-      document.addEventListener('visibilitychange', function() {
+      const onResume = function() {
         const allVids = document.querySelectorAll('.antigravity-slot-video');
         if (document.hidden) {
           for (let i = 0; i < allVids.length; i++) {
-            if (!allVids[i].paused) allVids[i].pause();
+            if (allVids[i].id !== 'antigravity-video-left' && !allVids[i].paused) {
+              allVids[i].pause();
+            }
           }
         } else {
           for (let i = 0; i < allVids.length; i++) {
             syncVideoPlaybackState(allVids[i]);
           }
         }
-      });
+      };
+      document.addEventListener('visibilitychange', onResume);
+      window.addEventListener('focus', onResume);
     }
 
     function applyVideos() {
@@ -2700,10 +2739,12 @@ function getClientVideoScript(config) {
               leftVid._errorRetryCount++;
               leftVid.src = src;
               leftVid.load();
-              if (!document.hidden) leftVid.play().catch(function(){});
+              leftVid.play().catch(function(){});
             }
           }
-          if (!document.hidden && leftVid.paused && leftVid.readyState >= 1) {
+          setupVideoLoopGuards(leftVid);
+          if (leftVid.paused && leftVid.readyState >= 1) {
+            if (leftVid.currentTime >= leftVid.duration - 0.2 || leftVid.ended) leftVid.currentTime = 0;
             leftVid.play().catch(function() {});
           }
           checkAndShowVideo(leftVid);
@@ -2758,11 +2799,12 @@ function getClientVideoScript(config) {
               leftVid.style.backgroundSize = 'cover';
               leftVid.style.backgroundPosition = '${posLeft}';
             }
+            setupVideoLoopGuards(leftVid);
             leftVid.addEventListener('playing', function() {
               checkAndShowVideo(leftVid);
             });
             leftVid.addEventListener('canplay', function() {
-              if (!document.hidden && leftVid.paused) leftVid.play().catch(function() {});
+              if (leftVid.paused) leftVid.play().catch(function() {});
             });
             leftVid.addEventListener('error', function() {
               const now = Date.now();
@@ -2774,7 +2816,7 @@ function getClientVideoScript(config) {
                 setTimeout(function() {
                   if (leftVid.error) {
                     leftVid.load();
-                    if (!document.hidden) leftVid.play().catch(function(){});
+                    leftVid.play().catch(function(){});
                   }
                 }, 1000);
               }
@@ -2811,10 +2853,11 @@ function getClientVideoScript(config) {
             leftVid.dataset.currentSrc = src;
             leftVid.src = src;
             leftVid.load();
-            if (!document.hidden) leftVid.play().catch(function() {});
+            leftVid.play().catch(function() {});
           }
           leftVid.style.objectPosition = '${posLeft}';
-          if (!document.hidden && leftVid.paused && leftVid.readyState >= 1) {
+          setupVideoLoopGuards(leftVid);
+          if (leftVid.paused && leftVid.readyState >= 1) {
             leftVid.play().catch(function() {});
           }
           checkAndShowVideo(leftVid);
@@ -3013,6 +3056,7 @@ function getClientVideoScript(config) {
                 vid.style.backgroundSize = 'cover';
                 vid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
               }
+              setupVideoLoopGuards(vid);
               vid.addEventListener('playing', function() {
                 checkAndShowVideo(vid);
               });
@@ -3059,6 +3103,7 @@ function getClientVideoScript(config) {
               if (isVideoVisible(vid)) vid.play().catch(function() {});
             }
             vid.style.objectPosition = slotPositions[slotKey] || 'center center';
+            setupVideoLoopGuards(vid);
             syncVideoPlaybackState(vid);
             if (window.__antigravityVideoVisibilityObserver) {
               window.__antigravityVideoVisibilityObserver.observe(vid);
@@ -3098,9 +3143,11 @@ function getClientVideoScript(config) {
           const m = mutations[i];
           const target = m.target;
           if (!target || target.nodeType === 3) continue;
-          const tag = target.nodeName ? target.nodeName.toLowerCase() : '';
-          if (tag === 'span' || tag === 'code' || tag === 'p' || tag === 'pre' || tag === 'a') continue;
-          if (target.closest && (target.closest('.xterm') || target.closest('.terminal') || target.closest('.monaco-editor') || target.closest('pre') || target.closest('.code-block') || target.closest('[data-testid*="message"]'))) {
+          // 深度性能过滤：彻底忽略用户打字、光标移动、代码块渲染与AI流式输出DOM扰动
+          if (target.closest && (
+              target.closest('.markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"], textarea, input, [contenteditable], [role="textbox"], form') ||
+              (target.closest('[id="antigravity.agentSidePanelInputBox"]') && (document.querySelector('.antigravity-slot-video[data-slot="bottom"]') || document.querySelector('[id="antigravity.agentSidePanelInputBox"] [data-ag-positioned]')))
+          )) {
             continue;
           }
           if (m.type === 'attributes') {
@@ -3115,9 +3162,12 @@ function getClientVideoScript(config) {
               if (node.nodeType === 1) {
                 const role = node.getAttribute ? node.getAttribute('role') : null;
                 const ds = node.getAttribute ? node.getAttribute('data-state') : null;
+                if (node.id === 'antigravity.agentSidePanelInputBox' || 
+                    (node.id && node.id.includes('agentSidePanelInputBox'))) {
+                  isRelevant = true;
+                  break;
+                }
                 if (role === 'dialog' || ds === 'open' || 
-                  node.id === 'antigravity.agentSidePanelInputBox' || 
-                  (node.id && node.id.includes('agentSidePanelInputBox')) ||
                   (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm') ||
                    node.classList.contains('overflow-y-auto') || node.classList.contains('bg-background') ||
                    node.classList.contains('bg-card') || node.classList.contains('bg-card-border'))) ||
@@ -3150,13 +3200,13 @@ function getClientVideoScript(config) {
       if (window.__isDraggingSplit || (document.body && document.body.classList.contains('is-resizing'))) {
         return;
       }
-      if (debounceTimer) clearTimeout(debounceTimer);
+      if (debounceTimer) return;
       debounceTimer = setTimeout(function() {
         debounceTimer = null;
         if (window.__antigravityApplyVideos) {
           window.__antigravityApplyVideos();
         }
-      }, 200);
+      }, 120);
     };
 
     window.__antigravityVideoObserver = new MutationObserver(scheduledApply);

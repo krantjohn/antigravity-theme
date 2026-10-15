@@ -162,6 +162,46 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     }
   } catch(e) {}
 
+  // 60FPS 视频无缝循环与末尾卡死自愈守护引擎 (杜绝 Chromium 循环播放末尾缓冲空洞与假死卡在静态海报)
+  function setupVideoLoopGuards(videoEl) {
+    if (!videoEl || videoEl._hasLoopGuards) return;
+    videoEl._hasLoopGuards = true;
+
+    // 1. 当视频自然播放到结尾时，立即秒回 0 秒无缝续播，杜绝 Chromium EOF 暂停卡死
+    videoEl.addEventListener('ended', function() {
+      videoEl.currentTime = 0;
+      videoEl.play().catch(function(){});
+    });
+
+    // 2. 视频缓冲与末尾截断守护：在最后 150ms 处平滑循环，防止触发硬解管道缓冲空洞
+    videoEl.addEventListener('timeupdate', function() {
+      if (videoEl.duration > 0 && videoEl.currentTime >= videoEl.duration - 0.15) {
+        videoEl.currentTime = 0;
+        if (videoEl.paused) videoEl.play().catch(function(){});
+      }
+    });
+
+    // 3. 异常意外暂停自愈守护 (只要视频在 DOM 中且可见，若意外暂停自动唤醒)
+    videoEl.addEventListener('pause', function() {
+      if (videoEl.isConnected && (videoEl.id === 'antigravity-video-left' || (typeof isVideoVisible === 'function' && isVideoVisible(videoEl)))) {
+        if (videoEl.currentTime >= videoEl.duration - 0.2 || videoEl.ended || videoEl.currentTime === 0) {
+          videoEl.currentTime = 0;
+          videoEl.play().catch(function(){});
+        }
+      }
+    });
+
+    // 4. 卡顿与等待自愈
+    videoEl.addEventListener('waiting', function() {
+      if (videoEl._waitingTimer) clearTimeout(videoEl._waitingTimer);
+      videoEl._waitingTimer = setTimeout(function() {
+        if (videoEl.paused && videoEl.isConnected && (videoEl.id === 'antigravity-video-left' || (typeof isVideoVisible === 'function' && isVideoVisible(videoEl)))) {
+          videoEl.play().catch(function(){});
+        }
+      }, 500);
+    });
+  }
+
   // Tick 0 极速挂载底图壁纸 (0ms 显示高保真静态海报图并立即挂载至 documentElement，绝无开机黑屏与卡顿延迟)
   function mountTickZeroBase() {
     try {
@@ -306,6 +346,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           }
           if (!document.hidden) leftVid.play().catch(function(){});
         }
+        setupVideoLoopGuards(leftVid);
         leftVid.addEventListener('playing', function() {
           const zeroStyle = document.getElementById('antigravity-zero-latency-style');
           if (zeroStyle) {
@@ -451,8 +492,8 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
   // 智能可视性判定引擎：无重排轻量检测，精确感知折叠、弹窗关闭、祖先隐藏与视口相交
   function isVideoVisible(v) {
     if (!v || !v.isConnected) return false;
-    if (document.hidden) return false;
     if (v.id === 'antigravity-video-left') return true;
+    if (document.hidden) return false;
     if (v._isIntersecting === false) return false;
     if (v.style.display === 'none' || v.style.visibility === 'hidden') return false;
     const p = v.parentElement;
@@ -471,7 +512,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       }
       checkAndShowVideo(v);
     } else {
-      if (!v.paused) {
+      if (v.id !== 'antigravity-video-left' && !v.paused) {
         v.pause();
       }
     }
@@ -508,7 +549,9 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       const allVids = document.querySelectorAll('.antigravity-slot-video');
       if (document.hidden) {
         for (let i = 0; i < allVids.length; i++) {
-          if (!allVids[i].paused) allVids[i].pause();
+          if (allVids[i].id !== 'antigravity-video-left' && !allVids[i].paused) {
+            allVids[i].pause();
+          }
         }
       } else {
         for (let i = 0; i < allVids.length; i++) {
@@ -631,6 +674,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             leftVid.style.backgroundSize = 'cover';
             leftVid.style.backgroundPosition = (config.left && config.left.position) || '0% 45%';
           }
+          setupVideoLoopGuards(leftVid);
           leftVid.addEventListener('playing', function() {
             checkAndShowVideo(leftVid);
             const zeroStyle = document.getElementById('antigravity-zero-latency-style');
@@ -639,7 +683,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             }
           });
           leftVid.addEventListener('canplay', function() {
-            if (!document.hidden && leftVid.paused) leftVid.play().catch(function(){});
+            if (leftVid.paused) leftVid.play().catch(function(){});
           });
           leftVid.addEventListener('error', function() {
             const now = Date.now();
@@ -912,6 +956,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
               vid.style.backgroundSize = 'cover';
               vid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
             }
+            setupVideoLoopGuards(vid);
             vid.addEventListener('playing', function() {
               checkAndShowVideo(vid);
             });
@@ -1018,14 +1063,17 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
     let debounceTimer = null;
     const scheduledApply = function(mutations) {
-      let isHighPriority = false;
       if (mutations && mutations.length > 0) {
         let isRelevant = false;
         for (let i = 0; i < mutations.length; i++) {
           const m = mutations[i];
           const target = m.target;
           if (!target || target.nodeType === 3) continue;
-          if (target.closest && target.closest('.markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"]')) {
+          // 深度性能过滤：彻底忽略用户打字、光标移动、代码块渲染与AI流式输出DOM扰动
+          if (target.closest && (
+              target.closest('.markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"], textarea, input, [contenteditable], [role="textbox"], form') ||
+              (target.closest('[id="antigravity.agentSidePanelInputBox"]') && (document.querySelector('.antigravity-slot-video[data-slot="bottom"]') || document.querySelector('[id="antigravity.agentSidePanelInputBox"] [data-ag-positioned]')))
+          )) {
             continue;
           }
           if (m.type === 'attributes') {
@@ -1041,10 +1089,8 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
                 const role = node.getAttribute ? node.getAttribute('role') : null;
                 const ds = node.getAttribute ? node.getAttribute('data-state') : null;
                 if (node.id === 'antigravity.agentSidePanelInputBox' || 
-                    (node.id && node.id.includes('agentSidePanelInputBox')) ||
-                    (node.classList && (node.classList.contains('bg-card') || node.classList.contains('bg-card-border')))) {
+                    (node.id && node.id.includes('agentSidePanelInputBox'))) {
                   isRelevant = true;
-                  isHighPriority = true;
                   break;
                 }
                 if (role === 'dialog' || ds === 'open' || 
@@ -1078,20 +1124,11 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
         return;
       }
 
-      if (isHighPriority) {
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
-          debounceTimer = null;
-        }
-        applyVideos();
-        return;
-      }
-
       if (debounceTimer) return;
       debounceTimer = setTimeout(function() {
         debounceTimer = null;
         applyVideos();
-      }, 50);
+      }, 120);
     };
 
     window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
