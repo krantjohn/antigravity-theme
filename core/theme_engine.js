@@ -1087,12 +1087,25 @@ div[class*="group/user-input-step"]::after {
   background-image: none !important;
 }
 
-/* 仅清除输入框上方的黑色过渡遮罩 */
+/* 仅清除输入框上方与聊天区边缘的黑色过渡渐变遮罩 (兼容旧版 inset-x-4 与新版 left-4 / right 动态位) */
+div.absolute.bottom-0.pointer-events-none.left-4,
 div.absolute.bottom-0.inset-x-4.pointer-events-none,
-div[class*="inset-x-4"][class*="pointer-events-none"][class*="bottom-0"] {
+div[class*="pointer-events-none"][class*="bottom-0"][class*="left-4"],
+div[class*="inset-x-4"][class*="pointer-events-none"][class*="bottom-0"],
+div.pointer-events-none[style*="linear-gradient"][style*="var(--background)"],
+div.pointer-events-none[style*="linear-gradient(to top"],
+div[class*="pointer-events-none"][style*="linear-gradient"],
+div.absolute.top-0.pointer-events-none.left-4,
+div.absolute.top-0.inset-x-4.pointer-events-none,
+div[class*="pointer-events-none"][class*="top-0"][class*="left-4"],
+div.pointer-events-none[style*="linear-gradient(to bottom"] {
   background: transparent !important;
   background-image: none !important;
   display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
 }
 
 /* 5. Left Sidebar & Navigation & Conversation History List (深色磨砂背景保护区：纯净浅白文本，彻底杜绝黑色字体与发虚白光晕) */

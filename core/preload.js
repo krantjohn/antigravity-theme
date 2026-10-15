@@ -216,6 +216,17 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           '#root, #app {',
           '  position: relative !important;',
           '  z-index: 1 !important;',
+          '}',
+          'div.absolute.bottom-0.pointer-events-none.left-4,',
+          'div.absolute.bottom-0.inset-x-4.pointer-events-none,',
+          'div[class*="pointer-events-none"][class*="bottom-0"],',
+          'div.pointer-events-none[style*="linear-gradient"] {',
+          '  display: none !important;',
+          '  background: transparent !important;',
+          '  background-image: none !important;',
+          '  opacity: 0 !important;',
+          '  visibility: hidden !important;',
+          '  height: 0 !important;',
           '}'
         );
         zeroLatencyStyle.textContent = rules.join('\n');
