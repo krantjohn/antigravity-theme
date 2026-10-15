@@ -10,6 +10,14 @@ using System.Runtime.InteropServices;
 using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Web.WebView2.Core;
 
+[assembly: AssemblyTitle("Antigravity Theme Studio")]
+[assembly: AssemblyDescription("Antigravity 实时预览与全景工坊")]
+[assembly: AssemblyCompany("krantjohn")]
+[assembly: AssemblyProduct("Antigravity Theme Studio")]
+[assembly: AssemblyCopyright("Copyright © 2026 krantjohn")]
+[assembly: AssemblyVersion("3.1.0.0")]
+[assembly: AssemblyFileVersion("3.1.0.0")]
+
 namespace AntigravityThemeStudio
 {
     static class Program
