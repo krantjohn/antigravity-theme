@@ -1270,6 +1270,44 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     return 0;
   }
 
+  let cachedUpdaterState = null;
+  async function getLiveUpdaterState() {
+    try {
+      if (typeof updaterAPI !== 'undefined' && updaterAPI.getState) {
+        const s = await updaterAPI.getState();
+        if (s) cachedUpdaterState = s;
+      } else if (typeof electron_1 !== 'undefined' && electron_1.ipcRenderer) {
+        const s = await electron_1.ipcRenderer.invoke('updater:get-state');
+        if (s) cachedUpdaterState = s;
+      }
+    } catch(e) {}
+    return cachedUpdaterState;
+  }
+
+  try {
+    if (typeof updaterAPI !== 'undefined' && updaterAPI.onStateChanged) {
+      updaterAPI.onStateChanged((state) => {
+        if (state) {
+          cachedUpdaterState = state;
+          if (state.currentVersion && state.latestVersion) {
+            if (compareVersions(state.latestVersion, state.currentVersion) <= 0) {
+              hideUpdateButton();
+            }
+          }
+        }
+      });
+    }
+  } catch(e) {}
+
+  // Proactively fetch initial updater state
+  getLiveUpdaterState().then(st => {
+    if (st && st.currentVersion && st.latestVersion) {
+      if (compareVersions(st.latestVersion, st.currentVersion) <= 0) {
+        hideUpdateButton();
+      }
+    }
+  }).catch(() => {});
+
   let lastUpdateModalOpen = 0;
   function showThemeUpdateModal(versionOverride) {
     const now = Date.now();
@@ -1290,20 +1328,12 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       }
     }
 
-    let curVer = '2.19.1';
-    let newVer = (typeof versionOverride === 'string' ? versionOverride : '2.22.0');
-    let downloadUrl = 'https://storage.googleapis.com/antigravity-public/antigravity-hub/2.19.1-6046815158665216/windows-x64/Antigravity-x64.exe';
+    let curVer = (cachedUpdaterState?.currentVersion) || '2.23.0';
+    let newVer = (typeof versionOverride === 'string' ? versionOverride : (cachedUpdaterState?.latestVersion || cachedUpdaterState?.update?.version || curVer));
+    let downloadUrl = cachedUpdaterState?.downloadUrl || 'https://storage.googleapis.com/antigravity-public/antigravity-hub/2.19.1-6046815158665216/windows-x64/Antigravity-x64.exe';
     let officialUrl = 'https://antigravity.google';
-    let isReady = false;
-    let isDownloading = false;
-
-    try {
-      if (typeof window !== 'undefined' && window.__lastUpdaterState) {
-        if (window.__lastUpdaterState.currentVersion) curVer = window.__lastUpdaterState.currentVersion;
-        if (window.__lastUpdaterState.latestVersion) newVer = window.__lastUpdaterState.latestVersion;
-        else if (window.__lastUpdaterState.update?.version) newVer = window.__lastUpdaterState.update.version;
-      }
-    } catch(e) {}
+    let isReady = cachedUpdaterState?.type === 'ready';
+    let isDownloading = cachedUpdaterState?.type === 'downloading';
 
     const hasRealUpdate = compareVersions(newVer, curVer) > 0;
 
@@ -1351,27 +1381,31 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     box.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; -webkit-app-region: no-drag !important;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 18px;">✨</span>
+          <span id="ag-modal-icon" style="font-size: 18px;">${hasRealUpdate ? '✨' : '🛡️'}</span>
           <span id="ag-modal-title" style="font-size: 16px; font-weight: 600; letter-spacing: -0.2px;">${hasRealUpdate ? '发现新版本 (Update Available)' : '当前已是最新版本 (Already Up to Date)'}</span>
         </div>
         <button id="ag-modal-close-x" aria-label="关闭" title="关闭 (Esc)" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); color: #a1a1aa; font-size: 18px; width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-app-region: no-drag !important; app-region: no-drag !important; pointer-events: auto !important; transition: all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='#a1a1aa'">✕</button>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px; -webkit-app-region: no-drag !important;">
+      <div id="ag-modal-versions-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 13px; -webkit-app-region: no-drag !important;">
         <span style="background: rgba(255, 255, 255, 0.07); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08); color: #a1a1aa;">当前版本: <b id="ag-modal-cur-ver" style="color: #e4e4e7;">v${curVer}</b></span>
-        <span style="color: #71717a;">➔</span>
-        <span id="ag-modal-target-box" style="background: ${hasRealUpdate ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)'}; padding: 3px 8px; border-radius: 6px; border: 1px solid ${hasRealUpdate ? 'rgba(59, 130, 246, 0.3)' : 'rgba(16, 185, 129, 0.3)'}; color: ${hasRealUpdate ? '#60a5fa' : '#34d399'}; font-weight: 600;">${hasRealUpdate ? '目标版本' : '最新版本'}: <b id="ag-modal-target-ver">v${hasRealUpdate ? newVer : curVer}</b></span>
+        ${hasRealUpdate ? `
+          <span id="ag-modal-ver-arrow" style="color: #71717a;">➔</span>
+          <span id="ag-modal-target-box" style="background: rgba(59, 130, 246, 0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-weight: 600;">目标版本: <b id="ag-modal-target-ver">v${newVer}</b></span>
+        ` : `
+          <span id="ag-modal-target-box" style="background: rgba(16, 185, 129, 0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-weight: 600;">✓ 已是最新版本</span>
+        `}
       </div>
 
       <div id="ag-modal-note" style="background: ${hasRealUpdate ? 'rgba(245, 158, 11, 0.08)' : 'rgba(16, 185, 129, 0.08)'}; border: 1px solid ${hasRealUpdate ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.25)'}; border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; font-size: 12px; line-height: 1.55; color: ${hasRealUpdate ? '#fbbf24' : '#34d399'}; -webkit-app-region: no-drag !important;">
         ${hasRealUpdate
           ? '🛡️ <b>主题与会话保护提示</b>：检测到官方新版本。<br><b style="color: #ef4444;">⚠️ 会话安全注意：</b>如果您当前正在与 AI 助手协同工作，<b>切勿在此刻立即重启软件</b>（关闭或重启 Antigravity 会强行中断当前 AI 任务）。建议在当前对话工作完成后再手动升级。'
-          : `🛡️ <b>客户端已是最新版本</b>：当前客户端运行版本为 <b>v${curVer}</b>，无需更新。主题增强引擎与动态壁纸正在稳定运行中。`}
+          : `🛡️ <b>客户端运行正常</b>：当前客户端运行版本为 <b>v${curVer}</b>，已是最新稳定版本，无需任何更新。主题增强引擎与动态壁纸正在流畅运行中。`}
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 8px; -webkit-app-region: no-drag !important;">
-        <button id="ag-modal-btn-primary" style="${hasRealUpdate ? 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff;' : 'background: rgba(255, 255, 255, 0.08); color: #a1a1aa; cursor: default;'} border: none; border-radius: 10px; padding: 11px 16px; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: ${hasRealUpdate ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none'}; -webkit-app-region: no-drag !important; app-region: no-drag !important; pointer-events: auto !important; transition: all 0.15s;">
-          ${hasRealUpdate ? '⬇️ 开始后台下载更新' : '✓ 当前已是最新版本'}
+        <button id="ag-modal-btn-primary" style="${hasRealUpdate ? 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff;' : 'background: rgba(255, 255, 255, 0.08); color: #a1a1aa; cursor: pointer;'} border: none; border-radius: 10px; padding: 11px 16px; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: ${hasRealUpdate ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none'}; -webkit-app-region: no-drag !important; app-region: no-drag !important; pointer-events: auto !important; transition: all 0.15s;">
+          ${hasRealUpdate ? (isReady ? '🔄 立即重启并更新' : (isDownloading ? '⏳ 正在后台下载更新包...' : '⬇️ 开始后台下载更新')) : '<span>✓ 知道了 / 关闭</span>'}
         </button>
 
         <div style="display: flex; gap: 8px; -webkit-app-region: no-drag !important;">
@@ -1424,22 +1458,20 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
           } catch(e2) {}
         }
-      }, 120);
+      }, 50);
     };
     overlay.closeModal = closeModal;
 
-    requestAnimationFrame(() => {
-      overlay.style.opacity = '1';
-      box.style.transform = 'scale(1) translateY(0)';
-      try {
-        const cancelBtn = overlay.querySelector('#ag-modal-btn-cancel');
-        if (cancelBtn) {
-          cancelBtn.focus();
-        } else {
-          box.focus();
-        }
-      } catch(e) {}
-    });
+    overlay.style.opacity = '1';
+    box.style.transform = 'scale(1) translateY(0)';
+    try {
+      const cancelBtn = overlay.querySelector('#ag-modal-btn-cancel');
+      if (cancelBtn) {
+        cancelBtn.focus();
+      } else {
+        box.focus();
+      }
+    } catch(e) {}
 
     const onKeyDown = (e) => {
       if (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27) {
@@ -1558,8 +1590,11 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           if (!userConfirm) return;
           closeModal();
           try {
-            if (window.electronUpdater && window.electronUpdater.quitAndInstall) {
-              await window.electronUpdater.quitAndInstall();
+            if (typeof updaterAPI !== 'undefined' && updaterAPI.quitAndInstall) {
+              await updaterAPI.quitAndInstall();
+              return;
+            } else if (typeof electron_1 !== 'undefined' && electron_1.ipcRenderer) {
+              await electron_1.ipcRenderer.invoke('updater:quit-and-install');
               return;
             }
           } catch(err) {}
@@ -1575,11 +1610,11 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
           let triggered = false;
           try {
-            if (window.electronUpdater && window.electronUpdater.downloadUpdate) {
-              await window.electronUpdater.downloadUpdate();
+            if (typeof updaterAPI !== 'undefined' && updaterAPI.downloadUpdate) {
+              await updaterAPI.downloadUpdate();
               triggered = true;
-            } else if (window.electronUpdater && window.electronUpdater.applyUpdate) {
-              await window.electronUpdater.applyUpdate();
+            } else if (typeof electron_1 !== 'undefined' && electron_1.ipcRenderer) {
+              await electron_1.ipcRenderer.invoke('updater:download');
               triggered = true;
             }
           } catch(err) {}
@@ -1606,14 +1641,14 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     // Asynchronously update version info and state in background
     (async () => {
       try {
-        if (typeof window !== 'undefined' && window.electronUpdater && window.electronUpdater.getState) {
-          const st = await window.electronUpdater.getState();
-          window.__lastUpdaterState = st;
-          if (st?.currentVersion) curVer = st.currentVersion;
-          if (st?.latestVersion) newVer = st.latestVersion;
-          else if (st?.update?.version) newVer = st.update.version;
-          if (st?.type === 'ready') isReady = true;
-          if (st?.type === 'downloading') isDownloading = true;
+        const st = await getLiveUpdaterState();
+        if (st) {
+          if (st.currentVersion) curVer = st.currentVersion;
+          if (st.latestVersion) newVer = st.latestVersion;
+          else if (st.update?.version) newVer = st.update.version;
+          if (st.type === 'ready') isReady = true;
+          if (st.type === 'downloading') isDownloading = true;
+          if (st.downloadUrl) downloadUrl = st.downloadUrl;
         }
       } catch(e) {}
 
@@ -1634,35 +1669,33 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       // Update UI elements if modal is still open
       try {
         const hasRealUpdateNow = compareVersions(newVer, curVer) > 0;
-        const curEl = overlay.querySelector('#ag-modal-cur-ver');
-        if (curEl) curEl.textContent = 'v' + curVer;
-        const targetEl = overlay.querySelector('#ag-modal-target-ver');
-        const targetBox = overlay.querySelector('#ag-modal-target-box');
+        const iconEl = overlay.querySelector('#ag-modal-icon');
         const titleEl = overlay.querySelector('#ag-modal-title');
+        const rowEl = overlay.querySelector('#ag-modal-versions-row');
         const noteEl = overlay.querySelector('#ag-modal-note');
         const pBtn = overlay.querySelector('#ag-modal-btn-primary');
 
         if (!hasRealUpdateNow) {
-          if (titleEl) titleEl.textContent = '✨ 当前已是最新版本 (Already Up to Date)';
-          if (targetEl) targetEl.textContent = 'v' + curVer;
-          if (targetBox) {
-            targetBox.style.background = 'rgba(16, 185, 129, 0.15)';
-            targetBox.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-            targetBox.style.color = '#34d399';
-            targetBox.innerHTML = '最新版本: <b id="ag-modal-target-ver">v' + curVer + '</b>';
+          if (iconEl) iconEl.textContent = '🛡️';
+          if (titleEl) titleEl.textContent = '当前已是最新版本 (Already Up to Date)';
+          if (rowEl) {
+            rowEl.innerHTML = `
+              <span style="background: rgba(255, 255, 255, 0.07); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08); color: #a1a1aa;">当前版本: <b id="ag-modal-cur-ver" style="color: #e4e4e7;">v${curVer}</b></span>
+              <span id="ag-modal-target-box" style="background: rgba(16, 185, 129, 0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-weight: 600;">✓ 已是最新版本</span>
+            `;
           }
           if (noteEl) {
             noteEl.style.background = 'rgba(16, 185, 129, 0.08)';
             noteEl.style.borderColor = 'rgba(16, 185, 129, 0.25)';
             noteEl.style.color = '#34d399';
-            noteEl.innerHTML = '🛡️ <b>客户端已是最新版本</b>：当前客户端运行版本为 <b>v' + curVer + '</b>，无需更新。主题增强引擎与动态壁纸正在稳定运行中。';
+            noteEl.innerHTML = '🛡️ <b>客户端运行正常</b>：当前客户端运行版本为 <b>v' + curVer + '</b>，已是最新稳定版本，无需任何更新。主题增强引擎与动态壁纸正在流畅运行中。';
           }
           if (pBtn) {
             pBtn.style.background = 'rgba(255, 255, 255, 0.08)';
             pBtn.style.color = '#a1a1aa';
             pBtn.style.boxShadow = 'none';
-            pBtn.style.cursor = 'default';
-            pBtn.innerHTML = '<span>✓ 当前已是最新版本</span>';
+            pBtn.style.cursor = 'pointer';
+            pBtn.innerHTML = '<span>✓ 知道了 / 关闭</span>';
             pBtn.onclick = (e) => {
               if (e) { e.preventDefault(); e.stopPropagation(); }
               closeModal();
@@ -1670,19 +1703,32 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           }
           hideUpdateButton();
         } else {
-          if (titleEl) titleEl.textContent = '✨ 发现新版本 (Update Available)';
-          if (targetEl) targetEl.textContent = 'v' + newVer;
-          if (targetBox) {
-            targetBox.style.background = 'rgba(59, 130, 246, 0.15)';
-            targetBox.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-            targetBox.style.color = '#60a5fa';
-            targetBox.innerHTML = '目标版本: <b id="ag-modal-target-ver">v' + newVer + '</b>';
+          if (iconEl) iconEl.textContent = '✨';
+          if (titleEl) titleEl.textContent = '发现新版本 (Update Available)';
+          if (rowEl) {
+            rowEl.innerHTML = `
+              <span style="background: rgba(255, 255, 255, 0.07); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08); color: #a1a1aa;">当前版本: <b id="ag-modal-cur-ver" style="color: #e4e4e7;">v${curVer}</b></span>
+              <span id="ag-modal-ver-arrow" style="color: #71717a;">➔</span>
+              <span id="ag-modal-target-box" style="background: rgba(59, 130, 246, 0.15); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; font-weight: 600;">目标版本: <b id="ag-modal-target-ver">v${newVer}</b></span>
+            `;
+          }
+          if (noteEl) {
+            noteEl.style.background = 'rgba(245, 158, 11, 0.08)';
+            noteEl.style.borderColor = 'rgba(245, 158, 11, 0.2)';
+            noteEl.style.color = '#fbbf24';
+            noteEl.innerHTML = '🛡️ <b>主题与会话保护提示</b>：检测到官方新版本。<br><b style="color: #ef4444;">⚠️ 会话安全注意：</b>如果您当前正在与 AI 助手协同工作，<b>切勿在此刻立即重启软件</b>（关闭或重启 Antigravity 会强行中断当前 AI 任务）。建议在当前对话工作完成后再手动升级。';
           }
           if (pBtn) {
+            pBtn.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+            pBtn.style.color = '#ffffff';
+            pBtn.style.boxShadow = '0 4px 14px rgba(37, 99, 235, 0.35)';
+            pBtn.style.cursor = 'pointer';
             if (isReady) {
               pBtn.innerHTML = '🔄 准备就绪 (点击升级)';
             } else if (isDownloading) {
               pBtn.innerHTML = '⏳ 正在后台下载更新包...';
+            } else {
+              pBtn.innerHTML = '⬇️ 开始后台下载更新';
             }
           }
         }
@@ -1694,8 +1740,10 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
   // Expose on window for direct access / testing
   if (typeof window !== 'undefined') {
-    window.showThemeUpdateModal = showThemeUpdateModal;
-    window.hideThemeUpdateButton = hideUpdateButton;
+    try { window.__agShowModal = showThemeUpdateModal; } catch(e) {}
+    try { window.__agHideBtn = hideUpdateButton; } catch(e) {}
+    try { window.showThemeUpdateModal = showThemeUpdateModal; } catch(e) {}
+    try { window.hideThemeUpdateButton = hideUpdateButton; } catch(e) {}
   }
   try {
     const { contextBridge } = require('electron');

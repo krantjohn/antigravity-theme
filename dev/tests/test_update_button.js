@@ -245,7 +245,7 @@ async function main() {
   // 6. Test reopening and closing via "取消 / 关闭" button via REAL mouse click
   console.log('   Testing "取消 / 关闭" button via real mouse click...');
   await new Promise(r => setTimeout(r, 300));
-  await evaluate('window.showThemeUpdateModal()', true);
+  await evaluate('(window.__agShowModal || window.showThemeUpdateModal)()', true);
   await new Promise(r => setTimeout(r, 300));
   const cancelBtnCoords = await evaluate(`
     (() => {
@@ -273,7 +273,7 @@ async function main() {
   // 7. Test backdrop click outside modal box via REAL mouse click
   console.log('   Testing backdrop click outside modal box...');
   await new Promise(r => setTimeout(r, 300));
-  await evaluate('window.showThemeUpdateModal()', true);
+  await evaluate('(window.__agShowModal || window.showThemeUpdateModal)()', true);
   await new Promise(r => setTimeout(r, 300));
   const backdropCoords = await evaluate(`
     (() => {
@@ -296,7 +296,7 @@ async function main() {
   // 8. Test Escape key modal dismissal via REAL key event
   console.log('   Testing Escape key modal dismissal via real key event...');
   await new Promise(r => setTimeout(r, 300));
-  await evaluate('window.showThemeUpdateModal()', true);
+  await evaluate('(window.__agShowModal || window.showThemeUpdateModal)()', true);
   await new Promise(r => setTimeout(r, 300));
   const isOpenedAgain = await evaluate('!!document.getElementById("antigravity-update-modal-overlay")');
   assert(isOpenedAgain, 'Modal must reopen via showThemeUpdateModal()');
@@ -307,6 +307,7 @@ async function main() {
     if (btn) btn.focus();
   })()`);
 
+  await sendCdp('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
   await sendCdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
   await sendCdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
   const isClosed4 = await waitForModalClose();
@@ -316,7 +317,7 @@ async function main() {
   // 9. Test "稍后提醒 / 隐藏更新按钮"
   console.log('   Testing dismiss and hide button...');
   await new Promise(r => setTimeout(r, 350));
-  await evaluate('window.showThemeUpdateModal()', true);
+  await evaluate('(window.__agShowModal || window.showThemeUpdateModal)()', true);
   await new Promise(r => setTimeout(r, 350));
   const dismissCoords = await evaluate(`
     (() => {
@@ -369,7 +370,7 @@ async function main() {
   // 11. Test text selection / drag protection (mousedown inside box, mouseup on backdrop)
   console.log('   Testing drag/selection protection across box boundary...');
   await new Promise(r => setTimeout(r, 300));
-  await evaluate('window.showThemeUpdateModal()', true);
+  await evaluate('(window.__agShowModal || window.showThemeUpdateModal)()', true);
   await new Promise(r => setTimeout(r, 300));
   const boxCoords = await evaluate(`
     (() => {
@@ -397,7 +398,7 @@ async function main() {
   // 12. Test Keyboard Focus & Enter key on cancel button
   console.log('   Testing keyboard focus management & Enter key on cancel button...');
   await new Promise(r => setTimeout(r, 200));
-  await evaluate('window.showThemeUpdateModal()', true);
+  await evaluate('(window.__agShowModal || window.showThemeUpdateModal)()', true);
   await new Promise(r => setTimeout(r, 250));
   const focusInfo = await evaluate(`
     (() => {
@@ -419,7 +420,7 @@ async function main() {
 
   // 13. Test rapid reopening during closing animation (race condition defense)
   console.log('   Testing rapid reopening during fade-out animation...');
-  await evaluate('window.showThemeUpdateModal()', true);
+  await evaluate('(window.__agShowModal || window.showThemeUpdateModal)()', true);
   await new Promise(r => setTimeout(r, 200));
   // Start closing
   await evaluate(`(() => {
@@ -428,7 +429,7 @@ async function main() {
   })()`);
   // Rapidly reopen at 50ms into 120ms fadeout
   await new Promise(r => setTimeout(r, 50));
-  await evaluate('window.showThemeUpdateModal()', true);
+  await evaluate('(window.__agShowModal || window.showThemeUpdateModal)()', true);
   // Wait past normal animation finish (250ms)
   await new Promise(r => setTimeout(r, 250));
   const isStillPresent = await evaluate(`(() => {
