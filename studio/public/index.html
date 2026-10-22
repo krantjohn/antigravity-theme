@@ -42,11 +42,16 @@
       <button class="nav-tab" data-tab="view-safety" id="nav-tab-safety">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         <span>底层与安全</span>
+        <span class="nav-tab-dot" id="nav-safety-dot" style="display:none;" title="尚未注入美化底层"></span>
       </button>
     </nav>
 
     <!-- Right: Telemetry & Controls -->
     <div class="header-status">
+      <div class="status-pill cursor-pointer" id="patch-status-pill" title="核心美化底层注入状态 (点击查看或一键注入)">
+        <span class="status-dot"></span>
+        <span class="status-text" id="patch-status-text">底层状态...</span>
+      </div>
       <div class="status-pill" id="cdp-status" title="CDP 8314 热重载通道">
         <span class="status-dot"></span>
         <span class="status-text">正在探测 CDP...</span>
@@ -55,6 +60,10 @@
         <span class="status-dot"></span>
         <span class="status-text">流媒体 8315</span>
       </div>
+      <button class="btn btn-secondary btn-sm btn-header" id="btn-open-guide" title="新手快速上手指南与工作流程说明">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="header-btn-text">新手指南</span>
+      </button>
       <button class="btn btn-warning-ghost btn-sm btn-header" id="btn-restart-app" title="一键重启 Antigravity 客户端以激活 8314 热重载或装载最新补丁">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         <span class="header-btn-text">重启</span>
@@ -87,6 +96,25 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
           <span class="collapsed-inspector-text">INSPECTOR</span>
+        </div>
+
+        <!-- Quick Step 1 Injection / Onboarding Card -->
+        <div class="inspector-guide-card" id="inspector-guide-card">
+          <div class="guide-card-header">
+            <span class="guide-card-badge" id="guide-card-badge">第一步</span>
+            <span class="guide-card-title" id="guide-card-title">注入美化底层</span>
+          </div>
+          <p class="guide-card-desc" id="guide-card-desc">
+            首次使用需一键注入美化内核，方可在 Antigravity 中渲染壁纸与激活热重载。
+          </p>
+          <div class="guide-card-actions">
+            <button class="btn btn-primary btn-sm btn-block btn-glow" id="btn-quick-inject">
+              ⚡ 一键注入美化底层
+            </button>
+            <button class="btn btn-warning-ghost btn-sm btn-block" id="btn-quick-restart" style="display:none;">
+              🔄 一键重启客户端
+            </button>
+          </div>
         </div>
 
         <!-- Draft Commit Actions Toolbar -->
@@ -262,6 +290,29 @@
             <button class="btn btn-secondary btn-sm" id="btn-toggle-mock-settings" title="打开/收起设置弹窗外观仿真">
               ⚙️ 预览设置弹窗
             </button>
+          </div>
+        </div>
+
+        <!-- Newbie / Status Hero Action Banner -->
+        <div class="workspace-hero-banner" id="workspace-hero-banner">
+          <div class="hero-banner-main">
+            <div class="hero-banner-icon-wrap" id="hero-banner-icon">⚡</div>
+            <div class="hero-banner-content">
+              <div class="hero-banner-title" id="hero-banner-title">欢迎使用 Antigravity 主题工坊！第一步：注入美化底层</div>
+              <div class="hero-banner-sub" id="hero-banner-sub">官方客户端尚未注入美化扩展。点击右侧按钮一键安全注入，即可开启自定义动态壁纸与极速热重载。</div>
+            </div>
+          </div>
+          <div class="hero-banner-actions" id="hero-banner-actions">
+            <button class="btn btn-primary btn-sm btn-glow" id="btn-hero-inject">
+              ⚡ 一键注入美化底层
+            </button>
+            <button class="btn btn-warning-ghost btn-sm" id="btn-hero-restart" style="display:none;">
+              🔄 一键重启客户端
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-hero-guide">
+              💡 新手快速指引
+            </button>
+            <button class="btn-banner-close" id="btn-banner-close" style="display:none;" title="收起此提示">✕</button>
           </div>
         </div>
 
@@ -775,8 +826,8 @@
       <div class="safety-telemetry-grid">
         <div class="telemetry-card spotlight-card">
           <div class="card-title-group">
-            <span class="section-tag">PATCH STATUS</span>
-            <h3>核心注入环境</h3>
+            <span class="section-tag">STEP 1 · PATCH STATUS</span>
+            <h3>① 核心注入环境 (必选第一步)</h3>
           </div>
           <div class="backup-status-banner" id="patch-banner">
             <span class="backup-dot" id="patch-dot"></span>
@@ -789,8 +840,8 @@
 
         <div class="telemetry-card spotlight-card">
           <div class="card-title-group">
-            <span class="section-tag">CLIENT CONTROL</span>
-            <h3>客户端控制</h3>
+            <span class="section-tag">STEP 2 · CLIENT CONTROL</span>
+            <h3>② 客户端控制与重启 (第二步)</h3>
           </div>
           <p class="telemetry-desc">当官方更新后或底层补丁注入后，点击一键全自动重启客户端，激活 8314 热重载通道。</p>
           <button class="btn btn-warning-ghost btn-block" id="btn-restart-app-card">
@@ -801,8 +852,8 @@
 
         <div class="telemetry-card spotlight-card">
           <div class="card-title-group">
-            <span class="section-tag">VANILLA RESTORE</span>
-            <h3>官方原版纯净模式</h3>
+            <span class="section-tag">SAFETY · VANILLA RESTORE</span>
+            <h3>官方原版纯净模式 (安全出厂备用)</h3>
           </div>
           <p class="telemetry-desc">一键恢复 Google 官方原生界面风格（当前壁纸自动保存为快照预设，稍后随时可还原）。</p>
           <button class="btn btn-secondary btn-block" id="btn-vanilla">
@@ -866,6 +917,84 @@
       <div class="modal-footer we-picker-footer">
         <span class="picker-hint">💡 点击任意壁纸即可直接装配到当前选中的槽位，并在视窗 0ms 实时预览</span>
         <button class="btn btn-secondary" id="btn-cancel-we-picker">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Newbie Quick Start Guide -->
+  <div class="modal-overlay" id="guide-modal">
+    <div class="modal-box modal-box-guide">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h3>💡 Antigravity Theme Studio 快速上手指南</h3>
+          <span class="badge badge-accent">30秒掌握操作流程</span>
+        </div>
+        <button class="modal-close" id="btn-close-guide-modal">✕</button>
+      </div>
+      <div class="modal-body guide-steps-container">
+        <div class="guide-step-card" id="guide-step-1">
+          <div class="guide-step-num">1</div>
+          <div class="guide-step-content">
+            <h4>⚡ 第一步：一键注入美化底层 (必备操作)</h4>
+            <p>
+              Google 官方客户端原生不具备透明毛玻璃与动态壁纸渲染支持。点击注入会自动为核心注入 <strong>CDP 8314 热重载通道</strong> 与 <strong>8315 本地流媒体加速服务</strong>。<br>
+              <span class="guide-highlight">🛡️ 100% 安全：注入时全自动备份官方出厂 <code>app.asar.orig.bak</code>，在安全中心随时可一键物理出厂还原，零残留。</span>
+            </p>
+            <div class="guide-step-action">
+              <button class="btn btn-primary btn-sm" id="btn-guide-step1-inject">⚡ 立即一键注入美化底层</button>
+              <span class="guide-status-tag" id="guide-step1-tag">检测中...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-step-card" id="guide-step-2">
+          <div class="guide-step-num">2</div>
+          <div class="guide-step-content">
+            <h4>🔄 第二步：重启 Antigravity 客户端</h4>
+            <p>
+              注入底层后，重启一次 Antigravity 客户端以加载新内核。右上角 CDP 状态将显示为【🟢 CDP 在线】，标志着免重启热重载链路已打通。
+            </p>
+            <div class="guide-step-action">
+              <button class="btn btn-warning-ghost btn-sm" id="btn-guide-step2-restart">🔄 一键重启 Antigravity 客户端</button>
+              <span class="guide-status-tag" id="guide-step2-tag">检测中...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-step-card" id="guide-step-3">
+          <div class="guide-step-num">3</div>
+          <div class="guide-step-content">
+            <h4>🎨 第三步：挑选槽位壁纸与微调</h4>
+            <p>
+              工坊支持 <strong>5 大界面槽位</strong>（主对话、活跃终端、独立侧栏、提问框、设置）。可直接拖拽本地图片/MP4 视频，或在【Steam 创意工坊】浏览已订阅的高清动态壁纸。<br>
+              在左侧面板中可实时微调画面对齐位置 (X/Y 轴)、毛玻璃模糊度与字体对比度。
+            </p>
+            <div class="guide-step-action">
+              <button class="btn btn-secondary btn-sm" id="btn-guide-step3-workspace">🖥️ 前往工作区挑选</button>
+              <button class="btn btn-secondary btn-sm" id="btn-guide-step3-we">🎮 浏览创意工坊壁纸</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="guide-step-card" id="guide-step-4">
+          <div class="guide-step-num">4</div>
+          <div class="guide-step-content">
+            <h4>🚀 第四步：点击【应用生效】秒级生效</h4>
+            <p>
+              在工作区微调完毕后，点击【应用生效】，新壁纸与布局将在 <strong>0.3 秒内免重启极速热推</strong> 到客户端！满意的方案还可【💾 存为预设】，一键随心切换。
+            </p>
+            <div class="guide-step-action">
+              <button class="btn btn-primary btn-sm btn-glow" id="btn-guide-step4-go">🚀 进入工作区开始创作</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer guide-modal-footer">
+        <label class="guide-checkbox-label">
+          <input type="checkbox" id="chk-never-show-guide">
+          <span>下次启动不再自动弹出</span>
+        </label>
+        <button class="btn btn-primary" id="btn-finish-guide">开始体验工坊</button>
       </div>
     </div>
   </div>

@@ -28,7 +28,12 @@ let state = {
   glassBlur: 16,         // 毛玻璃模糊度 (px)
   glassDarkness: 70,     // 卡片底色暗度 (%)
   isAutoFit: true,       // 全自适应缩放模式 (默认开启，开箱完整铺满视口)
-  zoomLevel: 100         // 当前缩放百分比 (当退出 auto-fit 时为具体百分比)
+  zoomLevel: 100,        // 当前缩放百分比 (当退出 auto-fit 时为具体百分比)
+  patchStatus: null,
+  hasBackup: false,
+  backupSize: 0,
+  isHeroBannerDismissed: localStorage.getItem('ag_hero_banner_dismissed') === 'true',
+  hasCheckedGuideAutoOpen: false
 };
 
 // DOM Elements Cache
@@ -134,6 +139,43 @@ const btnRestartApp = document.getElementById('btn-restart-app');
 const btnRestartAppCard = document.getElementById('btn-restart-app-card');
 const btnVanilla = document.getElementById('btn-vanilla');
 const btnUninstall = document.getElementById('btn-uninstall');
+
+// Header Additions
+const patchStatusPill = document.getElementById('patch-status-pill');
+const patchStatusText = document.getElementById('patch-status-text');
+const btnOpenGuide = document.getElementById('btn-open-guide');
+const navSafetyDot = document.getElementById('nav-safety-dot');
+
+// Inspector Step 1 Card
+const inspectorGuideCard = document.getElementById('inspector-guide-card');
+const guideCardBadge = document.getElementById('guide-card-badge');
+const guideCardTitle = document.getElementById('guide-card-title');
+const guideCardDesc = document.getElementById('guide-card-desc');
+const btnQuickInject = document.getElementById('btn-quick-inject');
+const btnQuickRestart = document.getElementById('btn-quick-restart');
+
+// Workspace Hero Banner
+const workspaceHeroBanner = document.getElementById('workspace-hero-banner');
+const heroBannerIcon = document.getElementById('hero-banner-icon');
+const heroBannerTitle = document.getElementById('hero-banner-title');
+const heroBannerSub = document.getElementById('hero-banner-sub');
+const btnHeroInject = document.getElementById('btn-hero-inject');
+const btnHeroRestart = document.getElementById('btn-hero-restart');
+const btnHeroGuide = document.getElementById('btn-hero-guide');
+const btnBannerClose = document.getElementById('btn-banner-close');
+
+// Newbie Quick Start Guide Modal
+const guideModal = document.getElementById('guide-modal');
+const btnCloseGuideModal = document.getElementById('btn-close-guide-modal');
+const btnFinishGuide = document.getElementById('btn-finish-guide');
+const btnGuideStep1Inject = document.getElementById('btn-guide-step1-inject');
+const btnGuideStep2Restart = document.getElementById('btn-guide-step2-restart');
+const btnGuideStep3Workspace = document.getElementById('btn-guide-step3-workspace');
+const btnGuideStep3We = document.getElementById('btn-guide-step3-we');
+const btnGuideStep4Go = document.getElementById('btn-guide-step4-go');
+const guideStep1Tag = document.getElementById('guide-step1-tag');
+const guideStep2Tag = document.getElementById('guide-step2-tag');
+const chkNeverShowGuide = document.getElementById('chk-never-show-guide');
 
 // Utility Elements
 const btnShutdown = document.getElementById('btn-shutdown');
@@ -261,6 +303,9 @@ async function fetchStatus() {
       state.presets = data.presets || [];
       state.fontPresets = data.fontPresets || {};
       state.slotsMeta = data.slotsMeta || {};
+      state.patchStatus = data.patchStatus || null;
+      state.hasBackup = data.hasBackup;
+      state.backupSize = data.backupSize;
 
       if (!state.isDirty) {
         state.draftConfig = JSON.parse(JSON.stringify(state.slotsConfig));
@@ -275,6 +320,18 @@ async function fetchStatus() {
       renderQuickPresetSelect();
       renderWeStatus(data.weCount);
       renderPatchStatus(data.patchStatus, data.hasBackup, data.backupSize);
+
+      // Auto-open Newbie Guide on first launch if unpatched
+      if (!state.hasCheckedGuideAutoOpen) {
+        state.hasCheckedGuideAutoOpen = true;
+        try {
+          const neverShow = localStorage.getItem('ag_never_show_guide') === 'true';
+          const guideShown = localStorage.getItem('ag_theme_guide_shown') === 'true';
+          if (!neverShow && !guideShown && (!data.patchStatus || !data.patchStatus.isPatched)) {
+            setTimeout(openGuideModal, 600);
+          }
+        } catch (_) {}
+      }
     }
   } catch (err) {
     console.error('Failed to fetch status:', err);
@@ -1220,6 +1277,18 @@ function renderWePickerGrid() {
 // 13. Draft Actions (Commit & Discard)
 // =========================================================================
 async function commitDraftToAntigravity() {
+  // Safety check: if user is unpatched, proactively alert and offer one-click injection
+  if (state.patchStatus && !state.patchStatus.isPatched) {
+    const shouldInject = confirm(
+      '⚠️ 检测到 Antigravity 客户端尚未注入美化底层！\n\n' +
+      '若不注入底层，官方客户端将无法加载自定义透明毛玻璃与全景壁纸。\n\n' +
+      '点击【确定】立即一键注入美化底层，\n点击【取消】则仅保存配置到磁盘。'
+    );
+    if (shouldInject) {
+      await executeInstallPatch();
+    }
+  }
+
   btnCommitDraft.disabled = true;
   const originalText = btnCommitDraft.innerHTML;
   btnCommitDraft.innerHTML = `<span>⏳ 正在正式应用并固化...</span>`;
@@ -1260,10 +1329,10 @@ async function commitDraftToAntigravity() {
 
       if (state.isCdpOnline) {
         showToast('✨ 全套视觉配置已正式生效！CDP 0.3s 极速热更新完成！', 4000);
-      } else if (state.isAntigravityRunning) {
+      } else if (state.patchStatus && state.patchStatus.isPatched) {
         showToast('✨ 配置已固化！请重启一次 Antigravity 客户端使其生效并激活热更新', 6000);
       } else {
-        showToast('✨ 全套视觉配置已正式固化！下次启动 Antigravity 即可看到效果', 4000);
+        showToast('⚠️ 配置已保存！但需点击顶部【一键注入底层】并重启客户端方可在应用内显示', 6000);
       }
       await fetchStatus();
     } else {
@@ -1535,6 +1604,16 @@ function renderPresetsList() {
     };
 
     baselineCard.querySelector('#btn-apply-baseline-preset').onclick = async () => {
+      if (state.patchStatus && !state.patchStatus.isPatched) {
+        const shouldInject = confirm(
+          '⚠️ 检测到 Antigravity 客户端尚未注入美化底层！\n\n' +
+          '若不注入底层，官方客户端将无法加载基线壁纸与动态效果。\n\n' +
+          '点击【确定】立即一键注入美化底层，\n点击【取消】仅应用配置到磁盘。'
+        );
+        if (shouldInject) {
+          await executeInstallPatch();
+        }
+      }
       try {
         showToast('正在应用【初版黄金基线】...', 2500);
         const res = await fetch('/api/theme/baseline', { method: 'POST' });
@@ -1542,7 +1621,13 @@ function renderPresetsList() {
         if (data.success) {
           cleanBlobUrls();
           setDraftDirty(false);
-          showToast('✨ 已成功应用【初版黄金基线】！0.3s 热重载生效');
+          if (state.isCdpOnline) {
+            showToast('✨ 已成功应用【初版黄金基线】！0.3s 热重载生效');
+          } else if (state.patchStatus && state.patchStatus.isPatched) {
+            showToast('✨ 已成功应用【初版黄金基线】！请重启一次客户端使其生效', 6000);
+          } else {
+            showToast('⚠️ 配置已应用！需点击【一键注入底层】并重启客户端方可在应用内显示', 6000);
+          }
           await fetchStatus();
         } else {
           showToast('应用基线失败: ' + (data.error || '未知错误'));
@@ -1706,6 +1791,17 @@ function renderPresetsList() {
 }
 
 async function applyPresetDirectly(name) {
+  if (state.patchStatus && !state.patchStatus.isPatched) {
+    const shouldInject = confirm(
+      '⚠️ 检测到 Antigravity 客户端尚未注入美化底层！\n\n' +
+      '若不注入底层，官方客户端将无法加载预设中的透明毛玻璃与全景壁纸。\n\n' +
+      '点击【确定】立即一键注入美化底层，\n点击【取消】仅应用配置到磁盘。'
+    );
+    if (shouldInject) {
+      await executeInstallPatch();
+    }
+  }
+
   try {
     showToast(`正在装配并应用预设【${name}】...`, 3000);
     const res = await fetch('/api/presets/apply', {
@@ -1720,10 +1816,10 @@ async function applyPresetDirectly(name) {
 
       if (state.isCdpOnline) {
         showToast(`✨ 预设【${name}】已成功应用并极速热重载生效！`);
-      } else if (state.isAntigravityRunning) {
-        showToast(`✨ 预设【${name}】配置已固化！重启 Antigravity 客户端即可激活`, 6000);
+      } else if (state.patchStatus && state.patchStatus.isPatched) {
+        showToast(`✨ 预设【${name}】配置已固化！请重启一次 Antigravity 客户端使其生效并激活热更新`, 6000);
       } else {
-        showToast(`✨ 预设【${name}】已成功应用！启动 Antigravity 即可显示`);
+        showToast(`⚠️ 预设【${name}】配置已保存！但需点击顶部【一键注入底层】并重启客户端方可在应用内显示`, 6000);
       }
       await fetchStatus();
     } else {
@@ -1865,51 +1961,280 @@ if (weSearchInput) {
 // =========================================================================
 // 18. Core Engine & Safety Center (View 4)
 // =========================================================================
+let isPatchingInProgress = false;
+async function executeInstallPatch() {
+  if (isPatchingInProgress) return false;
+  isPatchingInProgress = true;
+
+  const patchButtons = [
+    document.getElementById('btn-install-patch'),
+    document.getElementById('btn-hero-inject'),
+    document.getElementById('btn-quick-inject'),
+    document.getElementById('btn-guide-step1-inject')
+  ].filter(Boolean);
+
+  patchButtons.forEach(btn => {
+    btn.disabled = true;
+    btn.dataset.prevText = btn.textContent;
+    btn.textContent = '⏳ 正在自动化安全注入核心 (约需5秒)...';
+  });
+
+  showToast('⚡ 正在安全注入 Antigravity 美化核心底层，请稍候...', 6000);
+
+  let success = false;
+  try {
+    const res = await fetch('/api/patch/install', { method: 'POST' });
+    let data;
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = { success: false, error: `服务器返回异常 (HTTP ${res.status})` };
+    }
+    if (data.success) {
+      success = true;
+      showToast('✨ 核心注入成功！8314 CDP 与 8315 流媒体双引擎已就绪！', 4000);
+      await fetchStatus();
+    } else {
+      showToast('❌ 注入失败: ' + (data.error || '未知错误'), 5000);
+    }
+  } catch (e) {
+    showToast('❌ 注入失败: ' + e.message, 5000);
+  } finally {
+    isPatchingInProgress = false;
+    patchButtons.forEach(btn => {
+      btn.disabled = false;
+      // If injection succeeded, fetchStatus() -> renderPatchStatus() already set the correct
+      // updated button text (e.g. "🔄 重新注入" or "✓ 底层已就绪")!
+      // Only revert to prevText if the operation failed.
+      if (!success && btn.dataset.prevText) {
+        btn.textContent = btn.dataset.prevText;
+      }
+    });
+  }
+  return success;
+}
+
+function openGuideModal() {
+  if (!guideModal) return;
+  if (chkNeverShowGuide) {
+    try {
+      chkNeverShowGuide.checked = localStorage.getItem('ag_never_show_guide') === 'true';
+    } catch (_) {}
+  }
+  guideModal.classList.add('active');
+}
+
+function closeGuideModal() {
+  if (!guideModal) return;
+  guideModal.classList.remove('active');
+  try {
+    localStorage.setItem('ag_theme_guide_shown', 'true');
+    if (chkNeverShowGuide) {
+      if (chkNeverShowGuide.checked) {
+        localStorage.setItem('ag_never_show_guide', 'true');
+      } else {
+        localStorage.removeItem('ag_never_show_guide');
+      }
+    }
+  } catch (_) {}
+}
+
 function renderPatchStatus(patchStatus, hasBackup, backupSize) {
-  if (!patchBanner || !patchText) return;
   const isPatched = patchStatus && patchStatus.isPatched;
   const isFreshOfficialUpdate = patchStatus && patchStatus.isFreshOfficialUpdate;
+  const isCdpOnline = state.isCdpOnline;
 
-  if (isPatched) {
-    patchBanner.style.background = 'rgba(52, 211, 153, 0.08)';
-    patchBanner.style.borderColor = 'rgba(52, 211, 153, 0.2)';
-    patchBanner.style.color = '#6ee7b7';
-    if (patchDot) {
-      patchDot.style.background = 'var(--accent-emerald)';
-      patchDot.style.boxShadow = '0 0 10px rgba(52, 211, 153, 0.6)';
+  // 1. Tab 4 Safety Center Card
+  if (patchBanner && patchText) {
+    if (isPatched) {
+      patchBanner.style.background = 'rgba(52, 211, 153, 0.08)';
+      patchBanner.style.borderColor = 'rgba(52, 211, 153, 0.2)';
+      patchBanner.style.color = '#6ee7b7';
+      if (patchDot) {
+        patchDot.style.background = 'var(--accent-emerald)';
+        patchDot.style.boxShadow = '0 0 10px rgba(52, 211, 153, 0.6)';
+      }
+      const bakStr = hasBackup ? ` (出厂备份: ${backupSize}MB)` : '';
+      patchText.textContent = `🟢 核心补丁已就绪 (CDP与流媒体双引擎已激活)${bakStr}`;
+      if (btnInstallPatch) {
+        btnInstallPatch.textContent = '🔄 重新注入 / 官方更新后重补';
+        btnInstallPatch.className = 'btn btn-secondary btn-block';
+      }
+    } else if (isFreshOfficialUpdate) {
+      patchBanner.style.background = 'rgba(234, 179, 8, 0.1)';
+      patchBanner.style.borderColor = 'rgba(234, 179, 8, 0.35)';
+      patchBanner.style.color = '#fde047';
+      if (patchDot) {
+        patchDot.style.background = '#eab308';
+        patchDot.style.boxShadow = '0 0 10px rgba(234, 179, 8, 0.6)';
+      }
+      patchText.textContent = '⚡ 检测到 Google 官方刚完成更新！当前为原生未注入状态';
+      if (btnInstallPatch) {
+        btnInstallPatch.textContent = '⚡ 一键注入美化底层 (自动继承官方新特性)';
+        btnInstallPatch.className = 'btn btn-primary btn-block';
+      }
+    } else {
+      patchBanner.style.background = 'rgba(244, 63, 94, 0.08)';
+      patchBanner.style.borderColor = 'rgba(244, 63, 94, 0.2)';
+      patchBanner.style.color = '#fb7185';
+      if (patchDot) {
+        patchDot.style.background = 'var(--accent-rose)';
+        patchDot.style.boxShadow = '0 0 10px rgba(244, 63, 94, 0.6)';
+      }
+      patchText.textContent = '⚠️ 当前处于官方原生未注入状态，点击下方一键注入';
+      if (btnInstallPatch) {
+        btnInstallPatch.textContent = '⚡ 一键注入 / 安装美化底层';
+        btnInstallPatch.className = 'btn btn-primary btn-block';
+      }
     }
-    const bakStr = hasBackup ? ` (出厂备份: ${backupSize}MB)` : '';
-    patchText.textContent = `🟢 核心补丁已就绪 (CDP与流媒体双引擎已激活)${bakStr}`;
-    if (btnInstallPatch) {
-      btnInstallPatch.textContent = '🔄 重新注入 / 官方更新后重补';
-      btnInstallPatch.className = 'btn btn-secondary btn-block';
+  }
+
+  // 2. Global Header Status Pill & Nav Badge Dot
+  if (patchStatusPill) {
+    const pDot = patchStatusPill.querySelector('.status-dot');
+    if (isPatched) {
+      if (pDot) pDot.className = 'status-dot online';
+      if (patchStatusText) patchStatusText.textContent = '底层已注入';
+      patchStatusPill.title = '核心美化底层已就绪 (CDP 8314 与流媒体 8315 已配置)';
+    } else if (isFreshOfficialUpdate) {
+      if (pDot) pDot.className = 'status-dot warning';
+      if (patchStatusText) patchStatusText.textContent = '官方已更新';
+      patchStatusPill.title = '检测到 Google 官方完成更新，底层文件被重置，点击一键重新注入';
+    } else {
+      if (pDot) pDot.className = 'status-dot offline';
+      if (patchStatusText) patchStatusText.textContent = '未注入底层';
+      patchStatusPill.title = '⚠️ Antigravity 官方原生文件尚未注入美化内核，点击立即注入';
     }
-  } else if (isFreshOfficialUpdate) {
-    patchBanner.style.background = 'rgba(234, 179, 8, 0.1)';
-    patchBanner.style.borderColor = 'rgba(234, 179, 8, 0.35)';
-    patchBanner.style.color = '#fde047';
-    if (patchDot) {
-      patchDot.style.background = '#eab308';
-      patchDot.style.boxShadow = '0 0 10px rgba(234, 179, 8, 0.6)';
+  }
+
+  if (navSafetyDot) {
+    navSafetyDot.style.display = isPatched ? 'none' : 'inline-block';
+    if (isFreshOfficialUpdate) {
+      navSafetyDot.style.background = '#eab308';
+      navSafetyDot.style.boxShadow = '0 0 8px rgba(234, 179, 8, 0.8)';
+    } else {
+      navSafetyDot.style.background = '#f43f5e';
+      navSafetyDot.style.boxShadow = '0 0 8px rgba(244, 63, 94, 0.8)';
     }
-    patchText.textContent = '⚡ 检测到 Google 官方刚完成更新！当前为原生未注入状态';
-    if (btnInstallPatch) {
-      btnInstallPatch.textContent = '⚡ 一键注入美化底层 (自动继承官方新特性)';
-      btnInstallPatch.className = 'btn btn-primary btn-block';
+  }
+
+  // 3. Left Inspector Step 1 Card
+  if (inspectorGuideCard) {
+    if (!isPatched) {
+      inspectorGuideCard.style.display = 'block';
+      inspectorGuideCard.className = 'inspector-guide-card action-needed';
+      if (guideCardBadge) {
+        guideCardBadge.textContent = '第一步';
+        guideCardBadge.className = 'guide-card-badge';
+      }
+      if (guideCardTitle) guideCardTitle.textContent = '注入美化底层';
+      if (guideCardDesc) guideCardDesc.textContent = isFreshOfficialUpdate
+        ? '检测到 Google 刚完成更新！点击重新注入以恢复壁纸与热重载。'
+        : '首次使用需注入美化底层，方可在 Antigravity 中渲染壁纸与热重载。';
+      if (btnQuickInject) {
+        btnQuickInject.style.display = 'block';
+        btnQuickInject.textContent = isFreshOfficialUpdate ? '⚡ 重新注入美化底层' : '⚡ 一键注入美化底层';
+      }
+      if (btnQuickRestart) btnQuickRestart.style.display = 'none';
+    } else if (!isCdpOnline) {
+      inspectorGuideCard.style.display = 'block';
+      inspectorGuideCard.className = 'inspector-guide-card action-needed';
+      if (guideCardBadge) {
+        guideCardBadge.textContent = '第二步';
+        guideCardBadge.className = 'guide-card-badge step-2';
+      }
+      if (guideCardTitle) guideCardTitle.textContent = '重启客户端激活';
+      if (guideCardDesc) guideCardDesc.textContent = '底层补丁已注入！需重启 Antigravity 客户端以激活 8314 热重载。';
+      if (btnQuickInject) btnQuickInject.style.display = 'none';
+      if (btnQuickRestart) btnQuickRestart.style.display = 'block';
+    } else {
+      // System is completely ready: hide onboarding card to maximize customizer workspace
+      inspectorGuideCard.style.display = 'none';
     }
-  } else {
-    patchBanner.style.background = 'rgba(244, 63, 94, 0.08)';
-    patchBanner.style.borderColor = 'rgba(244, 63, 94, 0.2)';
-    patchBanner.style.color = '#fb7185';
-    if (patchDot) {
-      patchDot.style.background = 'var(--accent-rose)';
-      patchDot.style.boxShadow = '0 0 10px rgba(244, 63, 94, 0.6)';
+  }
+
+  // 4. Workspace Hero Banner (View 1 Top)
+  if (workspaceHeroBanner) {
+    if (!isPatched) {
+      workspaceHeroBanner.style.display = 'flex';
+      workspaceHeroBanner.className = isFreshOfficialUpdate ? 'workspace-hero-banner warning' : 'workspace-hero-banner uninjected';
+      if (heroBannerIcon) heroBannerIcon.textContent = isFreshOfficialUpdate ? '🔔' : '⚡';
+      if (heroBannerTitle) {
+        heroBannerTitle.textContent = isFreshOfficialUpdate
+          ? 'Google 官方刚完成版本更新，核心文件被官方重置！'
+          : '欢迎使用 Antigravity 主题工坊！第一步：注入美化底层';
+      }
+      if (heroBannerSub) {
+        heroBannerSub.textContent = isFreshOfficialUpdate
+          ? '点击右侧一键重新注入，自动继承官方最新特性，并全自动恢复个性化壁纸与热重载。'
+          : '当前客户端尚未注入美化扩展。点击右侧按钮一键安全注入，即可开启自定义动态壁纸与极速热重载。';
+      }
+      if (btnHeroInject) {
+        btnHeroInject.style.display = 'inline-flex';
+        btnHeroInject.textContent = isFreshOfficialUpdate ? '⚡ 重新注入美化底层' : '⚡ 一键注入美化底层';
+      }
+      if (btnHeroRestart) btnHeroRestart.style.display = 'none';
+      if (btnBannerClose) btnBannerClose.style.display = 'none';
+    } else if (!isCdpOnline) {
+      workspaceHeroBanner.style.display = 'flex';
+      workspaceHeroBanner.className = 'workspace-hero-banner warning';
+      if (heroBannerIcon) heroBannerIcon.textContent = '🔄';
+      if (heroBannerTitle) heroBannerTitle.textContent = '核心补丁已注入成功！第二步：请重启 Antigravity 客户端';
+      if (heroBannerSub) heroBannerSub.textContent = '重启客户端后将全自动激活 8314 免重启极速热重载通道与 8315 流媒体加速引擎。';
+      if (btnHeroInject) btnHeroInject.style.display = 'none';
+      if (btnHeroRestart) btnHeroRestart.style.display = 'inline-flex';
+      if (btnBannerClose) btnBannerClose.style.display = 'none';
+    } else {
+      if (state.isHeroBannerDismissed) {
+        workspaceHeroBanner.style.display = 'none';
+      } else {
+        workspaceHeroBanner.style.display = 'flex';
+        workspaceHeroBanner.className = 'workspace-hero-banner ready';
+        if (heroBannerIcon) heroBannerIcon.textContent = '✨';
+        if (heroBannerTitle) heroBannerTitle.textContent = '全景美化引擎与 8314 免重启极速热重载已全就绪！';
+        if (heroBannerSub) heroBannerSub.textContent = '在左侧挑选壁纸槽位（支持本地图片/MP4/Steam创意工坊），点击【应用生效】立即可见。';
+        if (btnHeroInject) btnHeroInject.style.display = 'none';
+        if (btnHeroRestart) btnHeroRestart.style.display = 'none';
+        if (btnBannerClose) btnBannerClose.style.display = 'inline-flex';
+      }
     }
-    patchText.textContent = '⚠️ 当前处于官方原生未注入状态，点击下方一键注入';
-    if (btnInstallPatch) {
-      btnInstallPatch.textContent = '⚡ 一键注入 / 安装美化底层';
-      btnInstallPatch.className = 'btn btn-primary btn-block';
+  }
+
+  // 5. Guide Modal Status Badges
+  if (guideStep1Tag) {
+    if (isPatched) {
+      guideStep1Tag.textContent = '🟢 已注入就绪';
+      guideStep1Tag.style.color = '#34d399';
+    } else if (isFreshOfficialUpdate) {
+      guideStep1Tag.textContent = '🟡 官方已更新待重补';
+      guideStep1Tag.style.color = '#fde047';
+    } else {
+      guideStep1Tag.textContent = '🔴 尚未注入';
+      guideStep1Tag.style.color = '#fb7185';
     }
+  }
+  if (btnGuideStep1Inject) {
+    btnGuideStep1Inject.textContent = isPatched ? '✓ 底层已就绪 (点击可重补)' : (isFreshOfficialUpdate ? '⚡ 重新注入美化底层' : '⚡ 立即一键注入美化底层');
+  }
+
+  if (guideStep2Tag) {
+    if (isCdpOnline) {
+      guideStep2Tag.textContent = '🟢 CDP 在线 (免重启热重载就绪)';
+      guideStep2Tag.style.color = '#34d399';
+    } else if (isPatched) {
+      guideStep2Tag.textContent = '🟡 补丁已就绪，等待重启激活';
+      guideStep2Tag.style.color = '#fde047';
+    } else {
+      guideStep2Tag.textContent = '⚪ 等待第一步完成';
+      guideStep2Tag.style.color = 'var(--text-dim)';
+    }
+  }
+  if (btnGuideStep2Restart) {
+    btnGuideStep2Restart.disabled = !isPatched;
+  }
+
+  if (typeof updateMockupScale === 'function') {
+    setTimeout(updateMockupScale, 50);
   }
 }
 
@@ -2026,33 +2351,118 @@ function setupEventListeners() {
     }
   };
 
-  // Safety Center Actions
-  if (btnInstallPatch) {
-    btnInstallPatch.onclick = async () => {
-      btnInstallPatch.disabled = true;
-      const originalText = btnInstallPatch.textContent;
-      btnInstallPatch.textContent = '⏳ 正在自动化安全注入核心 (约需5秒)...';
-      showToast('⚡ 正在注入 Antigravity 美化核心底层，请稍候...', 6000);
+  // Reset Baseline in Presets Page
+  if (btnResetBaselinePresets) {
+    btnResetBaselinePresets.onclick = async () => {
+      if (!confirm('确定要恢复为初版黄金基线全套配置吗？\n（包含 5 大槽位壁纸、对齐位置与纯白高对比字体）')) return;
+      if (state.patchStatus && !state.patchStatus.isPatched) {
+        const shouldInject = confirm(
+          '⚠️ 检测到 Antigravity 客户端尚未注入美化底层！\n\n' +
+          '若不注入底层，官方客户端将无法加载基线壁纸与动态效果。\n\n' +
+          '点击【确定】立即一键注入美化底层，\n点击【取消】仅应用配置到磁盘。'
+        );
+        if (shouldInject) {
+          await executeInstallPatch();
+        }
+      }
       try {
-        const res = await fetch('/api/patch/install', { method: 'POST' });
+        showToast('正在应用【初版黄金基线】...', 2500);
+        const res = await fetch('/api/theme/baseline', { method: 'POST' });
         const data = await res.json();
         if (data.success) {
-          showToast('✨ 核心注入成功！8314 CDP 与 8315 流媒体双引擎已就绪！', 4000);
+          cleanBlobUrls();
+          setDraftDirty(false);
+          if (state.isCdpOnline) {
+            showToast('✨ 已成功恢复为【初版黄金基线】！0.3s 热重载生效');
+          } else if (state.patchStatus && state.patchStatus.isPatched) {
+            showToast('✨ 已成功恢复为【初版黄金基线】！请重启一次客户端使其生效', 6000);
+          } else {
+            showToast('⚠️ 配置已应用！需点击【一键注入底层】并重启客户端方可在应用内显示', 6000);
+          }
           await fetchStatus();
         } else {
-          showToast('❌ 注入失败: ' + (data.error || '未知错误'), 4000);
+          showToast('恢复基线失败: ' + (data.error || '未知错误'));
         }
       } catch (e) {
-        showToast('❌ 注入失败: ' + e.message, 5000);
-      } finally {
-        btnInstallPatch.disabled = false;
-        btnInstallPatch.textContent = originalText;
+        showToast('恢复基线失败: ' + e.message);
       }
     };
   }
 
+  // Patch and Injection Actions (Unified across View 1, View 4, Guide Modal, Header)
+  if (btnInstallPatch) btnInstallPatch.onclick = executeInstallPatch;
+  if (btnQuickInject) btnQuickInject.onclick = executeInstallPatch;
+  if (btnHeroInject) btnHeroInject.onclick = executeInstallPatch;
+  if (btnGuideStep1Inject) btnGuideStep1Inject.onclick = executeInstallPatch;
+
+  if (patchStatusPill) {
+    patchStatusPill.onclick = () => {
+      if (!state.patchStatus || !state.patchStatus.isPatched) {
+        const isFresh = state.patchStatus && state.patchStatus.isFreshOfficialUpdate;
+        const msg = isFresh
+          ? '检测到 Google 官方刚完成更新，底层文件被官方重置！\n\n是否立即一键重新注入美化底层？'
+          : '当前 Antigravity 尚未注入美化底层！\n\n注入后可解锁透明毛玻璃、全景壁纸与 0.3s 免重启极速热更。\n\n是否立即一键注入？';
+        if (confirm(msg)) {
+          executeInstallPatch();
+        }
+      } else if (!state.isCdpOnline) {
+        if (confirm('🟡 核心美化补丁已就绪！\n\n但检测到 CDP 8314 热重载通道尚未连接，需重启一次客户端激活。\n\n是否立即一键重启 Antigravity 客户端？')) {
+          handleRestartAntigravity();
+        }
+      } else {
+        showToast('🟢 核心美化底层已就绪：CDP 8314 与流媒体 8315 均在线！');
+      }
+    };
+  }
+
+  // Client Control & Restart
   if (btnRestartApp) btnRestartApp.onclick = handleRestartAntigravity;
   if (btnRestartAppCard) btnRestartAppCard.onclick = handleRestartAntigravity;
+  if (btnQuickRestart) btnQuickRestart.onclick = handleRestartAntigravity;
+  if (btnHeroRestart) btnHeroRestart.onclick = handleRestartAntigravity;
+  if (btnGuideStep2Restart) btnGuideStep2Restart.onclick = handleRestartAntigravity;
+
+  // Newbie Guide Modal & Banners
+  if (btnOpenGuide) btnOpenGuide.onclick = openGuideModal;
+  if (btnHeroGuide) btnHeroGuide.onclick = openGuideModal;
+  if (btnCloseGuideModal) btnCloseGuideModal.onclick = closeGuideModal;
+  if (btnFinishGuide) {
+    btnFinishGuide.onclick = () => {
+      closeGuideModal();
+      switchTab('view-preview');
+    };
+  }
+  if (btnGuideStep3Workspace) {
+    btnGuideStep3Workspace.onclick = () => {
+      closeGuideModal();
+      switchTab('view-preview');
+    };
+  }
+  if (btnGuideStep3We) {
+    btnGuideStep3We.onclick = () => {
+      closeGuideModal();
+      switchTab('view-we');
+    };
+  }
+  if (btnGuideStep4Go) {
+    btnGuideStep4Go.onclick = () => {
+      closeGuideModal();
+      switchTab('view-preview');
+    };
+  }
+  if (guideModal) {
+    guideModal.onclick = (e) => {
+      if (e.target === guideModal) closeGuideModal();
+    };
+  }
+  if (btnBannerClose) {
+    btnBannerClose.onclick = () => {
+      state.isHeroBannerDismissed = true;
+      try { localStorage.setItem('ag_hero_banner_dismissed', 'true'); } catch(_) {}
+      if (workspaceHeroBanner) workspaceHeroBanner.style.display = 'none';
+      if (typeof updateMockupScale === 'function') updateMockupScale();
+    };
+  }
 
   btnVanilla.onclick = async () => {
     if (!confirm('确定要恢复为 Antigravity 官方原版纯净模式吗？\n（当前壁纸将自动保存为快照，稍后随时可一键还原）')) return;
