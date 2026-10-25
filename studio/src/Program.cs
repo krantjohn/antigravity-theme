@@ -7,6 +7,8 @@ using System.Threading;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using System.IO.Compression;
+using System.Security.Cryptography;
 using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Web.WebView2.Core;
 
@@ -80,7 +82,7 @@ namespace AntigravityThemeStudio
                 }
 
                 string targetLoader = Path.Combine(cacheDir, "WebView2Loader.dll");
-                if (!File.Exists(targetLoader))
+                if (!File.Exists(targetLoader) || new FileInfo(targetLoader).Length == 0)
                 {
                     using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("WebView2Loader.dll"))
                     {
@@ -99,12 +101,124 @@ namespace AntigravityThemeStudio
                     }
                 }
 
-                if (File.Exists(targetLoader))
+                if (File.Exists(targetLoader) && new FileInfo(targetLoader).Length > 0)
                 {
                     SetDllDirectory(cacheDir);
                 }
             }
             catch { }
+        }
+
+        private static string EnsureStudioRuntime()
+        {
+            try
+            {
+                string runtimeDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "antigravity_studio_host",
+                    "runtime"
+                );
+
+                string serverScript = Path.Combine(runtimeDir, "studio", "server.js");
+                string hashFile = Path.Combine(runtimeDir, ".bundle_hash");
+
+                using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("app_bundle.zip"))
+                {
+                    if (stream == null) return null;
+
+                    string bundleHash;
+                    using (SHA256 sha = SHA256.Create())
+                    {
+                        byte[] hashBytes = sha.ComputeHash(stream);
+                        bundleHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                    }
+
+                    if (stream.CanSeek)
+                    {
+                        stream.Seek(0, SeekOrigin.Begin);
+                    }
+
+                    // 检查本地缓存是否与当前内嵌 bundle 的哈希完全一致
+                    if (File.Exists(serverScript) && File.Exists(hashFile))
+                    {
+                        try
+                        {
+                            string cachedHash = File.ReadAllText(hashFile).Trim();
+                            if (string.Equals(cachedHash, bundleHash, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return runtimeDir;
+                            }
+                        }
+                        catch { }
+                    }
+
+                    // 释放 bundle 到运行时目录
+                    if (!Directory.Exists(runtimeDir))
+                    {
+                        Directory.CreateDirectory(runtimeDir);
+                    }
+
+                    bool allExtracted = true;
+                    using (ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Read))
+                    {
+                        foreach (ZipArchiveEntry entry in archive.Entries)
+                        {
+                            string relPath = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                            string destPath = Path.Combine(runtimeDir, relPath);
+
+                            if (string.IsNullOrEmpty(entry.Name) || entry.FullName.EndsWith("/") || entry.FullName.EndsWith("\\"))
+                            {
+                                if (!Directory.Exists(destPath))
+                                {
+                                    Directory.CreateDirectory(destPath);
+                                }
+                                continue;
+                            }
+
+                            string destDir = Path.GetDirectoryName(destPath);
+                            if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                            {
+                                Directory.CreateDirectory(destDir);
+                            }
+
+                            if (File.Exists(destPath))
+                            {
+                                try { File.SetAttributes(destPath, FileAttributes.Normal); } catch { }
+                            }
+
+                            try
+                            {
+                                using (Stream entryStream = entry.Open())
+                                using (FileStream fs = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+                                {
+                                    entryStream.CopyTo(fs);
+                                }
+                            }
+                            catch
+                            {
+                                allExtracted = false;
+                            }
+                        }
+                    }
+
+                    if (allExtracted)
+                    {
+                        try
+                        {
+                            File.WriteAllText(hashFile, bundleHash);
+                        }
+                        catch { }
+                    }
+
+                    if (File.Exists(serverScript))
+                    {
+                        return runtimeDir;
+                    }
+                }
+            }
+            catch { }
+
+            return null;
         }
 
         private static void RunApp()
@@ -115,6 +229,7 @@ namespace AntigravityThemeStudio
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
             string serverScript = Path.Combine(appDir, "studio", "server.js");
 
+            // 1. 优先检查当前目录或上级目录是否存在 studio/server.js (开发/源码仓库模式)
             if (!File.Exists(serverScript))
             {
                 string altServer = Path.Combine(appDir, "..", "studio", "server.js");
@@ -122,6 +237,21 @@ namespace AntigravityThemeStudio
                 {
                     serverScript = Path.GetFullPath(altServer);
                     appDir = Path.GetDirectoryName(Path.GetDirectoryName(serverScript));
+                }
+            }
+
+            // 2. 若当前目录及上级目录均不存在后台脚本 (单文件独立运行模式)，自动释放内嵌资源到用户运行时目录
+            if (!File.Exists(serverScript))
+            {
+                string runtimeDir = EnsureStudioRuntime();
+                if (!string.IsNullOrEmpty(runtimeDir))
+                {
+                    string runtimeServer = Path.Combine(runtimeDir, "studio", "server.js");
+                    if (File.Exists(runtimeServer))
+                    {
+                        appDir = runtimeDir;
+                        serverScript = runtimeServer;
+                    }
                 }
             }
 
@@ -167,6 +297,9 @@ namespace AntigravityThemeStudio
                 nodePsi.UseShellExecute = false;
                 nodePsi.WindowStyle = ProcessWindowStyle.Hidden;
 
+                // 注入 ELECTRON_RUN_AS_NODE 环境变量：若回退使用 Antigravity.exe 作为解释器时以纯 Node 模式执行
+                nodePsi.EnvironmentVariables["ELECTRON_RUN_AS_NODE"] = "1";
+
                 _nodeProcess = Process.Start(nodePsi);
 
                 // 绑定到 Windows Job Object，内核级保证宿主关闭时自动销毁子进程
@@ -196,27 +329,33 @@ namespace AntigravityThemeStudio
             }
         }
 
+        private static readonly object _cleanupLock = new object();
+
         public static void CleanupNodeProcess()
         {
-            if (_nodeProcess != null && !_nodeProcess.HasExited)
+            lock (_cleanupLock)
             {
-                try
+                if (_nodeProcess != null && !_nodeProcess.HasExited)
                 {
-                    var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:8316/api/shutdown");
-                    req.Method = "POST";
-                    req.Timeout = 500;
-                    using (req.GetResponse()) { }
-                }
-                catch { }
-
-                try
-                {
-                    if (!_nodeProcess.WaitForExit(400))
+                    try
                     {
-                        _nodeProcess.Kill();
+                        var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:8316/api/shutdown");
+                        req.Method = "POST";
+                        req.Timeout = 500;
+                        using (req.GetResponse()) { }
                     }
+                    catch { }
+
+                    try
+                    {
+                        if (!_nodeProcess.WaitForExit(400))
+                        {
+                            _nodeProcess.Kill();
+                        }
+                    }
+                    catch { }
+                    _nodeProcess = null;
                 }
-                catch { }
             }
         }
 
@@ -253,10 +392,10 @@ namespace AntigravityThemeStudio
 
             string[] knownPaths = new string[]
             {
-                @"D:\720721\nodejs\node.exe",
                 @"C:\Program Files\nodejs\node.exe",
                 @"C:\Program Files (x86)\nodejs\node.exe",
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\node\node.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\nodejs\node.exe"),
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"npm\node.exe")
             };
 
@@ -282,6 +421,43 @@ namespace AntigravityThemeStudio
                         catch { }
                     }
                 }
+            }
+
+            // 自动回退探测 Google Antigravity 原生 Electron 运行时 (支持以 ELECTRON_RUN_AS_NODE 模式作为 Node 执行)
+            // 优先探测正在运行的 Antigravity 实例所在路径
+            try
+            {
+                Process[] procs = Process.GetProcessesByName("Antigravity");
+                if (procs != null && procs.Length > 0)
+                {
+                    foreach (var proc in procs)
+                    {
+                        try
+                        {
+                            string procPath = proc.MainModule.FileName;
+                            if (!string.IsNullOrEmpty(procPath) && File.Exists(procPath))
+                            {
+                                return procPath;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
+
+            string[] antigravityPaths = new string[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\antigravity\Antigravity.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"Antigravity\Antigravity.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Antigravity\Antigravity.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Programs\Google\Antigravity\Antigravity.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"Google\Antigravity\Antigravity.exe")
+            };
+
+            foreach (string p in antigravityPaths)
+            {
+                if (!string.IsNullOrEmpty(p) && File.Exists(p)) return p;
             }
 
             return null;
@@ -316,6 +492,10 @@ namespace AntigravityThemeStudio
             if (File.Exists(icoPath))
             {
                 try { this.Icon = new Icon(icoPath); } catch { }
+            }
+            if (this.Icon == null)
+            {
+                try { this.Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location); } catch { }
             }
 
             // 创建并嵌入 WebView2 控件

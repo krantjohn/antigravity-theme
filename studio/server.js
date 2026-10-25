@@ -4,6 +4,12 @@ const path = require('path');
 const os = require('os');
 const { exec, execSync } = require('child_process');
 
+// If started under Electron fallback (ELECTRON_RUN_AS_NODE=1), clear the variable
+// so child processes (such as restarting Antigravity GUI) start in GUI mode.
+if (process.env.ELECTRON_RUN_AS_NODE) {
+  delete process.env.ELECTRON_RUN_AS_NODE;
+}
+
 const themeEngine = require('../core/theme_engine');
 
 const PORT = 8316;
@@ -106,6 +112,7 @@ function restartAntigravity() {
 
     console.log('[Studio] 正在重启 Antigravity 客户端...');
     const psScript = [
+      'Remove-Item Env:\\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue',
       '$p = Get-Process Antigravity -ErrorAction SilentlyContinue',
       'if ($p) {',
       '  $p | Stop-Process -Force -ErrorAction SilentlyContinue',

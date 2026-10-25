@@ -83,4 +83,6 @@ antigravity2-cn-main/
 *.exe
 studio/src/bin/
 studio/src/obj/
+studio/lib/*.zip
+
 
