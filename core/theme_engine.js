@@ -984,6 +984,7 @@ body::-webkit-scrollbar,
 }
 
 /* 2. Fullscreen GPU-Accelerated Unified Base Wallpaper (左: 主对话区/全局底图) */
+${!isLeftNone ? `
 body::before {
   content: "" !important;
   position: fixed !important;
@@ -1023,6 +1024,25 @@ body::before {
   backface-visibility: hidden !important;
   contain: layout paint !important;
 }
+` : `
+/* 主对话区域已恢复官方原版纯净样式 */
+body::before, html::before {
+  display: none !important;
+  background: none !important;
+  background-image: none !important;
+  opacity: 0 !important;
+  content: "" !important;
+}
+
+#antigravity-video-left,
+.antigravity-slot-video[data-slot="left"] {
+  display: none !important;
+}
+
+html, body {
+  background-color: var(--color-background, #131722) !important;
+}
+`}
 
 /* 3. Global Transparent Layout */
 #root, #app, [data-theme], .h-screen, .w-screen, .flex-1 {
@@ -1539,7 +1559,22 @@ div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-men
   background-image: none !important;
   background-color: transparent !important;
 }
-` : ''}
+` : `
+/* 底部输入框强制恢复官方原生深色卡片样式 */
+[id="antigravity.agentSidePanelInputBox"] > div.bg-card,
+[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"],
+div.rounded-2xl.bg-card-border > div.bg-card,
+div.rounded-2xl.bg-card-border > div[class*="bg-card"],
+div[data-ag-positioned],
+[data-ag-positioned] {
+  background-image: none !important;
+  background-color: var(--color-card, #131722) !important;
+  background: var(--color-card, #131722) !important;
+}
+.antigravity-slot-video[data-slot="bottom"] {
+  display: none !important;
+}
+`}
 
 /* 8.3 Actions / Slash Command Popup Menu 磨砂琉璃质感（彻底杜绝输入框壁纸渗漏或重复切片） */
 div[role="listbox"],
@@ -1871,7 +1906,22 @@ div:has(> .xterm-screen) {
   position: relative !important;
   z-index: 1 !important;
 }
-` : ''}
+` : `
+/* 活跃终端界面背景彻底还原 */
+.terminal-wrapper,
+[data-panel="terminal"],
+div.terminal,
+div.xterm,
+.terminal.xterm {
+  background-image: none !important;
+  background: transparent !important;
+  border-left: none !important;
+  box-shadow: none !important;
+}
+.antigravity-slot-video[data-slot="mid"] {
+  display: none !important;
+}
+`}
 
 /* 终端字体：升级为圆润可爱带中文等宽的 Maple Mono NF CN 现代编程字体 */
 .xterm-char-measure-element {
@@ -2037,7 +2087,20 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
   backface-visibility: hidden !important;
   will-change: transform !important;
 }
-` : ''}
+` : `
+/* 右侧抽屉背景彻底还原 */
+[aria-label="Auxiliary Pane"],
+div[role="region"][aria-label="Terminal"],
+[class*="terminal-drawer"],
+div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background {
+  background-image: none !important;
+  background: transparent !important;
+  border-left: none !important;
+}
+.antigravity-slot-video[data-slot="right"] {
+  display: none !important;
+}
+`}
 
 /* 拖拽与缩放时禁用过渡动画，实现 60FPS 零延迟跟随 */
 body.is-resizing,
@@ -2152,7 +2215,18 @@ div.settings-modal-container {
   z-index: 0 !important;
   border-radius: 20px !important;
 }
-` : ''}
+` : `
+/* 设置弹窗背景彻底还原 */
+[role="dialog"],
+div[data-state="open"]:has(div.bg-sidebar),
+div.settings-modal-container {
+  background-image: none !important;
+  background-color: var(--color-popover, #131722) !important;
+}
+.antigravity-slot-video[data-slot="settings"] {
+  display: none !important;
+}
+`}
 
 [role="dialog"] .bg-background,
 [role="dialog"] [class*="bg-background"],
@@ -3620,6 +3694,54 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
   const reloadPromise = await triggerLiveHotReload(css, slotsConfig);
 
   console.log(`✨ 【${slotInput}】壁纸更换完成！已实时生效。`);
+  return reloadPromise;
+}
+
+/**
+ * 将指定单个槽位恢复为官方原版纯净模样 (清除该区域壁纸、保留官方原生背景与质感)
+ * @param {string} slotInput - 槽位名称或别名 (左, 中, 右, 下, 设置 等)
+ * @returns {Promise<boolean>}
+ */
+async function restoreSlotVanilla(slotInput) {
+  if (!slotInput) {
+    console.error('❌ 请提供槽位名称: 左, 中, 右, 下, 设置');
+    return false;
+  }
+  const slotKey = SLOT_ALIASES[slotInput.toLowerCase()];
+  if (!slotKey || !SLOTS_META[slotKey]) {
+    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置`);
+    return false;
+  }
+
+  const slotMeta = SLOTS_META[slotKey];
+  console.log(`[1/3] 正在将槽位【${slotInput} (${slotMeta.desc})】恢复为官方原版纯净模样...`);
+
+  const slotsConfig = loadSlotsConfig();
+  slotsConfig[slotKey] = {
+    key: slotKey,
+    file: '',
+    type: 'none',
+    position: 'center center',
+    desc: slotMeta.desc,
+    isOriginal: true,
+    version: Date.now()
+  };
+  delete slotsConfig[slotKey].poster;
+  delete slotsConfig[slotKey].unsupportedCodec;
+
+  saveSlotsConfig(slotsConfig);
+  console.log(`✓ slots_config.json 已更新为原版配置`);
+
+  console.log(`[2/3] 重新编译并输出 custom_theme.css...`);
+  const css = generateMasterCss(slotsConfig);
+  fs.writeFileSync(customCssPath, css, 'utf-8');
+  try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch(e) {}
+  console.log(`✓ custom_theme.css 已更新 (${(css.length / 1024 / 1024).toFixed(2)} MB)`);
+
+  console.log(`[3/3] 触发界面热重载与实时生效...`);
+  const reloadPromise = await triggerLiveHotReload(css, slotsConfig);
+
+  console.log(`✨ 【${slotInput}】已成功恢复为官方原版纯净模样！已实时生效。`);
   return reloadPromise;
 }
 
@@ -5199,6 +5321,7 @@ async function installPatch() {
 
 module.exports = {
   swapWallpaper,
+  restoreSlotVanilla,
   swapWallpaperFromWE,
   listWallpaperEngineWallpapers,
   scanWorkshopWallpapers,

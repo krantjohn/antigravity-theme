@@ -3877,3 +3877,54 @@ body {
 }
 
 
+
+
+/* =========================================================================
+   17. Per-Slot Vanilla Pure Reset Styles (针对单个槽位恢复原版纯净样式)
+   ========================================================================= */
+.mock-chat-workspace.slot-vanilla .mock-bg-left,
+.mock-floating-input-wrap.slot-vanilla .mock-slot-bg,
+.mock-pane-content.slot-vanilla .mock-slot-bg,
+.mock-settings-modal.slot-vanilla .mock-slot-bg {
+  display: none !important;
+}
+
+.mock-chat-workspace.slot-vanilla {
+  background: #0d0e15 !important;
+}
+
+.mock-chat-workspace.slot-vanilla .user-bubble-box {
+  background: #242938 !important;
+  color: #f1f5f9 !important;
+  text-shadow: none !important;
+}
+
+.mock-chat-workspace.slot-vanilla .assistant-content-card {
+  background: #141724 !important;
+  backdrop-filter: none !important;
+  color: #f1f5f9 !important;
+  text-shadow: none !important;
+}
+
+.mock-floating-input-wrap.slot-vanilla {
+  background: #131722 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+}
+
+.mock-floating-input-wrap.slot-vanilla .mock-input-textarea {
+  text-shadow: none !important;
+}
+
+.mock-terminal-view.slot-vanilla {
+  background: #0a0b10 !important;
+}
+
+.mock-subagents-view.slot-vanilla {
+  background: #11131c !important;
+}
+
+.mock-settings-modal.slot-vanilla {
+  background: #131722 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8) !important;
+}

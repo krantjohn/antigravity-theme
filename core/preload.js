@@ -793,13 +793,17 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           oldVids[i].load();
           oldVids[i].remove();
         }
-        if (config.isOriginal || (slotData && slotData.type === 'none')) {
+        if (config.isOriginal || (slotData && (slotData.type === 'none' || slotData.isOriginal))) {
           for (let i = 0; i < selectors.length; i++) {
             try {
               const el = document.querySelector(selectors[i]);
               if (el) {
                 el.style.setProperty('background-image', 'none', 'important');
-                el.style.setProperty('background-color', 'var(--color-card)', 'important');
+                if (slotKey === 'bottom') {
+                  el.style.setProperty('background-color', 'var(--color-card, #131722)', 'important');
+                } else {
+                  el.style.removeProperty('background-color');
+                }
                 el.style.removeProperty('overflow');
                 el.style.removeProperty('contain');
                 el.style.removeProperty('will-change');

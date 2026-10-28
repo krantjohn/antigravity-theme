@@ -118,7 +118,7 @@ function restartAntigravity() {
       '  $p | Stop-Process -Force -ErrorAction SilentlyContinue',
       '  Start-Sleep -Milliseconds 800',
       '}',
-      `Start-Process -FilePath "${exePath.replace(/\\/g, '\\\\')}"`
+      `Start-Process -FilePath "explorer.exe" -ArgumentList "${exePath.replace(/\\/g, '\\\\')}"`
     ].join("\r\n");
 
     const b64 = Buffer.from(psScript, 'utf16le').toString('base64');
@@ -624,12 +624,18 @@ const server = http.createServer(async (req, res) => {
       for (const slotKey of ['left', 'mid', 'right', 'bottom', 'settings']) {
         const slotData = draftConfig[slotKey];
         if (slotData) {
-          if (slotData.stagedFilePath && fs.existsSync(slotData.stagedFilePath)) {
-            await themeEngine.swapWallpaper(slotKey, slotData.stagedFilePath);
-          }
-          if (slotData.position) {
-            const [x, y] = slotData.position.split(' ');
-            await themeEngine.setPosition(slotKey, x || 'center', y || 'center');
+          if (slotData.type === 'none' || slotData.isOriginal) {
+            if (typeof themeEngine.restoreSlotVanilla === 'function') {
+              await themeEngine.restoreSlotVanilla(slotKey);
+            }
+          } else {
+            if (slotData.stagedFilePath && fs.existsSync(slotData.stagedFilePath)) {
+              await themeEngine.swapWallpaper(slotKey, slotData.stagedFilePath);
+            }
+            if (slotData.position) {
+              const [x, y] = slotData.position.split(' ');
+              await themeEngine.setPosition(slotKey, x || 'center', y || 'center');
+            }
           }
         }
       }
@@ -643,6 +649,26 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, slotsConfig: activeConfig });
     } catch (err) {
       console.error('[Studio] 批量应用草稿失败:', err);
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 8.6. POST /api/theme/slot/restore-vanilla - Restore a specific slot to official vanilla styling
+  if (req.method === 'POST' && pathname === '/api/theme/slot/restore-vanilla') {
+    try {
+      const body = await parseBody(req);
+      const { slot } = body;
+      if (!slot) {
+        return sendJson(res, 400, { success: false, error: 'slot parameter is required' });
+      }
+      console.log(`[Studio] 收到槽位【${slot}】恢复原版请求...`);
+      if (typeof themeEngine.restoreSlotVanilla === 'function') {
+        await themeEngine.restoreSlotVanilla(slot);
+      }
+      const activeConfig = themeEngine.loadSlotsConfig();
+      return sendJson(res, 200, { success: true, slot, slotsConfig: activeConfig });
+    } catch (err) {
+      console.error(`[Studio] 槽位恢复原版失败:`, err);
       return sendJson(res, 500, { success: false, error: err.message });
     }
   }

@@ -677,6 +677,8 @@ namespace AntigravityThemeStudio
 
         private const int JobObjectExtendedLimitInformation = 9;
         private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000;
+        private const uint JOB_OBJECT_LIMIT_BREAKAWAY_OK = 0x00000800;
+        private const uint JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK = 0x00001000;
 
         private static IntPtr _jobHandle = IntPtr.Zero;
         private static object _lock = new object();
@@ -693,7 +695,7 @@ namespace AntigravityThemeStudio
                     {
                         _jobHandle = CreateJobObject(IntPtr.Zero, null);
                         var info = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION();
-                        info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+                        info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_BREAKAWAY_OK | JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK;
 
                         int length = Marshal.SizeOf(typeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
                         IntPtr extendedInfoPtr = Marshal.AllocHGlobal(length);

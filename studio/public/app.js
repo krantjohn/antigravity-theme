@@ -51,6 +51,7 @@ const sliderPosY = document.getElementById('slider-pos-y');
 const valPosX = document.getElementById('val-pos-x');
 const valPosY = document.getElementById('val-pos-y');
 const btnResetSlot = document.getElementById('btn-reset-slot');
+const btnRestoreSlotVanilla = document.getElementById('btn-restore-slot-vanilla');
 const btnResetPos = document.getElementById('btn-reset-pos');
 const btnResetAllPos = document.getElementById('btn-reset-all-pos');
 const btnBrowseNative = document.getElementById('btn-browse-native');
@@ -405,15 +406,17 @@ function renderSlotInspector() {
     (slotData.file && slotData.file.match(/\.(mp4|webm|mov)$/i)) || 
     (slotData.stagedFilePath && slotData.stagedFilePath.match(/\.(mp4|webm|mov)$/i)) ||
     (slotData.stagedFileName && slotData.stagedFileName.match(/\.(mp4|webm|mov)$/i));
-  if (isVid) {
+  const isVanilla = slotData.type === 'none' || slotData.isOriginal || (!slotData.file && !slotData.stagedFilePath && !slotData.stagedFileName);
+  if (isVanilla) {
+    typeBadgeEl.className = 'badge badge-subtle';
+    typeBadgeEl.textContent = '🛡️ 原版纯净 (Vanilla)';
+    activeSlotFileEl.textContent = '官方原生深色主题 (无壁纸)';
+  } else if (isVid) {
     typeBadgeEl.className = 'badge badge-accent';
     typeBadgeEl.textContent = '🎬 4K/2K 动态视频';
-  } else if (slotData.file || slotData.stagedFilePath || slotData.stagedFileName) {
-    typeBadgeEl.className = 'badge badge-subtle';
-    typeBadgeEl.textContent = '🖼️ 静态图像';
   } else {
     typeBadgeEl.className = 'badge badge-subtle';
-    typeBadgeEl.textContent = '无壁纸 (Vanilla)';
+    typeBadgeEl.textContent = '🖼️ 静态图像';
   }
 
   // Parse Position Coordinates
@@ -483,7 +486,11 @@ function renderMockupPreview() {
     let mediaUrl = '';
     let isVideo = false;
 
-    if (state.blobUrls[slotKey]) {
+    const isSlotVanilla = slotData.type === 'none' || slotData.isOriginal;
+    if (isSlotVanilla) {
+      mediaUrl = '';
+      isVideo = false;
+    } else if (state.blobUrls[slotKey]) {
       mediaUrl = state.blobUrls[slotKey];
       const pendingFile = state.pendingFiles[slotKey];
       isVideo = pendingFile ? pendingFile.type.startsWith('video/') : false;
@@ -552,6 +559,7 @@ function renderMockupPreview() {
 
     // Interactive target highlight
     if (slotContainer) {
+      slotContainer.classList.toggle('slot-vanilla', Boolean(isSlotVanilla));
       if (slotKey === 'bottom') {
         slotContainer.classList.toggle('has-media', Boolean(mediaUrl));
       }
@@ -1400,6 +1408,32 @@ function initPositionControls() {
     updateActiveSlotPosition(currentCoords.x, currentCoords.y);
     showToast('全部 5 大槽位对齐位置已重置为默认基准');
   };
+
+  if (btnRestoreSlotVanilla) {
+    btnRestoreSlotVanilla.onclick = () => {
+      const slot = state.activeSlot;
+      const meta = state.slotsMeta[slot] || {};
+
+      if (state.blobUrls[slot]) {
+        try { URL.revokeObjectURL(state.blobUrls[slot]); } catch (_) {}
+        delete state.blobUrls[slot];
+        delete state.pendingFiles[slot];
+      }
+      if (!state.draftConfig[slot]) state.draftConfig[slot] = {};
+      state.draftConfig[slot].key = slot;
+      state.draftConfig[slot].file = '';
+      state.draftConfig[slot].type = 'none';
+      state.draftConfig[slot].isOriginal = true;
+      delete state.draftConfig[slot].stagedFilePath;
+      delete state.draftConfig[slot].stagedFileName;
+      delete state.draftConfig[slot].poster;
+
+      setDraftDirty(true);
+      renderSlotInspector();
+      renderMockupPreview();
+      showToast(`🛡️ 已将【${meta.desc || slot}】恢复为官方原版纯净样式（点击上方“应用生效”即可生效）`);
+    };
+  }
 
   btnResetSlot.onclick = () => {
     const slot = state.activeSlot;
