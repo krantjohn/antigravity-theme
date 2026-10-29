@@ -80,6 +80,8 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
               cachedSlotsContent = fs.readFileSync(configPath, 'utf8');
               cachedSlotsMtime = stat.mtimeMs;
               cachedSlotsEtag = `W/"slots-${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+              statCache.clear();
+              filePathCache.clear();
             }
 
             if (req.headers['if-none-match'] === cachedSlotsEtag) {
@@ -119,6 +121,8 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
               cachedCssBuf = fs.readFileSync(cssPath);
               cachedCssMtime = stat.mtimeMs;
               cachedCssEtag = `W/"css-${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+              statCache.clear();
+              filePathCache.clear();
             }
 
             if (req.headers['if-none-match'] === cachedCssEtag) {
@@ -188,7 +192,7 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
       let stat;
       const now = Date.now();
       const cachedStat = statCache.get(filePath);
-      if (cachedStat && (now - cachedStat.time < 3000)) {
+      if (cachedStat && (now - cachedStat.time < 500)) {
         stat = cachedStat.stat;
       } else {
         try {
@@ -222,7 +226,7 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
       const isMedia = ext === '.mp4' || ext === '.webm' || ext === '.ogg' || ext === '.jpg' || ext === '.png' || ext === '.gif' || ext === '.webp';
       const hasVersion = urlObj.searchParams.has('v');
       const cacheHeader = isMedia 
-        ? (hasVersion ? 'public, max-age=31536000, immutable' : 'public, max-age=86400, stale-while-revalidate=604800') 
+        ? (hasVersion ? 'public, max-age=31536000, immutable' : 'no-cache, no-store, must-revalidate') 
         : 'no-cache';
 
       if (req.method === 'HEAD') {

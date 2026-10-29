@@ -612,7 +612,7 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 8.5. POST /api/theme/apply-draft - Batch apply drafted theme changes to Antigravity
+  // 8.5. POST /api/theme/apply-draft - Atomic batch apply drafted theme changes to Antigravity
   if (req.method === 'POST' && pathname === '/api/theme/apply-draft') {
     try {
       const body = await parseBody(req);
@@ -621,32 +621,8 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { success: false, error: 'draftConfig is required' });
       }
 
-      console.log('[Studio] 收到正式应用草稿指令，正在批量装配并固化配置...');
-      for (const slotKey of ['left', 'mid', 'right', 'bottom', 'settings']) {
-        const slotData = draftConfig[slotKey];
-        if (slotData) {
-          if (slotData.type === 'none' || slotData.isOriginal) {
-            if (typeof themeEngine.restoreSlotVanilla === 'function') {
-              await themeEngine.restoreSlotVanilla(slotKey);
-            }
-          } else {
-            if (slotData.stagedFilePath && fs.existsSync(slotData.stagedFilePath)) {
-              await themeEngine.swapWallpaper(slotKey, slotData.stagedFilePath);
-            }
-            if (slotData.position) {
-              const [x, y] = slotData.position.split(' ');
-              await themeEngine.setPosition(slotKey, x || 'center', y || 'center');
-            }
-          }
-        }
-      }
-
-      if (fontColor) {
-        const fKey = typeof fontColor === 'string' ? fontColor : (fontColor.id || fontColor.primary);
-        if (fKey) await themeEngine.setFontColor(fKey);
-      }
-
-      const activeConfig = themeEngine.loadSlotsConfig();
+      console.log('[Studio] 收到正式应用草稿指令，正在原子批量装配并固化配置...');
+      const activeConfig = await themeEngine.batchApplyDraft(draftConfig, fontColor);
       return sendJson(res, 200, { success: true, slotsConfig: activeConfig });
     } catch (err) {
       console.error('[Studio] 批量应用草稿失败:', err);

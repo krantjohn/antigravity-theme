@@ -930,16 +930,17 @@ div.settings-modal-container {
 
   const serverBase = `http://127.0.0.1:${DEFAULT_PORT || 8315}`;
   
-  function getInlineOrUrl(imgFile) {
+  function getInlineOrUrl(imgFile, slotVersion) {
     if (!imgFile) return '';
-    return `${serverBase}/${encodeURIComponent(imgFile)}`;
+    const vParam = slotVersion ? `?v=${slotVersion}` : `?v=${Date.now()}`;
+    return `${serverBase}/${encodeURIComponent(imgFile)}${vParam}`;
   }
 
-  const b64Left = getInlineOrUrl(leftImg);
-  const b64Mid = getInlineOrUrl(midImg);
-  const b64Right = getInlineOrUrl(rightImg);
-  const b64Bottom = getInlineOrUrl(bottomImg);
-  const b64Settings = getInlineOrUrl(settingsImg);
+  const b64Left = getInlineOrUrl(leftImg, slotsConfig.left && slotsConfig.left.version);
+  const b64Mid = getInlineOrUrl(midImg, slotsConfig.mid && slotsConfig.mid.version);
+  const b64Right = getInlineOrUrl(rightImg, slotsConfig.right && slotsConfig.right.version);
+  const b64Bottom = getInlineOrUrl(bottomImg, slotsConfig.bottom && slotsConfig.bottom.version);
+  const b64Settings = getInlineOrUrl(settingsImg, slotsConfig.settings && slotsConfig.settings.version);
 
   const posLeft = getSlotPosition(slotsConfig, 'left');
   const posMid = getSlotPosition(slotsConfig, 'mid');
@@ -2526,7 +2527,8 @@ function getClientVideoScript(config) {
   ['left', 'mid', 'right', 'bottom', 'settings'].forEach(slotKey => {
     const slotData = config && config[slotKey];
     if (slotData && slotData.poster) {
-      slotPosters[slotKey] = `${serverBase}/${encodeURIComponent(slotData.poster)}`;
+      const v = slotData.version ? `?v=${slotData.version}` : `?v=${Date.now()}`;
+      slotPosters[slotKey] = `${serverBase}/${encodeURIComponent(slotData.poster)}${v}`;
     }
   });
   const slotPostersJson = JSON.stringify(slotPosters);
@@ -2879,60 +2881,154 @@ function getClientVideoScript(config) {
           }
           checkAndShowVideo(leftVid);
         } else {
-          const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
-          for (let i = 1; i < allLeftVids.length; i++) {
-            allLeftVids[i].pause();
-            allLeftVids[i].removeAttribute('src');
-            allLeftVids[i].load();
-            allLeftVids[i].remove();
-          }
-          leftVid = allLeftVids[0];
-          if (!leftVid) {
-            leftVid = document.createElement('video');
-            leftVid.id = 'antigravity-video-left';
-            leftVid.className = 'antigravity-slot-video';
-            leftVid.setAttribute('data-slot', 'left');
-            leftVid.muted = true;
-            leftVid.defaultMuted = true;
-            leftVid.setAttribute('muted', '');
-            leftVid.autoplay = true;
-            leftVid.loop = true;
-            leftVid.playsInline = true;
-            leftVid.setAttribute('playsinline', '');
-            leftVid.setAttribute('autoplay', '');
-            leftVid.setAttribute('loop', '');
-            leftVid.preload = 'auto';
-            leftVid.setAttribute('preload', 'auto');
-            leftVid.crossOrigin = 'anonymous';
-            leftVid.setAttribute('crossorigin', 'anonymous');
-            leftVid.disablePictureInPicture = true;
-            leftVid.setAttribute('disablepictureinpicture', '');
-            leftVid.disableRemotePlayback = true;
-            leftVid.setAttribute('disableremoteplayback', '');
-            leftVid.style.position = 'fixed';
-            leftVid.style.top = '0';
-            leftVid.style.left = '0';
-            leftVid.style.width = '100vw';
-            leftVid.style.height = '100vh';
-            leftVid.style.objectFit = 'cover';
-            leftVid.style.objectPosition = '${posLeft}';
-            leftVid.style.zIndex = '0';
-            leftVid.style.pointerEvents = 'none';
-            leftVid.style.transform = 'translateZ(0)';
-            leftVid.style.contain = 'strict';
-            leftVid.style.backfaceVisibility = 'hidden';
-            leftVid.style.display = 'block';
-            if (posterSrc) {
-              leftVid.poster = posterSrc;
-              leftVid.setAttribute('poster', posterSrc);
-              leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
-              leftVid.style.backgroundSize = 'cover';
-              leftVid.style.backgroundPosition = '${posLeft}';
+          // Double-buffering: if leftVid is already playing and source changed, preload in staging video without blanking
+          if (leftVid && leftVid.isConnected && leftVid.dataset.currentSrc !== src) {
+            let stagingVid = document.getElementById('antigravity-video-left-staging');
+            if (!stagingVid || stagingVid.dataset.currentSrc !== src) {
+              if (stagingVid) {
+                try { stagingVid.pause(); stagingVid.removeAttribute('src'); stagingVid.load(); stagingVid.remove(); } catch(e) {}
+              }
+              stagingVid = document.createElement('video');
+              stagingVid.id = 'antigravity-video-left-staging';
+              stagingVid.className = 'antigravity-slot-video';
+              stagingVid.setAttribute('data-slot', 'left');
+              stagingVid.muted = true;
+              stagingVid.defaultMuted = true;
+              stagingVid.setAttribute('muted', '');
+              stagingVid.autoplay = true;
+              stagingVid.loop = true;
+              stagingVid.playsInline = true;
+              stagingVid.setAttribute('playsinline', '');
+              stagingVid.setAttribute('autoplay', '');
+              stagingVid.setAttribute('loop', '');
+              stagingVid.preload = 'auto';
+              stagingVid.setAttribute('preload', 'auto');
+              stagingVid.crossOrigin = 'anonymous';
+              stagingVid.setAttribute('crossorigin', 'anonymous');
+              stagingVid.disablePictureInPicture = true;
+              stagingVid.disableRemotePlayback = true;
+              stagingVid.style.position = 'fixed';
+              stagingVid.style.top = '0';
+              stagingVid.style.left = '0';
+              stagingVid.style.width = '100vw';
+              stagingVid.style.height = '100vh';
+              stagingVid.style.objectFit = 'cover';
+              stagingVid.style.objectPosition = '${posLeft}';
+              stagingVid.style.zIndex = '0';
+              stagingVid.style.pointerEvents = 'none';
+              stagingVid.style.transform = 'translateZ(0)';
+              stagingVid.style.contain = 'strict';
+              stagingVid.style.backfaceVisibility = 'hidden';
+              stagingVid.style.opacity = '0';
+              stagingVid.style.transition = 'opacity 0.25s ease-in-out';
+              stagingVid.style.display = 'block';
+              if (posterSrc) {
+                stagingVid.poster = posterSrc;
+                stagingVid.setAttribute('poster', posterSrc);
+                stagingVid.style.backgroundImage = 'url("' + posterSrc + '")';
+                stagingVid.style.backgroundSize = 'cover';
+                stagingVid.style.backgroundPosition = '${posLeft}';
+              }
+              setupVideoLoopGuards(stagingVid);
+
+              const performSwap = function() {
+                if (stagingVid._swapped) return;
+                stagingVid._swapped = true;
+                stagingVid.style.opacity = '1';
+                setTimeout(function() {
+                  const oldLeft = document.getElementById('antigravity-video-left');
+                  if (oldLeft && oldLeft !== stagingVid) {
+                    try { oldLeft.pause(); oldLeft.removeAttribute('src'); oldLeft.load(); oldLeft.remove(); } catch(e) {}
+                  }
+                  stagingVid.id = 'antigravity-video-left';
+                  stagingVid.style.transition = '';
+                }, 260);
+              };
+
+              stagingVid.addEventListener('playing', performSwap, { once: true });
+              stagingVid.addEventListener('canplay', function() {
+                if (stagingVid.paused) stagingVid.play().catch(function() {});
+              }, { once: true });
+
+              stagingVid.dataset.currentSrc = src;
+              stagingVid.src = src;
+
+              if (document.body) {
+                document.body.prepend(stagingVid);
+              } else if (document.documentElement) {
+                document.documentElement.prepend(stagingVid);
+              }
+              stagingVid.load();
+              stagingVid.play().catch(function() {});
             }
-            setupVideoLoopGuards(leftVid);
-            leftVid.addEventListener('playing', function() {
-              checkAndShowVideo(leftVid);
-            });
+          } else {
+            const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
+            for (let i = 1; i < allLeftVids.length; i++) {
+              allLeftVids[i].pause();
+              allLeftVids[i].removeAttribute('src');
+              allLeftVids[i].load();
+              allLeftVids[i].remove();
+            }
+            leftVid = allLeftVids[0];
+            if (!leftVid) {
+              leftVid = document.createElement('video');
+              leftVid.id = 'antigravity-video-left';
+              leftVid.className = 'antigravity-slot-video';
+              leftVid.setAttribute('data-slot', 'left');
+              leftVid.muted = true;
+              leftVid.defaultMuted = true;
+              leftVid.setAttribute('muted', '');
+              leftVid.autoplay = true;
+              leftVid.loop = true;
+              leftVid.playsInline = true;
+              leftVid.setAttribute('playsinline', '');
+              leftVid.setAttribute('autoplay', '');
+              leftVid.setAttribute('loop', '');
+              leftVid.preload = 'auto';
+              leftVid.setAttribute('preload', 'auto');
+              leftVid.crossOrigin = 'anonymous';
+              leftVid.setAttribute('crossorigin', 'anonymous');
+              leftVid.disablePictureInPicture = true;
+              leftVid.disableRemotePlayback = true;
+              leftVid.style.position = 'fixed';
+              leftVid.style.top = '0';
+              leftVid.style.left = '0';
+              leftVid.style.width = '100vw';
+              leftVid.style.height = '100vh';
+              leftVid.style.objectFit = 'cover';
+              leftVid.style.objectPosition = '${posLeft}';
+              leftVid.style.zIndex = '0';
+              leftVid.style.pointerEvents = 'none';
+              leftVid.style.transform = 'translateZ(0)';
+              leftVid.style.contain = 'strict';
+              leftVid.style.backfaceVisibility = 'hidden';
+              leftVid.style.display = 'block';
+              if (posterSrc) {
+                leftVid.poster = posterSrc;
+                leftVid.setAttribute('poster', posterSrc);
+                leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
+                leftVid.style.backgroundSize = 'cover';
+                leftVid.style.backgroundPosition = '${posLeft}';
+              }
+              setupVideoLoopGuards(leftVid);
+              leftVid.addEventListener('playing', function() {
+                checkAndShowVideo(leftVid);
+              });
+              leftVid.addEventListener('canplay', function() {
+                if (leftVid.paused) leftVid.play().catch(function() {});
+              });
+              leftVid.dataset.currentSrc = src;
+              leftVid.src = src;
+              if (document.body) {
+                document.body.prepend(leftVid);
+              } else if (document.documentElement) {
+                document.documentElement.prepend(leftVid);
+              }
+              leftVid.load();
+              leftVid.play().catch(function() {});
+            }
+          }
+        });
             leftVid.addEventListener('canplay', function() {
               if (leftVid.paused) leftVid.play().catch(function() {});
             });
@@ -3227,10 +3323,77 @@ function getClientVideoScript(config) {
               vid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
             }
             if (vid.dataset.currentSrc !== src) {
-              vid.dataset.currentSrc = src;
-              vid.src = src;
-              vid.load();
-              if (isVideoVisible(vid)) vid.play().catch(function() {});
+              let stagingContainerVid = targetContainer.querySelector(':scope > .antigravity-slot-video-staging');
+              if (!stagingContainerVid || stagingContainerVid.dataset.currentSrc !== src) {
+                if (stagingContainerVid) {
+                  try { stagingContainerVid.pause(); stagingContainerVid.removeAttribute('src'); stagingContainerVid.load(); stagingContainerVid.remove(); } catch(e) {}
+                }
+                stagingContainerVid = document.createElement('video');
+                stagingContainerVid.className = 'antigravity-slot-video antigravity-slot-video-staging';
+                stagingContainerVid.setAttribute('data-slot', slotKey);
+                stagingContainerVid.muted = true;
+                stagingContainerVid.defaultMuted = true;
+                stagingContainerVid.setAttribute('muted', '');
+                stagingContainerVid.autoplay = true;
+                stagingContainerVid.loop = true;
+                stagingContainerVid.playsInline = true;
+                stagingContainerVid.setAttribute('playsinline', '');
+                stagingContainerVid.setAttribute('autoplay', '');
+                stagingContainerVid.setAttribute('loop', '');
+                stagingContainerVid.preload = 'auto';
+                stagingContainerVid.setAttribute('preload', 'auto');
+                stagingContainerVid.crossOrigin = 'anonymous';
+                stagingContainerVid.disablePictureInPicture = true;
+                stagingContainerVid.disableRemotePlayback = true;
+                stagingContainerVid.style.position = 'absolute';
+                stagingContainerVid.style.top = '0';
+                stagingContainerVid.style.left = '0';
+                stagingContainerVid.style.width = '100%';
+                stagingContainerVid.style.height = '100%';
+                stagingContainerVid.style.objectFit = 'cover';
+                stagingContainerVid.style.objectPosition = slotPositions[slotKey] || 'center center';
+                stagingContainerVid.style.pointerEvents = 'none';
+                stagingContainerVid.style.zIndex = '0';
+                stagingContainerVid.style.transform = 'translateZ(0)';
+                stagingContainerVid.style.contain = 'strict';
+                stagingContainerVid.style.backfaceVisibility = 'hidden';
+                stagingContainerVid.style.opacity = '0';
+                stagingContainerVid.style.transition = 'opacity 0.25s ease-in-out';
+                stagingContainerVid.style.display = 'block';
+                if (posterSrc) {
+                  stagingContainerVid.poster = posterSrc;
+                  stagingContainerVid.setAttribute('poster', posterSrc);
+                  stagingContainerVid.style.backgroundImage = 'url("' + posterSrc + '")';
+                  stagingContainerVid.style.backgroundSize = 'cover';
+                  stagingContainerVid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
+                }
+                setupVideoLoopGuards(stagingContainerVid);
+
+                const performContainerSwap = function() {
+                  if (stagingContainerVid._swapped) return;
+                  stagingContainerVid._swapped = true;
+                  stagingContainerVid.style.opacity = '1';
+                  setTimeout(function() {
+                    const oldVids = targetContainer.querySelectorAll(':scope > .antigravity-slot-video:not(.antigravity-slot-video-staging)');
+                    for (let i = 0; i < oldVids.length; i++) {
+                      try { oldVids[i].pause(); oldVids[i].removeAttribute('src'); oldVids[i].load(); oldVids[i].remove(); } catch(e) {}
+                    }
+                    stagingContainerVid.classList.remove('antigravity-slot-video-staging');
+                    stagingContainerVid.style.transition = '';
+                  }, 260);
+                };
+
+                stagingContainerVid.addEventListener('playing', performContainerSwap, { once: true });
+                stagingContainerVid.addEventListener('canplay', function() {
+                  if (stagingContainerVid.paused) stagingContainerVid.play().catch(function() {});
+                }, { once: true });
+
+                stagingContainerVid.dataset.currentSrc = src;
+                stagingContainerVid.src = src;
+                targetContainer.prepend(stagingContainerVid);
+                stagingContainerVid.load();
+                stagingContainerVid.play().catch(function() {});
+              }
             }
             vid.style.objectPosition = slotPositions[slotKey] || 'center center';
             setupVideoLoopGuards(vid);
@@ -3633,6 +3796,179 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
       finish();
     }
   });
+}
+
+
+async function batchApplyDraft(draftConfig, fontColor) {
+  if (!draftConfig || typeof draftConfig !== 'object') {
+    throw new Error('draftConfig is required');
+  }
+
+  const slotsConfig = loadSlotsConfig();
+  let hasChanges = false;
+  const now = Date.now();
+
+  for (const slotKey of ['left', 'mid', 'right', 'bottom', 'settings']) {
+    const slotData = draftConfig[slotKey];
+    if (!slotData) continue;
+    const slotMeta = SLOTS_META[slotKey];
+
+    // Case 1: Slot restored to vanilla / none
+    if (slotData.type === 'none' || slotData.isOriginal) {
+      if (!slotsConfig[slotKey] || slotsConfig[slotKey].type !== 'none' || !slotsConfig[slotKey].isOriginal) {
+        slotsConfig[slotKey] = {
+          key: slotKey,
+          file: '',
+          type: 'none',
+          position: 'center center',
+          desc: slotMeta.desc,
+          isOriginal: true,
+          version: now
+        };
+        delete slotsConfig[slotKey].poster;
+        delete slotsConfig[slotKey].unsupportedCodec;
+        hasChanges = true;
+      }
+      continue;
+    }
+
+    // Case 2: New staged file for this slot
+    if (slotData.stagedFilePath && fs.existsSync(slotData.stagedFilePath)) {
+      const srcPath = slotData.stagedFilePath;
+      const ext = path.extname(srcPath).toLowerCase();
+      const isVideo = VIDEO_EXTS.has(ext);
+      const isImage = IMAGE_EXTS.has(ext);
+
+      if (isVideo || isImage) {
+        const prefix = slotKey === 'bottom' ? 'input' : slotKey;
+        const targetFileName = `${prefix}_wallpaper${ext}`;
+        const targetPath = path.join(wallpapersDir, targetFileName);
+
+        // Clean up stale alternate extensions for this slot in wallpapersDir
+        ['.mp4', '.webm', '.mov', '.jpg', '.jpeg', '.png', '.gif', '.webp'].forEach(oldExt => {
+          if (oldExt !== ext) {
+            const oldFile = path.join(wallpapersDir, `${prefix}_wallpaper${oldExt}`);
+            try { if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile); } catch (e) {}
+          }
+        });
+
+        // Copy file to targetPath
+        if (path.resolve(srcPath) !== path.resolve(targetPath)) {
+          fs.copyFileSync(srcPath, targetPath);
+        }
+
+        let posterFileName = null;
+        let isSupportedCodec = true;
+
+        if (isVideo) {
+          const codecInfo = detectVideoCodec(srcPath);
+          if (codecInfo && !codecInfo.isElectronSupported) {
+            isSupportedCodec = false;
+          }
+
+          const defaultPosterTarget = path.join(wallpapersDir, `${prefix}_poster.jpg`);
+          ['.png', '.gif', '.webp'].forEach(pExt => {
+            const oldPoster = path.join(wallpapersDir, `${prefix}_poster${pExt}`);
+            try { if (fs.existsSync(oldPoster)) fs.unlinkSync(oldPoster); } catch (e) {}
+          });
+
+          let companionPoster = findCompanionPoster(srcPath);
+          let needsExtract = !companionPoster || !fs.existsSync(companionPoster);
+          if (needsExtract) {
+            const extracted = extractPosterFromVideo(srcPath, defaultPosterTarget);
+            if (extracted) {
+              companionPoster = defaultPosterTarget;
+            }
+          }
+
+          if (companionPoster && fs.existsSync(companionPoster)) {
+            try {
+              let pExt = path.extname(companionPoster).toLowerCase();
+              if (pExt === '.gif') pExt = '.jpg';
+              posterFileName = `${prefix}_poster${pExt}`;
+              const posterTargetPath = path.join(wallpapersDir, posterFileName);
+              if (path.resolve(companionPoster) !== path.resolve(posterTargetPath)) {
+                fs.copyFileSync(companionPoster, posterTargetPath);
+              }
+              const staticFallbackTarget = path.join(wallpapersDir, `${prefix}_wallpaper${pExt}`);
+              try { fs.copyFileSync(posterTargetPath, staticFallbackTarget); } catch (e) {}
+            } catch (e) {}
+          }
+
+          ensureMp4Faststart(targetPath);
+        }
+
+        const prevPos = slotsConfig[slotKey]?.position || slotMeta.defaultPosition || 'center center';
+        const finalPos = slotData.position ? parsePosition(slotData.position, prevPos).str : prevPos;
+
+        slotsConfig[slotKey] = {
+          key: slotKey,
+          file: targetFileName,
+          type: isVideo ? 'video' : 'image',
+          version: now,
+          position: finalPos,
+          desc: slotMeta.desc
+        };
+
+        if (posterFileName) {
+          slotsConfig[slotKey].poster = posterFileName;
+        } else if (!isVideo) {
+          delete slotsConfig[slotKey].poster;
+        }
+
+        if (isVideo && !isSupportedCodec) {
+          slotsConfig[slotKey].unsupportedCodec = true;
+        } else {
+          delete slotsConfig[slotKey].unsupportedCodec;
+        }
+
+        hasChanges = true;
+      }
+    } else if (slotData.position) {
+      // Case 3: Only position changed
+      const currentPos = slotsConfig[slotKey]?.position;
+      const newPos = parsePosition(slotData.position, SLOTS_META[slotKey].defaultPosition).str;
+      if (currentPos !== newPos) {
+        if (!slotsConfig[slotKey]) {
+          slotsConfig[slotKey] = {
+            key: slotKey,
+            file: SLOTS_META[slotKey].defaultFile,
+            type: 'image',
+            version: now,
+            desc: SLOTS_META[slotKey].desc
+          };
+        }
+        slotsConfig[slotKey].position = newPos;
+        slotsConfig[slotKey].version = now;
+        hasChanges = true;
+      }
+    }
+  }
+
+  // Handle fontColor
+  if (fontColor) {
+    const fKey = typeof fontColor === 'string' ? fontColor : (fontColor.id || fontColor.primary);
+    const resolved = resolveFontColor(fKey);
+    if (JSON.stringify(slotsConfig.fontColor) !== JSON.stringify(resolved)) {
+      slotsConfig.fontColor = resolved;
+      hasChanges = true;
+    }
+  }
+
+  slotsConfig.isOriginal = false;
+  saveSlotsConfig(slotsConfig);
+
+  // Recompile CSS ONCE
+  const css = generateMasterCss(slotsConfig);
+  fs.writeFileSync(customCssPath, css, 'utf-8');
+  try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch (e) {}
+
+  await ensureMediaServer(wallpapersDir, DEFAULT_PORT);
+
+  // Trigger live hot reload EXACTLY ONCE
+  await triggerLiveHotReload(css, slotsConfig);
+
+  return slotsConfig;
 }
 
 async function swapWallpaper(slotInput, srcPath, customPosterPath) {
@@ -5406,6 +5742,7 @@ async function installPatch() {
 }
 
 module.exports = {
+  batchApplyDraft,
   swapWallpaper,
   restoreSlotVanilla,
   swapWallpaperFromWE,

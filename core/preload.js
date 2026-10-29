@@ -652,115 +652,153 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
         }
         checkAndShowVideo(leftVid);
       } else {
-        const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
-        for (let i = 1; i < allLeftVids.length; i++) {
-          allLeftVids[i].pause();
-          allLeftVids[i].removeAttribute('src');
-          allLeftVids[i].load();
-          allLeftVids[i].remove();
-        }
-        leftVid = allLeftVids[0];
-        if (!leftVid) {
-          leftVid = document.createElement('video');
-          leftVid.id = 'antigravity-video-left';
-          leftVid.className = 'antigravity-slot-video';
-          leftVid.setAttribute('data-slot', 'left');
-          leftVid.muted = true;
-          leftVid.defaultMuted = true;
-          leftVid.setAttribute('muted', '');
-          leftVid.autoplay = true;
-          leftVid.loop = true;
-          leftVid.playsInline = true;
-          leftVid.setAttribute('playsinline', '');
-          leftVid.setAttribute('autoplay', '');
-          leftVid.setAttribute('loop', '');
-          leftVid.preload = 'auto';
-          leftVid.setAttribute('preload', 'auto');
-          leftVid.crossOrigin = 'anonymous';
-          leftVid.setAttribute('crossorigin', 'anonymous');
-          leftVid.disablePictureInPicture = true;
-          leftVid.setAttribute('disablepictureinpicture', '');
-          leftVid.disableRemotePlayback = true;
-          leftVid.setAttribute('disableremoteplayback', '');
-          leftVid.style.position = 'fixed';
-          leftVid.style.top = '0';
-          leftVid.style.left = '0';
-          leftVid.style.width = '100vw';
-          leftVid.style.height = '100vh';
-          leftVid.style.objectFit = 'cover';
-          leftVid.style.objectPosition = (config.left && config.left.position) || '0% 45%';
-          leftVid.style.zIndex = '0';
-          leftVid.style.pointerEvents = 'none';
-          leftVid.style.transform = 'translateZ(0)';
-          leftVid.style.contain = 'strict';
-          leftVid.style.backfaceVisibility = 'hidden';
-          leftVid.style.display = 'block';
-          if (posterSrc) {
-            leftVid.poster = posterSrc;
-            leftVid.setAttribute('poster', posterSrc);
-            leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
-            leftVid.style.backgroundSize = 'cover';
-            leftVid.style.backgroundPosition = (config.left && config.left.position) || '0% 45%';
-          }
-          setupVideoLoopGuards(leftVid);
-          leftVid.addEventListener('playing', function() {
-            checkAndShowVideo(leftVid);
-            const zeroStyle = document.getElementById('antigravity-zero-latency-style');
-            if (zeroStyle) {
-              try { zeroStyle.remove(); } catch(e) {}
+        // Double-buffering: if leftVid is already playing and source changed, preload in staging video without blanking
+        if (leftVid && leftVid.isConnected && leftVid.dataset.currentSrc !== src) {
+          let stagingVid = document.getElementById('antigravity-video-left-staging');
+          if (!stagingVid || stagingVid.dataset.currentSrc !== src) {
+            if (stagingVid) {
+              try { stagingVid.pause(); stagingVid.removeAttribute('src'); stagingVid.load(); stagingVid.remove(); } catch(e) {}
             }
-          });
-          leftVid.addEventListener('canplay', function() {
-            if (leftVid.paused) leftVid.play().catch(function(){});
-          });
-          leftVid.addEventListener('error', function() {
-            const now = Date.now();
-            leftVid._lastErrorRetry = leftVid._lastErrorRetry || 0;
-            leftVid._errorRetryCount = leftVid._errorRetryCount || 0;
-            if (leftVid._errorRetryCount < 3 && (now - leftVid._lastErrorRetry > 2000)) {
-              leftVid._lastErrorRetry = now;
-              leftVid._errorRetryCount++;
+            stagingVid = document.createElement('video');
+            stagingVid.id = 'antigravity-video-left-staging';
+            stagingVid.className = 'antigravity-slot-video';
+            stagingVid.setAttribute('data-slot', 'left');
+            stagingVid.muted = true;
+            stagingVid.defaultMuted = true;
+            stagingVid.setAttribute('muted', '');
+            stagingVid.autoplay = true;
+            stagingVid.loop = true;
+            stagingVid.playsInline = true;
+            stagingVid.setAttribute('playsinline', '');
+            stagingVid.setAttribute('autoplay', '');
+            stagingVid.setAttribute('loop', '');
+            stagingVid.preload = 'auto';
+            stagingVid.setAttribute('preload', 'auto');
+            stagingVid.crossOrigin = 'anonymous';
+            stagingVid.setAttribute('crossorigin', 'anonymous');
+            stagingVid.disablePictureInPicture = true;
+            stagingVid.disableRemotePlayback = true;
+            stagingVid.style.position = 'fixed';
+            stagingVid.style.top = '0';
+            stagingVid.style.left = '0';
+            stagingVid.style.width = '100vw';
+            stagingVid.style.height = '100vh';
+            stagingVid.style.objectFit = 'cover';
+            stagingVid.style.objectPosition = (config.left && config.left.position) || '0% 45%';
+            stagingVid.style.zIndex = '0';
+            stagingVid.style.pointerEvents = 'none';
+            stagingVid.style.transform = 'translateZ(0)';
+            stagingVid.style.contain = 'strict';
+            stagingVid.style.backfaceVisibility = 'hidden';
+            stagingVid.style.opacity = '0';
+            stagingVid.style.transition = 'opacity 0.25s ease-in-out';
+            stagingVid.style.display = 'block';
+            if (posterSrc) {
+              stagingVid.poster = posterSrc;
+              stagingVid.setAttribute('poster', posterSrc);
+              stagingVid.style.backgroundImage = 'url("' + posterSrc + '")';
+              stagingVid.style.backgroundSize = 'cover';
+              stagingVid.style.backgroundPosition = (config.left && config.left.position) || '0% 45%';
+            }
+            setupVideoLoopGuards(stagingVid);
+
+            const performSwap = function() {
+              if (stagingVid._swapped) return;
+              stagingVid._swapped = true;
+              stagingVid.style.opacity = '1';
               setTimeout(function() {
-                if (leftVid.error) {
-                  leftVid.load();
-                  if (!document.hidden) leftVid.play().catch(function(){});
+                const oldLeft = document.getElementById('antigravity-video-left');
+                if (oldLeft && oldLeft !== stagingVid) {
+                  try { oldLeft.pause(); oldLeft.removeAttribute('src'); oldLeft.load(); oldLeft.remove(); } catch(e) {}
                 }
-              }, 1000);
+                stagingVid.id = 'antigravity-video-left';
+                stagingVid.style.transition = '';
+              }, 260);
+            };
+
+            stagingVid.addEventListener('playing', performSwap, { once: true });
+            stagingVid.addEventListener('canplay', function() {
+              if (stagingVid.paused) stagingVid.play().catch(function() {});
+            }, { once: true });
+
+            stagingVid.dataset.currentSrc = src;
+            stagingVid.src = src;
+
+            if (document.body) {
+              document.body.prepend(stagingVid);
+            } else if (document.documentElement) {
+              document.documentElement.prepend(stagingVid);
             }
-          });
-          if (!leftVid.isConnected) {
+            stagingVid.load();
+            stagingVid.play().catch(function() {});
+          }
+        } else {
+          const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
+          for (let i = 1; i < allLeftVids.length; i++) {
+            allLeftVids[i].pause();
+            allLeftVids[i].removeAttribute('src');
+            allLeftVids[i].load();
+            allLeftVids[i].remove();
+          }
+          leftVid = allLeftVids[0];
+          if (!leftVid) {
+            leftVid = document.createElement('video');
+            leftVid.id = 'antigravity-video-left';
+            leftVid.className = 'antigravity-slot-video';
+            leftVid.setAttribute('data-slot', 'left');
+            leftVid.muted = true;
+            leftVid.defaultMuted = true;
+            leftVid.setAttribute('muted', '');
+            leftVid.autoplay = true;
+            leftVid.loop = true;
+            leftVid.playsInline = true;
+            leftVid.setAttribute('playsinline', '');
+            leftVid.setAttribute('autoplay', '');
+            leftVid.setAttribute('loop', '');
+            leftVid.preload = 'auto';
+            leftVid.setAttribute('preload', 'auto');
+            leftVid.crossOrigin = 'anonymous';
+            leftVid.setAttribute('crossorigin', 'anonymous');
+            leftVid.disablePictureInPicture = true;
+            leftVid.disableRemotePlayback = true;
+            leftVid.style.position = 'fixed';
+            leftVid.style.top = '0';
+            leftVid.style.left = '0';
+            leftVid.style.width = '100vw';
+            leftVid.style.height = '100vh';
+            leftVid.style.objectFit = 'cover';
+            leftVid.style.objectPosition = (config.left && config.left.position) || '0% 45%';
+            leftVid.style.zIndex = '0';
+            leftVid.style.pointerEvents = 'none';
+            leftVid.style.transform = 'translateZ(0)';
+            leftVid.style.contain = 'strict';
+            leftVid.style.backfaceVisibility = 'hidden';
+            leftVid.style.display = 'block';
+            if (posterSrc) {
+              leftVid.poster = posterSrc;
+              leftVid.setAttribute('poster', posterSrc);
+              leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
+              leftVid.style.backgroundSize = 'cover';
+              leftVid.style.backgroundPosition = (config.left && config.left.position) || '0% 45%';
+            }
+            setupVideoLoopGuards(leftVid);
+            leftVid.addEventListener('playing', function() {
+              checkAndShowVideo(leftVid);
+            });
+            leftVid.addEventListener('canplay', function() {
+              if (leftVid.paused) leftVid.play().catch(function() {});
+            });
+            leftVid.dataset.currentSrc = src;
+            leftVid.src = src;
             if (document.body) {
               document.body.prepend(leftVid);
             } else if (document.documentElement) {
               document.documentElement.prepend(leftVid);
             }
+            leftVid.load();
+            leftVid.play().catch(function() {});
           }
         }
-        if (!leftVid.isConnected) {
-          if (document.body) {
-            document.body.prepend(leftVid);
-          } else if (document.documentElement) {
-            document.documentElement.prepend(leftVid);
-          }
-        }
-        if (posterSrc && leftVid.getAttribute('poster') !== posterSrc) {
-          leftVid.poster = posterSrc;
-          leftVid.setAttribute('poster', posterSrc);
-          leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
-          leftVid.style.backgroundSize = 'cover';
-          leftVid.style.backgroundPosition = (config.left && config.left.position) || '0% 45%';
-        }
-        if (leftVid.dataset.currentSrc !== src) {
-          leftVid.dataset.currentSrc = src;
-          leftVid.src = src;
-          leftVid.load();
-          if (!document.hidden) leftVid.play().catch(function(){});
-        }
-        leftVid.style.objectPosition = (config.left && config.left.position) || '0% 45%';
-        if (!document.hidden && leftVid.paused && leftVid.readyState >= 1) {
-          leftVid.play().catch(function(){});
-        }
-        checkAndShowVideo(leftVid);
       }
     } else {
       const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
@@ -1029,10 +1067,77 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             vid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
           }
           if (vid.dataset.currentSrc !== src) {
-            vid.dataset.currentSrc = src;
-            vid.src = src;
-            vid.load();
-            if (isVideoVisible(vid)) vid.play().catch(function(){});
+            let stagingContainerVid = targetContainer.querySelector(':scope > .antigravity-slot-video-staging');
+            if (!stagingContainerVid || stagingContainerVid.dataset.currentSrc !== src) {
+              if (stagingContainerVid) {
+                try { stagingContainerVid.pause(); stagingContainerVid.removeAttribute('src'); stagingContainerVid.load(); stagingContainerVid.remove(); } catch(e) {}
+              }
+              stagingContainerVid = document.createElement('video');
+              stagingContainerVid.className = 'antigravity-slot-video antigravity-slot-video-staging';
+              stagingContainerVid.setAttribute('data-slot', slotKey);
+              stagingContainerVid.muted = true;
+              stagingContainerVid.defaultMuted = true;
+              stagingContainerVid.setAttribute('muted', '');
+              stagingContainerVid.autoplay = true;
+              stagingContainerVid.loop = true;
+              stagingContainerVid.playsInline = true;
+              stagingContainerVid.setAttribute('playsinline', '');
+              stagingContainerVid.setAttribute('autoplay', '');
+              stagingContainerVid.setAttribute('loop', '');
+              stagingContainerVid.preload = 'auto';
+              stagingContainerVid.setAttribute('preload', 'auto');
+              stagingContainerVid.crossOrigin = 'anonymous';
+              stagingContainerVid.disablePictureInPicture = true;
+              stagingContainerVid.disableRemotePlayback = true;
+              stagingContainerVid.style.position = 'absolute';
+              stagingContainerVid.style.top = '0';
+              stagingContainerVid.style.left = '0';
+              stagingContainerVid.style.width = '100%';
+              stagingContainerVid.style.height = '100%';
+              stagingContainerVid.style.objectFit = 'cover';
+              stagingContainerVid.style.objectPosition = slotPositions[slotKey] || 'center center';
+              stagingContainerVid.style.pointerEvents = 'none';
+              stagingContainerVid.style.zIndex = '0';
+              stagingContainerVid.style.transform = 'translateZ(0)';
+              stagingContainerVid.style.contain = 'strict';
+              stagingContainerVid.style.backfaceVisibility = 'hidden';
+              stagingContainerVid.style.opacity = '0';
+              stagingContainerVid.style.transition = 'opacity 0.25s ease-in-out';
+              stagingContainerVid.style.display = 'block';
+              if (posterSrc) {
+                stagingContainerVid.poster = posterSrc;
+                stagingContainerVid.setAttribute('poster', posterSrc);
+                stagingContainerVid.style.backgroundImage = 'url("' + posterSrc + '")';
+                stagingContainerVid.style.backgroundSize = 'cover';
+                stagingContainerVid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
+              }
+              setupVideoLoopGuards(stagingContainerVid);
+
+              const performContainerSwap = function() {
+                if (stagingContainerVid._swapped) return;
+                stagingContainerVid._swapped = true;
+                stagingContainerVid.style.opacity = '1';
+                setTimeout(function() {
+                  const oldVids = targetContainer.querySelectorAll(':scope > .antigravity-slot-video:not(.antigravity-slot-video-staging)');
+                  for (let i = 0; i < oldVids.length; i++) {
+                    try { oldVids[i].pause(); oldVids[i].removeAttribute('src'); oldVids[i].load(); oldVids[i].remove(); } catch(e) {}
+                  }
+                  stagingContainerVid.classList.remove('antigravity-slot-video-staging');
+                  stagingContainerVid.style.transition = '';
+                }, 260);
+              };
+
+              stagingContainerVid.addEventListener('playing', performContainerSwap, { once: true });
+              stagingContainerVid.addEventListener('canplay', function() {
+                if (stagingContainerVid.paused) stagingContainerVid.play().catch(function() {});
+              }, { once: true });
+
+              stagingContainerVid.dataset.currentSrc = src;
+              stagingContainerVid.src = src;
+              targetContainer.prepend(stagingContainerVid);
+              stagingContainerVid.load();
+              stagingContainerVid.play().catch(function() {});
+            }
           }
           vid.style.objectPosition = slotPositions[slotKey] || 'center center';
           syncVideoPlaybackState(vid);
