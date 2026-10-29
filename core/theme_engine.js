@@ -3056,33 +3056,6 @@ function getClientVideoScript(config) {
               leftVid.play().catch(function() {});
             }
           }
-        });
-            leftVid.addEventListener('canplay', function() {
-              if (leftVid.paused) leftVid.play().catch(function() {});
-            });
-            leftVid.addEventListener('error', function() {
-              const now = Date.now();
-              leftVid._lastErrorRetry = leftVid._lastErrorRetry || 0;
-              leftVid._errorRetryCount = leftVid._errorRetryCount || 0;
-              if (leftVid._errorRetryCount < 3 && (now - leftVid._lastErrorRetry > 2000)) {
-                leftVid._lastErrorRetry = now;
-                leftVid._errorRetryCount++;
-                setTimeout(function() {
-                  if (leftVid.error) {
-                    leftVid.load();
-                    leftVid.play().catch(function(){});
-                  }
-                }, 1000);
-              }
-            });
-            if (!leftVid.isConnected) {
-              if (document.body) {
-                document.body.prepend(leftVid);
-              } else if (document.documentElement) {
-                document.documentElement.prepend(leftVid);
-              }
-            }
-          }
           if (!leftVid.isConnected) {
             if (document.body) {
               document.body.prepend(leftVid);
