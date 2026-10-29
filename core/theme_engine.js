@@ -1311,30 +1311,6 @@ div.absolute.top-full:has(button) button:hover {
   color: #ffffff !important;
 }
 
-/* 6.1 顶部标题栏与窗口原生控制按钮防碰撞防御 (Windows Electron Native Window Controls Collision Prevention) */
-/* 右侧边栏展开/收起按钮紧靠 Windows 原生控制按钮左侧 (~138px) 并保留自然间距 */
-div.absolute.top-0.right-0.z-50.flex.items-center.shrink-0,
-div.absolute.top-0:has(> div > [data-testid="toggle-aux-sidebar"]),
-div.absolute.top-0:has(> [data-testid="toggle-aux-sidebar"]),
-div:has(> div > [data-testid="toggle-aux-sidebar"]):not([class*="group"]):not([class*="pane"]) {
-  right: max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) !important;
-}
-
-/* 辅助面板展开时顶栏标签页与加号按钮右侧内边距，确保不被最大化/侧边栏切换按钮遮挡 (64px按钮组 + 8px自然间距 = 72px) */
-div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),
-[aria-label="Auxiliary Pane"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),
-div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]),
-[aria-label="Auxiliary Pane"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]) {
-  padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 72px) !important;
-}
-
-/* 当辅助面板收起时，主对话顶栏更多操作容器紧邻侧边栏切换按钮，严格限定于父级容器，杜绝子元素重复嵌套叠加 padding (32px单按钮 + 10px自然间距 = 42px) */
-div.h-screen.w-screen:not(:has(div[data-aux-pane-open="true"])) div.flex.items-center.justify-end.shrink-0:has([data-testid="titlebar-more-actions"]) {
-  padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 42px) !important;
-}
-div.h-screen.w-screen:not(:has(div[data-aux-pane-open="true"])) div.flex.items-center.justify-end.shrink-0:has([data-testid="titlebar-more-actions"]) > div {
-  padding-right: 0px !important;
-}
 
 /* ==========================================================================
    7. 主对话区文字排版与专属落樱微光气泡 (Mika Blossom Mist Glass)
@@ -3652,27 +3628,6 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         '  -webkit-app-region: no-drag !important;',
                         '  pointer-events: auto !important;',
                         '  cursor: pointer !important;',
-                        '}',
-                        '/* 6.1 顶部标题栏与窗口原生控制按钮防碰撞防御 (Windows Electron Native Window Controls Collision Prevention) */',
-                        'div.absolute.top-0.right-0.z-50.flex.items-center.shrink-0,',
-                        'div.absolute.top-0:has(> div > [data-testid="toggle-aux-sidebar"]),',
-                        'div.absolute.top-0:has(> [data-testid="toggle-aux-sidebar"]),',
-                        'div:has(> div > [data-testid="toggle-aux-sidebar"]):not([class*="group"]):not([class*="pane"]) {',
-                        '  right: max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) !important;',
-                        '}',
-                        '/* 辅助面板展开时顶栏标签页与加号按钮右侧内边距，确保不被最大化/侧边栏切换按钮遮挡 (64px按钮组 + 8px自然间距 = 72px) */',
-                        'div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),',
-                        '[aria-label="Auxiliary Pane"] div.shrink-0.flex.items-center.border-b:has([data-testid="aux-panel-plus-dropdown-trigger"]),',
-                        'div[data-aux-pane-open="true"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]),',
-                        '[aria-label="Auxiliary Pane"] div.shrink-0.flex.items-center.border-b:has(button[aria-label*="tab" i]) {',
-                        '  padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 72px) !important;',
-                        '}',
-                        '/* 当辅助面板收起时，主对话顶栏更多操作容器紧邻侧边栏切换按钮，严格限定于父级容器，杜绝子元素重复嵌套叠加 padding (32px单按钮 + 10px自然间距 = 42px) */',
-                        'div.h-screen.w-screen:not(:has(div[data-aux-pane-open="true"])) div.flex.items-center.justify-end.shrink-0:has([data-testid="titlebar-more-actions"]) {',
-                        '  padding-right: calc(max(138px, calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))) + 42px) !important;',
-                        '}',
-                        'div.h-screen.w-screen:not(:has(div[data-aux-pane-open="true"])) div.flex.items-center.justify-end.shrink-0:has([data-testid="titlebar-more-actions"]) > div {',
-                        '  padding-right: 0px !important;',
                         '}',
                         '/* 6.2 顶部原生菜单栏与下拉菜单层级保障 (Menubar Stacking Context & Dropdown Quality) */',
                         '.agy-shell > div.shrink-0:first-child,',
