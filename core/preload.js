@@ -689,21 +689,14 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             stagingVid.style.height = '100vh';
             stagingVid.style.objectFit = 'cover';
             stagingVid.style.objectPosition = (config.left && config.left.position) || '0% 45%';
-            stagingVid.style.zIndex = '0';
+            stagingVid.style.zIndex = '1';
             stagingVid.style.pointerEvents = 'none';
             stagingVid.style.transform = 'translateZ(0)';
             stagingVid.style.contain = 'strict';
             stagingVid.style.backfaceVisibility = 'hidden';
             stagingVid.style.opacity = '0';
-            stagingVid.style.transition = 'opacity 0.25s ease-in-out';
+            stagingVid.style.transition = 'opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1)';
             stagingVid.style.display = 'block';
-            if (posterSrc) {
-              stagingVid.poster = posterSrc;
-              stagingVid.setAttribute('poster', posterSrc);
-              stagingVid.style.backgroundImage = 'url("' + posterSrc + '")';
-              stagingVid.style.backgroundSize = 'cover';
-              stagingVid.style.backgroundPosition = (config.left && config.left.position) || '0% 45%';
-            }
             setupVideoLoopGuards(stagingVid);
 
             const performSwap = function() {
@@ -716,8 +709,9 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
                   try { oldLeft.pause(); oldLeft.removeAttribute('src'); oldLeft.load(); oldLeft.remove(); } catch(e) {}
                 }
                 stagingVid.id = 'antigravity-video-left';
+                stagingVid.style.zIndex = '0';
                 stagingVid.style.transition = '';
-              }, 260);
+              }, 300);
             };
 
             stagingVid.addEventListener('playing', performSwap, { once: true });
@@ -728,7 +722,9 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             stagingVid.dataset.currentSrc = src;
             stagingVid.src = src;
 
-            if (document.body) {
+            if (leftVid && leftVid.parentElement) {
+              leftVid.parentElement.insertBefore(stagingVid, leftVid.nextSibling);
+            } else if (document.body) {
               document.body.prepend(stagingVid);
             } else if (document.documentElement) {
               document.documentElement.prepend(stagingVid);
@@ -1011,10 +1007,19 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             vid.disableRemotePlayback = true;
             vid.setAttribute('disableremoteplayback', '');
             vid.style.position = 'absolute';
-            vid.style.top = '0';
-            vid.style.left = '0';
-            vid.style.width = '100%';
-            vid.style.height = '100%';
+            if (slotKey === 'bottom') {
+              vid.style.top = '';
+              vid.style.bottom = '0';
+              vid.style.left = '0';
+              vid.style.width = '100%';
+              vid.style.height = '360px';
+            } else {
+              vid.style.top = '0';
+              vid.style.bottom = '';
+              vid.style.left = '0';
+              vid.style.width = '100%';
+              vid.style.height = '100%';
+            }
             vid.style.objectFit = 'cover';
             vid.style.objectPosition = slotPositions[slotKey] || 'center center';
             vid.style.pointerEvents = 'none';
@@ -1022,6 +1027,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             vid.style.transform = 'translateZ(0)';
             vid.style.contain = 'strict';
             vid.style.backfaceVisibility = 'hidden';
+            vid.style.willChange = 'transform';
             vid.style.display = 'block';
             if (posterSrc) {
               vid.poster = posterSrc;
@@ -1094,27 +1100,29 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
               stagingContainerVid.disablePictureInPicture = true;
               stagingContainerVid.disableRemotePlayback = true;
               stagingContainerVid.style.position = 'absolute';
-              stagingContainerVid.style.top = '0';
-              stagingContainerVid.style.left = '0';
-              stagingContainerVid.style.width = '100%';
-              stagingContainerVid.style.height = '100%';
+              if (slotKey === 'bottom') {
+                stagingContainerVid.style.top = '';
+                stagingContainerVid.style.bottom = '0';
+                stagingContainerVid.style.left = '0';
+                stagingContainerVid.style.width = '100%';
+                stagingContainerVid.style.height = '360px';
+              } else {
+                stagingContainerVid.style.top = '0';
+                stagingContainerVid.style.bottom = '';
+                stagingContainerVid.style.left = '0';
+                stagingContainerVid.style.width = '100%';
+                stagingContainerVid.style.height = '100%';
+              }
               stagingContainerVid.style.objectFit = 'cover';
               stagingContainerVid.style.objectPosition = slotPositions[slotKey] || 'center center';
               stagingContainerVid.style.pointerEvents = 'none';
-              stagingContainerVid.style.zIndex = '0';
+              stagingContainerVid.style.zIndex = '1';
               stagingContainerVid.style.transform = 'translateZ(0)';
               stagingContainerVid.style.contain = 'strict';
               stagingContainerVid.style.backfaceVisibility = 'hidden';
               stagingContainerVid.style.opacity = '0';
-              stagingContainerVid.style.transition = 'opacity 0.25s ease-in-out';
+              stagingContainerVid.style.transition = 'opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1)';
               stagingContainerVid.style.display = 'block';
-              if (posterSrc) {
-                stagingContainerVid.poster = posterSrc;
-                stagingContainerVid.setAttribute('poster', posterSrc);
-                stagingContainerVid.style.backgroundImage = 'url("' + posterSrc + '")';
-                stagingContainerVid.style.backgroundSize = 'cover';
-                stagingContainerVid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
-              }
               setupVideoLoopGuards(stagingContainerVid);
 
               const performContainerSwap = function() {
@@ -1127,8 +1135,9 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
                     try { oldVids[i].pause(); oldVids[i].removeAttribute('src'); oldVids[i].load(); oldVids[i].remove(); } catch(e) {}
                   }
                   stagingContainerVid.classList.remove('antigravity-slot-video-staging');
+                  stagingContainerVid.style.zIndex = '0';
                   stagingContainerVid.style.transition = '';
-                }, 260);
+                }, 300);
               };
 
               stagingContainerVid.addEventListener('playing', performContainerSwap, { once: true });
@@ -1471,3 +1480,82 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     });
   };
 })();
+
+
+      // --- Input Bar Idle Governor (性能回收与动态自适应调度) ---
+      (function setupInputGovernor() {
+        if (window._agInputGovernorInitialized) return;
+        window._agInputGovernorInitialized = true;
+
+        let idleTimer = null;
+        const IDLE_TIMEOUT_MS = 6000;
+
+        function getBottomVideo() {
+          return document.querySelector('.antigravity-slot-video[data-slot="bottom"]');
+        }
+
+        function wakeBottomVideo() {
+          const bVid = getBottomVideo();
+          if (bVid) {
+            if (bVid.paused && !document.hidden) {
+              bVid.play().catch(function() {});
+            }
+          }
+          resetIdleTimer();
+        }
+
+        function checkInputFocus() {
+          const active = document.activeElement;
+          if (active && (
+            active.closest('[id*="InputBox"]') ||
+            active.tagName === 'TEXTAREA' ||
+            active.getAttribute('contenteditable') === 'true'
+          )) {
+            return true;
+          }
+          return false;
+        }
+
+        function resetIdleTimer() {
+          if (idleTimer) clearTimeout(idleTimer);
+          idleTimer = setTimeout(function() {
+            if (checkInputFocus()) {
+              resetIdleTimer();
+              return;
+            }
+            const bVid = getBottomVideo();
+            if (bVid && !bVid.paused) {
+              bVid.pause();
+            }
+          }, IDLE_TIMEOUT_MS);
+        }
+
+        const events = ['pointerenter', 'pointermove', 'focusin', 'input', 'keydown'];
+        events.forEach(function(evName) {
+          window.addEventListener(evName, function(e) {
+            const target = e.target;
+            if (target && target.nodeType === 1) {
+              if (target.closest && (
+                target.closest('[id*="InputBox"]') ||
+                target.closest('div.rounded-2xl.bg-card-border') ||
+                target.closest('.antigravity-slot-video[data-slot="bottom"]')
+              )) {
+                wakeBottomVideo();
+              }
+            }
+          }, { passive: true, capture: true });
+        });
+
+        window.addEventListener('blur', function() {
+          const bVid = getBottomVideo();
+          if (bVid && !bVid.paused) {
+            bVid.pause();
+          }
+        });
+
+        window.addEventListener('focus', function() {
+          wakeBottomVideo();
+        });
+
+        resetIdleTimer();
+      })();
