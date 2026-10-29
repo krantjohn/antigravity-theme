@@ -3796,12 +3796,6 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                       window.postMessage({ type: 'antigravity-config-updated', config: ${JSON.stringify(activeConfig)} }, '*');
                     } catch(e) {}
 
-                    try {
-                      if (typeof window.__antigravityScanChinese === 'function') {
-                        window.__antigravityScanChinese();
-                      }
-                    } catch(e) {}
-
                     return "Live theme & video hot-reloaded!";
                   })()
                 `;

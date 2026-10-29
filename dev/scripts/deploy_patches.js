@@ -28,29 +28,7 @@ const asarPath = path.join(resDir, 'app.asar');
 
 console.log('[1/5] Synchronizing latest patched source files to app/dist and user config...');
 fs.copyFileSync(sourcePreload, targetPreload);
-console.log('✓ Successfully copied preload.js (with Chinese Localization & Theme Engine) -> app/dist/preload.js');
-
-// Synchronize Chinese Localization native assets
-const chineseAssetsDir = path.join(__dirname, '..', 'chinese_assets');
-if (fs.existsSync(chineseAssetsDir)) {
-  const filesToCopy = ['menu.js', 'tray.js', 'updater.js', 'loadingOverlay.js', 'provisionSplash.js', 'wsl.js', 'utils.js'];
-  for (const f of filesToCopy) {
-    const src = path.join(chineseAssetsDir, f);
-    const dest = path.join(appDist, f);
-    if (fs.existsSync(src)) {
-      fs.copyFileSync(src, dest);
-    }
-  }
-  const ideDir = path.join(chineseAssetsDir, 'ideInstall');
-  if (fs.existsSync(ideDir)) {
-    const destIdeDir = path.join(appDist, 'ideInstall');
-    if (!fs.existsSync(destIdeDir)) fs.mkdirSync(destIdeDir, { recursive: true });
-    for (const f of fs.readdirSync(ideDir)) {
-      fs.copyFileSync(path.join(ideDir, f), path.join(destIdeDir, f));
-    }
-  }
-  console.log('✓ Successfully synchronized Chinese localization native assets (menus, tray, updater) -> app/dist');
-}
+console.log('✓ Successfully copied preload.js -> app/dist/preload.js');
 
 if (fs.existsSync(sourceMain)) {
   fs.copyFileSync(sourceMain, targetMain);
@@ -64,7 +42,7 @@ console.log('✓ Successfully copied media_server.js -> app/dist/media_server.js
 try { fs.copyFileSync(sourceThemeEngine, userThemeEngine); } catch(e) {}
 console.log('✓ Successfully copied theme_engine.js -> user config');
 
-console.log('[2/5] Repacking app.asar.patched with all optimizations and Chinese localization...');
+console.log('[2/5] Repacking app.asar.patched with all optimizations...');
 const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 execSync(`${npxCmd} --yes asar pack "${appDir}" "${patchedAsar}"`, { stdio: 'inherit' });
 console.log('✓ Successfully packed app.asar.patched');
