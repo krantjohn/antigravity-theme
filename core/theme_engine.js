@@ -1015,15 +1015,15 @@ body::before {
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
+  width: 100% !important;
+  height: 100% !important;
   object-fit: cover !important;
   object-position: ${posLeft} !important;
   pointer-events: none !important;
   z-index: 0 !important;
   transform: translate3d(0, 0, 0) !important;
   backface-visibility: hidden !important;
-  contain: layout paint !important;
+  contain: strict !important;
 }
 ` : `
 /* 主对话区域已恢复官方原版纯净样式 */
@@ -1045,10 +1045,30 @@ html, body {
 }
 `}
 
-/* 3. Global Transparent Layout */
+/* 3. Global Transparent Layout & GPU Compositing Isolation */
 #root, #app, [data-theme], .h-screen, .w-screen, .flex-1 {
   background-color: transparent !important;
   background: transparent !important;
+}
+
+/* 硬件加速独立合成层：隔离主对话流式渲染与滚动，杜绝与底层 4K 动态壁纸图层重绘重排 */
+main .overflow-y-auto,
+div[role="region"] .overflow-y-auto,
+.relative.w-full.h-full.overflow-y-auto,
+div.flex-1.min-h-0.overflow-y-auto {
+  transform: translateZ(0) !important;
+  contain: content !important;
+}
+
+/* 底部输入框独立渲染与图层隔离，防止打字微卡顿 */
+[id="antigravity.agentSidePanelInputBox"] > div.bg-card {
+  isolation: isolate !important;
+  contain: paint !important;
+}
+
+[id="antigravity.agentSidePanelInputBox"] textarea,
+[id="antigravity.agentSidePanelInputBox"] [contenteditable] {
+  transform: translateZ(0) !important;
 }
 
 /* 4. 主对话区彻底通透净化：消灭一切滚动黑带与渐变遮罩 */
@@ -2159,9 +2179,13 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background {
 }
 `}
 
-/* 拖拽与缩放时禁用过渡动画，实现 60FPS 零延迟跟随 */
+/* 拖拽与缩放时禁用过渡动画，实现 60FPS 零延迟跟随（针对关键容器精准定向，杜绝全局通配符 * 样式重算） */
 body.is-resizing,
-body.is-resizing * {
+body.is-resizing #root,
+body.is-resizing main,
+body.is-resizing [role="region"],
+body.is-resizing .antigravity-slot-video,
+body.is-resizing [id="antigravity.agentSidePanelInputBox"] {
   transition: none !important;
   user-select: none !important;
 }
@@ -2597,8 +2621,8 @@ function getClientVideoScript(config) {
     // 智能可视性判定引擎：无重排轻量检测，精确感知折叠、弹窗关闭、祖先隐藏与视口相交
     function isVideoVisible(v) {
       if (!v || !v.isConnected) return false;
-      if (v.id === 'antigravity-video-left') return true;
       if (document.hidden) return false;
+      if (v.id === 'antigravity-video-left') return true;
       if (v._isIntersecting === false) return false;
       if (v.style.display === 'none' || v.style.visibility === 'hidden') return false;
       const p = v.parentElement;
@@ -2801,15 +2825,19 @@ function getClientVideoScript(config) {
     if (!window.__antigravityDocVisibilityListener) {
       window.__antigravityDocVisibilityListener = true;
       const onResume = function() {
-        const allVids = document.querySelectorAll('.antigravity-slot-video');
+        const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left, video');
         if (document.hidden) {
           for (let i = 0; i < allVids.length; i++) {
-            if (allVids[i].id !== 'antigravity-video-left' && !allVids[i].paused) {
+            if (!allVids[i].paused) {
+              allVids[i]._pausedByHidden = true;
               allVids[i].pause();
             }
           }
         } else {
           for (let i = 0; i < allVids.length; i++) {
+            if (allVids[i]._pausedByHidden) {
+              allVids[i]._pausedByHidden = false;
+            }
             syncVideoPlaybackState(allVids[i]);
           }
         }
@@ -3439,7 +3467,7 @@ function getClientVideoScript(config) {
           // 深度性能过滤：彻底忽略用户打字、光标移动、代码块渲染与AI流式输出DOM扰动
           if (target.closest && (
               target.closest('.markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"], textarea, input, [contenteditable], [role="textbox"], form') ||
-              (target.closest('[id="antigravity.agentSidePanelInputBox"]') && (document.querySelector('.antigravity-slot-video[data-slot="bottom"]') || document.querySelector('[id="antigravity.agentSidePanelInputBox"] [data-ag-positioned]')))
+              target.closest('[id="antigravity.agentSidePanelInputBox"]')
           )) {
             continue;
           }
@@ -3510,44 +3538,73 @@ function getClientVideoScript(config) {
       attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
     });
 
-    // 拖拽与窗口缩放 60FPS 性能优化：监听分栏拖拽与窗口尺寸变动
+    // 极致原生 60FPS/120FPS 性能：原生窗口拖拽缩放与分栏调整协调器
     let resizeThrottleTimer = null;
+    let isResizeActive = false;
+
+    const pauseVideosForResize = function() {
+      if (isResizeActive) return;
+      isResizeActive = true;
+      if (document.body) document.body.classList.add('is-resizing');
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left, video');
+      for (let i = 0; i < allVids.length; i++) {
+        const v = allVids[i];
+        if (!v.paused) {
+          v._wasPlayingBeforeResize = true;
+          v.pause();
+        }
+      }
+    };
+
+    const resumeVideosAfterResize = function() {
+      if (!isResizeActive) return;
+      isResizeActive = false;
+      if (document.body) document.body.classList.remove('is-resizing');
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left, video');
+      for (let i = 0; i < allVids.length; i++) {
+        syncVideoPlaybackState(allVids[i]);
+      }
+    };
+
     const onDragStart = function(e) {
       const target = e.target;
       if (!target) return;
       let isHandle = false;
       if (target.classList && (target.classList.contains('cursor-col-resize') || target.classList.contains('cursor-row-resize'))) {
         isHandle = true;
-      } else {
-        try {
-          const cs = window.getComputedStyle(target);
-          if (cs && cs.cursor && cs.cursor.includes('resize')) isHandle = true;
-        } catch(err) {}
+      } else if (target.style && target.style.cursor && target.style.cursor.includes('resize')) {
+        isHandle = true;
       }
       if (isHandle) {
         window.__isDraggingSplit = true;
-        if (document.body) document.body.classList.add('is-resizing');
+        pauseVideosForResize();
       }
     };
+
     const onDragEnd = function() {
       if (window.__isDraggingSplit) {
         window.__isDraggingSplit = false;
-        if (document.body) document.body.classList.remove('is-resizing');
+        resumeVideosAfterResize();
         if (window.__antigravityApplyVideos) {
           window.__antigravityApplyVideos();
+        } else if (typeof applyVideos === 'function') {
+          applyVideos();
         }
       }
     };
+
     const onWindowResize = function() {
-      if (document.body) document.body.classList.add('is-resizing');
+      pauseVideosForResize();
       if (resizeThrottleTimer) clearTimeout(resizeThrottleTimer);
       resizeThrottleTimer = setTimeout(function() {
         resizeThrottleTimer = null;
-        if (document.body) document.body.classList.remove('is-resizing');
+        resumeVideosAfterResize();
         if (window.__antigravityApplyVideos) {
           window.__antigravityApplyVideos();
+        } else if (typeof applyVideos === 'function') {
+          applyVideos();
         }
-      }, 150);
+      }, 90);
     };
 
     try {
@@ -3563,7 +3620,7 @@ function getClientVideoScript(config) {
       window.addEventListener('pointerdown', onDragStart, true);
       window.addEventListener('pointerup', onDragEnd, true);
       window.addEventListener('pointercancel', onDragEnd, true);
-      window.addEventListener('resize', onWindowResize);
+      window.addEventListener('resize', onWindowResize, { passive: true });
     } catch(e) {}
 
     if (window.__antigravitySyncInterval) {

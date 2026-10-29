@@ -228,7 +228,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           '  content: "" !important;',
           '  position: fixed !important;',
           '  top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;',
-          '  width: 100vw !important; height: 100vh !important;',
+          '  width: 100% !important; height: 100% !important;',
           posterSrc ? '  background-image: linear-gradient(rgba(11, 12, 20, 0.06), rgba(11, 12, 20, 0.10)), url("' + posterSrc + '") !important;' : '',
           '  background-size: cover !important;',
           '  background-position: ' + posLeft + ' !important;',
@@ -520,8 +520,8 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
   // 智能可视性判定引擎：无重排轻量检测，精确感知折叠、弹窗关闭、祖先隐藏与视口相交
   function isVideoVisible(v) {
     if (!v || !v.isConnected) return false;
-    if (v.id === 'antigravity-video-left') return true;
     if (document.hidden) return false;
+    if (v.id === 'antigravity-video-left') return true;
     if (v._isIntersecting === false) return false;
     if (v.style.display === 'none' || v.style.visibility === 'hidden') return false;
     const p = v.parentElement;
@@ -574,15 +574,19 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
   if (!window.__antigravityDocVisibilityListener) {
     window.__antigravityDocVisibilityListener = true;
     document.addEventListener('visibilitychange', function() {
-      const allVids = document.querySelectorAll('.antigravity-slot-video');
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left, video');
       if (document.hidden) {
         for (let i = 0; i < allVids.length; i++) {
-          if (allVids[i].id !== 'antigravity-video-left' && !allVids[i].paused) {
+          if (!allVids[i].paused) {
+            allVids[i]._pausedByHidden = true;
             allVids[i].pause();
           }
         }
       } else {
         for (let i = 0; i < allVids.length; i++) {
+          if (allVids[i]._pausedByHidden) {
+            allVids[i]._pausedByHidden = false;
+          }
           syncVideoPlaybackState(allVids[i]);
         }
       }
@@ -1209,7 +1213,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           // 深度性能过滤：彻底忽略用户打字、光标移动、代码块渲染与AI流式输出DOM扰动
           if (target.closest && (
               target.closest('.markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"], textarea, input, [contenteditable], [role="textbox"], form') ||
-              (target.closest('[id="antigravity.agentSidePanelInputBox"]') && (document.querySelector('.antigravity-slot-video[data-slot="bottom"]') || document.querySelector('[id="antigravity.agentSidePanelInputBox"] [data-ag-positioned]')))
+              target.closest('[id="antigravity.agentSidePanelInputBox"]')
           )) {
             continue;
           }
@@ -1276,8 +1280,34 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
     });
 
-    // 拖拽与窗口缩放 60FPS 性能优化：监听分栏拖拽与窗口尺寸变动
+    // 极致原生 60FPS/120FPS 性能：原生窗口拖拽缩放与分栏调整协调器
     let resizeThrottleTimer = null;
+    let isResizeActive = false;
+
+    const pauseVideosForResize = function() {
+      if (isResizeActive) return;
+      isResizeActive = true;
+      if (document.body) document.body.classList.add('is-resizing');
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left, video');
+      for (let i = 0; i < allVids.length; i++) {
+        const v = allVids[i];
+        if (!v.paused) {
+          v._wasPlayingBeforeResize = true;
+          v.pause();
+        }
+      }
+    };
+
+    const resumeVideosAfterResize = function() {
+      if (!isResizeActive) return;
+      isResizeActive = false;
+      if (document.body) document.body.classList.remove('is-resizing');
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left, video');
+      for (let i = 0; i < allVids.length; i++) {
+        syncVideoPlaybackState(allVids[i]);
+      }
+    };
+
     const onDragStart = function(e) {
       const target = e.target;
       if (!target) return;
@@ -1289,24 +1319,34 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       }
       if (isHandle) {
         window.__isDraggingSplit = true;
-        if (document.body) document.body.classList.add('is-resizing');
+        pauseVideosForResize();
       }
     };
+
     const onDragEnd = function() {
       if (window.__isDraggingSplit) {
         window.__isDraggingSplit = false;
-        if (document.body) document.body.classList.remove('is-resizing');
-        applyVideos();
+        resumeVideosAfterResize();
+        if (window.__antigravityApplyVideos) {
+          window.__antigravityApplyVideos();
+        } else if (typeof applyVideos === 'function') {
+          applyVideos();
+        }
       }
     };
+
     const onWindowResize = function() {
-      if (document.body) document.body.classList.add('is-resizing');
+      pauseVideosForResize();
       if (resizeThrottleTimer) clearTimeout(resizeThrottleTimer);
       resizeThrottleTimer = setTimeout(function() {
         resizeThrottleTimer = null;
-        if (document.body) document.body.classList.remove('is-resizing');
-        applyVideos();
-      }, 150);
+        resumeVideosAfterResize();
+        if (window.__antigravityApplyVideos) {
+          window.__antigravityApplyVideos();
+        } else if (typeof applyVideos === 'function') {
+          applyVideos();
+        }
+      }, 90);
     };
 
     try {
@@ -1322,7 +1362,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       window.addEventListener('pointerdown', onDragStart, true);
       window.addEventListener('pointerup', onDragEnd, true);
       window.addEventListener('pointercancel', onDragEnd, true);
-      window.addEventListener('resize', onWindowResize);
+      window.addEventListener('resize', onWindowResize, { passive: true });
     } catch(e) {}
 
     // 定期与流媒体配置对齐同步 (从 2 秒降至 10 秒，仅对比 1KB JSON，零冗余开销)
