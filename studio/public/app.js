@@ -2443,6 +2443,9 @@ function setupEventListeners() {
 // 20. Bootstrap
 // =========================================================================
 window.addEventListener('DOMContentLoaded', () => {
+  // 初始化双色模式切换器
+  initThemeSwitcher();
+
   // 杜绝异常全屏：若窗口尺寸接近全屏，自动回缩至舒适适中尺寸 (1400x860)
   try {
     const screenW = window.screen?.availWidth || 2560;
@@ -2502,12 +2505,23 @@ function initThemeSwitcher() {
 
   applyTheme(savedTheme);
 
-  if (btnThemeToggle) {
-    btnThemeToggle.onclick = () => {
+  if (btnThemeToggle && !btnThemeToggle.dataset.themeBound) {
+    btnThemeToggle.dataset.themeBound = 'true';
+    btnThemeToggle.addEventListener('click', (e) => {
+      e.preventDefault();
       const current = document.documentElement.getAttribute('data-theme') || 'dark';
       const next = current === 'light' ? 'dark' : 'light';
       applyTheme(next);
-      showToast(`已切换至【${next === 'light' ? '亮色清爽' : '暗色极客'}】主题模式`);
-    };
+      if (typeof showToast === 'function') {
+        showToast(`已切换至【${next === 'light' ? '亮色清爽' : '暗色极客'}】主题模式`);
+      }
+    });
   }
+}
+
+// 保证在任何情况下（无论脚本何时完成加载）均即刻初始化并就绪
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initThemeSwitcher);
+} else {
+  initThemeSwitcher();
 }
