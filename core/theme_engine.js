@@ -180,11 +180,11 @@ const VIDEO_EXTS = new Set(['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v']);
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']);
 
 const SLOTS_META = {
-  'left': { key: 'left', defaultFile: 'left_wallpaper.jpg', desc: 'AI主对话界面 / 全局底图', defaultPosition: 'center center' },
-  'mid': { key: 'mid', defaultFile: 'mid_wallpaper.jpg', desc: '终端界面 (活跃终端壁纸)', defaultPosition: 'center 20%' },
-  'right': { key: 'right', defaultFile: 'right_wallpaper.jpg', desc: '最右侧界面 (独立终端/侧栏壁纸)', defaultPosition: 'center 20%' },
-  'bottom': { key: 'bottom', defaultFile: 'input_wallpaper.jpg', desc: '底部输入框', defaultPosition: 'center 6%' },
-  'settings': { key: 'settings', defaultFile: 'settings_wallpaper.png', desc: '设置界面', defaultPosition: 'center 65%' }
+  'left': { key: 'left', defaultFile: '', desc: 'AI主对话界面 / 全局底图', defaultPosition: 'center center' },
+  'mid': { key: 'mid', defaultFile: '', desc: '终端界面 (活跃终端壁纸)', defaultPosition: 'center 20%' },
+  'right': { key: 'right', defaultFile: '', desc: '最右侧界面 (独立终端/侧栏壁纸)', defaultPosition: 'center 20%' },
+  'bottom': { key: 'bottom', defaultFile: '', desc: '底部输入框', defaultPosition: 'center 6%' },
+  'settings': { key: 'settings', defaultFile: '', desc: '设置界面', defaultPosition: 'center 65%' }
 };
 
 const SLOT_ALIASES = {
@@ -510,6 +510,21 @@ function loadSlotsConfig() {
     try {
       config = JSON.parse(fs.readFileSync(slotsConfigPath, 'utf8'));
     } catch (e) {}
+  } else {
+    // 首次使用或未配置壁纸时，默认保持官方原生纯净主题 (100% Vanilla)
+    config = {
+      isOriginal: true,
+      left: { key: 'left', file: '', type: 'none', position: 'center center', desc: 'AI主对话界面 / 全局底图' },
+      mid: { key: 'mid', file: '', type: 'none', position: 'center 20%', desc: '终端界面 (活跃终端壁纸)' },
+      right: { key: 'right', file: '', type: 'none', position: 'center 20%', desc: '最右侧界面 (独立终端/侧栏壁纸)' },
+      bottom: { key: 'bottom', file: '', type: 'none', position: 'center 6%', desc: '底部输入框' },
+      settings: { key: 'settings', file: '', type: 'none', position: 'center 65%', desc: '设置界面' },
+      fontColor: { primary: '#ffffff' }
+    };
+    try {
+      fs.writeFileSync(slotsConfigPath, JSON.stringify(config, null, 2), 'utf8');
+    } catch(e) {}
+    return config;
   }
 
   if (config && config.isOriginal) {
@@ -527,34 +542,10 @@ function loadSlotsConfig() {
       continue;
     }
     if (!config[key] || !config[key].file) {
-      let foundFile = meta.defaultFile;
-      let foundType = 'image';
-
-      // 1. Check for video in wallpapersDir
-      const prefix = key === 'bottom' ? 'input_wallpaper' : `${key}_wallpaper`;
-      const matchingVideo = allFiles.find(f => {
-        const ext = path.extname(f).toLowerCase();
-        return VIDEO_EXTS.has(ext) && f.startsWith(prefix);
-      });
-
-      if (matchingVideo) {
-        foundFile = matchingVideo;
-        foundType = 'video';
-      } else {
-        const matchingImage = allFiles.find(f => {
-          const ext = path.extname(f).toLowerCase();
-          return IMAGE_EXTS.has(ext) && f.startsWith(prefix);
-        });
-        if (matchingImage) {
-          foundFile = matchingImage;
-          foundType = 'image';
-        }
-      }
-
       config[key] = {
         key,
-        file: foundFile,
-        type: foundType,
+        file: '',
+        type: 'none',
         position: meta.defaultPosition || 'center center',
         desc: meta.desc
       };

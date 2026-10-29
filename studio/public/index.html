@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Antigravity Theme Studio —— 实时预览与全景工坊</title>
-  <link rel="stylesheet" href="style.css?v=3.0">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css?v=3.1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,7 +17,7 @@
   <header class="app-header">
     <div class="header-left">
       <div class="brand">
-        <div class="brand-icon">🌸</div>
+        <div class="brand-icon"><img src="app-icon.png" width="22" height="22" style="border-radius:5px;display:block;" alt="Antigravity"></div>
         <div class="brand-info">
           <h1>Antigravity Theme Studio</h1>
           <span class="badge badge-subtle">v3.1</span>
@@ -48,6 +49,10 @@
 
     <!-- Right: Telemetry & Controls -->
     <div class="header-status">
+      <button class="btn btn-secondary btn-sm btn-header" id="btn-theme-toggle" title="切换暗色 / 亮色主题">
+        <span id="theme-toggle-icon">🌙</span>
+        <span class="header-btn-text" id="theme-toggle-text">暗色</span>
+      </button>
       <div class="status-pill cursor-pointer" id="patch-status-pill" title="核心美化底层注入状态 (点击查看或一键注入)">
         <span class="status-dot"></span>
         <span class="status-text" id="patch-status-text">底层状态...</span>
@@ -191,18 +196,18 @@
               </div>
               <div class="drop-title">拖拽素材到此处</div>
               <div class="drop-actions">
-                <button class="btn btn-secondary btn-sm" id="btn-browse-native">
+                <button class="btn btn-secondary btn-sm" id="btn-browse-native" title="从本地磁盘挑选图片或视频素材">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  本地文件...
+                  本地文件
                 </button>
                 <button class="btn btn-accent-ghost btn-sm" id="btn-open-we-picker" title="免切页面，直接在工作区挑选本地 Steam 创意工坊壁纸">
-                  🎮 创意工坊...
+                  🎮 创意工坊
                 </button>
-                <button class="btn btn-secondary btn-sm" id="btn-restore-slot-vanilla" title="将当前选中区域的壁纸清除，恢复为 Antigravity 官方原生纯净深色主题模样">
+                <button class="btn btn-secondary btn-sm" id="btn-restore-slot-vanilla" title="将当前槽位的壁纸清除，恢复为 Antigravity 官方原生纯净深色主题模样">
                   🛡️ 恢复原版
                 </button>
-                <button class="btn btn-secondary btn-sm" id="btn-reset-slot" title="重置当前槽位为默认官方壁纸">
-                  重置
+                <button class="btn btn-secondary btn-sm" id="btn-reset-slot" title="重置当前槽位壁纸">
+                  ↺ 重置槽位
                 </button>
               </div>
             </div>
@@ -238,29 +243,7 @@
           </div>
         </div>
 
-        <!-- Glassmorphism & Mask Control -->
-        <div class="inspector-section">
-          <div class="section-title-row">
-            <span class="section-tag">GLASS & CONTRAST</span>
-            <button class="btn-text-action" id="btn-reset-glass" title="重置毛玻璃与暗度">重置默认</button>
-          </div>
-          <div class="pos-control-group">
-            <div class="slider-row">
-              <div class="slider-label-line">
-                <span>界面毛玻璃模糊度</span>
-                <span class="slider-val-tag" id="val-glass-blur">16px</span>
-              </div>
-              <input type="range" class="range-slider" id="slider-glass-blur" min="0" max="36" value="16">
-            </div>
-            <div class="slider-row">
-              <div class="slider-label-line">
-                <span>卡片底色遮罩暗度</span>
-                <span class="slider-val-tag" id="val-glass-darkness">70%</span>
-              </div>
-              <input type="range" class="range-slider" id="slider-glass-darkness" min="10" max="95" value="70">
-            </div>
-          </div>
-        </div>
+        
       </aside>
 
       <!-- Right Column: 1:1 Antigravity Interactive Live Mockup Canvas -->
@@ -678,10 +661,7 @@
           <p class="section-desc">管理、存储并一键装配您的全套视觉配置预设（包含 5 大槽位壁纸、对齐坐标与专属字体配色）。</p>
         </div>
         <div class="page-header-actions">
-          <button class="btn btn-secondary btn-sm" id="btn-reset-baseline-presets" title="恢复为初版黄金基线全套配置">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-            恢复初版黄金基线
-          </button>
+          
           <button class="btn btn-primary btn-sm btn-glow" id="btn-open-save-modal">
             + 另存当前为新预设
           </button>

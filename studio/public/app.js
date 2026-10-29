@@ -952,21 +952,7 @@ function initPreviewToolbar() {
       const val = quickPresetSelect.value;
       if (!val) return;
 
-      if (val === '__baseline__') {
-        state.draftConfig = {
-          left: { file: 'left_wallpaper.jpg', type: 'image', position: 'center center' },
-          mid: { file: 'mid_wallpaper.jpg', type: 'image', position: 'center 20%' },
-          right: { file: 'right_wallpaper.jpg', type: 'image', position: 'center 20%' },
-          bottom: { file: 'input_wallpaper.jpg', type: 'image', position: 'center 6%' },
-          settings: { file: 'settings_wallpaper.png', type: 'image', position: 'center 65%' },
-          fontColor: { primary: '#ffffff' }
-        };
-        cleanBlobUrls();
-        setDraftDirty(true);
-        renderSlotInspector();
-        renderMockupPreview();
-        showToast('已在工作区装配【初版黄金基线】预览！');
-      } else if (val === '__vanilla__') {
+      if (val === '__vanilla__') {
         state.draftConfig = {
           left: { file: '', type: 'vanilla', position: 'center center' },
           mid: { file: '', type: 'vanilla', position: 'center center' },
@@ -1000,8 +986,7 @@ function renderQuickPresetSelect() {
   const currentVal = quickPresetSelect.value;
   quickPresetSelect.innerHTML = '<option value="">(快速载入预设方案...)</option>';
   
-  quickPresetSelect.innerHTML += '<option value="__baseline__">🌟 初版黄金基线</option>';
-  quickPresetSelect.innerHTML += '<option value="__vanilla__">🛡️ 官方原版纯净</option>';
+    quickPresetSelect.innerHTML += '<option value="__vanilla__">🛡️ 官方原版纯净</option>';
 
   if (state.presets && state.presets.length > 0) {
     state.presets.forEach(p => {
@@ -1410,7 +1395,8 @@ function initPositionControls() {
   };
 
   if (btnRestoreSlotVanilla) {
-    btnRestoreSlotVanilla.onclick = () => {
+    btnRestoreSlotVanilla.onclick = (e) => {
+      if (e) e.stopPropagation();
       const slot = state.activeSlot;
       const meta = state.slotsMeta[slot] || {};
 
@@ -1435,7 +1421,8 @@ function initPositionControls() {
     };
   }
 
-  btnResetSlot.onclick = () => {
+  btnResetSlot.onclick = (e) => {
+      if (e) e.stopPropagation();
     const slot = state.activeSlot;
     const meta = state.slotsMeta[slot] || {};
     if (!confirm(`确定要重置槽位 [${meta.desc || slot}] 的素材为默认官方壁纸吗？`)) return;
@@ -1582,99 +1569,6 @@ function renderPresetsList() {
   presetListEl.innerHTML = '';
 
   const filterText = presetSearchInput ? presetSearchInput.value.trim().toLowerCase() : '';
-
-  // 1. Baseline System Preset
-  if (!filterText || '初版黄金基线 baseline'.includes(filterText)) {
-    const baselineCard = document.createElement('div');
-    baselineCard.className = 'preset-card system-preset';
-    baselineCard.innerHTML = `
-      <div class="preset-header">
-        <div class="preset-title-wrap">
-          <h4>🌟 初版黄金基线</h4>
-          <span class="preset-badge-system">系统基线</span>
-        </div>
-        <span class="preset-date">官方默认</span>
-      </div>
-      <div class="preset-meta-tags">
-        <span class="preset-tag">💾 完整底图</span>
-        <span class="preset-tag">📦 5 槽位</span>
-        <span class="preset-tag">🔤 纯白高对比</span>
-      </div>
-      <div class="preset-slots-preview">
-        <span class="slot-pill-tag">主对话: 图像</span>
-        <span class="slot-pill-tag">活跃终端: 图像</span>
-        <span class="slot-pill-tag">独立侧栏: 图像</span>
-        <span class="slot-pill-tag">提问输入: 图像</span>
-        <span class="slot-pill-tag">设置弹窗: 图像</span>
-      </div>
-      <div class="preset-actions-bar">
-        <button class="btn btn-secondary btn-sm btn-preview-preset" id="btn-preview-baseline">
-          🖥️ 在工作区预览
-        </button>
-        <button class="btn btn-primary btn-sm btn-apply-preset" id="btn-apply-baseline-preset">
-          🚀 立即应用
-        </button>
-      </div>
-    `;
-
-    baselineCard.querySelector('#btn-preview-baseline').onclick = async () => {
-      showToast('正在工作区加载【初版黄金基线】预览...');
-      try {
-        state.draftConfig = {
-          left: { file: 'left_wallpaper.jpg', type: 'image', position: 'center center' },
-          mid: { file: 'mid_wallpaper.jpg', type: 'image', position: 'center 20%' },
-          right: { file: 'right_wallpaper.jpg', type: 'image', position: 'center 20%' },
-          bottom: { file: 'input_wallpaper.jpg', type: 'image', position: 'center 6%' },
-          settings: { file: 'settings_wallpaper.png', type: 'image', position: 'center 65%' },
-          fontColor: { primary: '#ffffff' }
-        };
-        cleanBlobUrls();
-        setDraftDirty(true);
-        switchTab('view-preview');
-        renderSlotInspector();
-        renderMockupPreview();
-        showToast('已在工作区装配【初版黄金基线】预览，满意后可点击正式应用！');
-      } catch (e) {
-        showToast('预览基线失败: ' + e.message);
-      }
-    };
-
-    baselineCard.querySelector('#btn-apply-baseline-preset').onclick = async () => {
-      if (state.patchStatus && !state.patchStatus.isPatched) {
-        const shouldInject = confirm(
-          '⚠️ 检测到 Antigravity 客户端尚未注入美化底层！\n\n' +
-          '若不注入底层，官方客户端将无法加载基线壁纸与动态效果。\n\n' +
-          '点击【确定】立即一键注入美化底层，\n点击【取消】仅应用配置到磁盘。'
-        );
-        if (shouldInject) {
-          await executeInstallPatch();
-        }
-      }
-      try {
-        showToast('正在应用【初版黄金基线】...', 2500);
-        const res = await fetch('/api/theme/baseline', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          cleanBlobUrls();
-          setDraftDirty(false);
-          if (state.isCdpOnline) {
-            showToast('✨ 已成功应用【初版黄金基线】！0.3s 热重载生效');
-          } else if (state.patchStatus && state.patchStatus.isPatched) {
-            showToast('✨ 已成功应用【初版黄金基线】！请重启一次客户端使其生效', 6000);
-          } else {
-            showToast('⚠️ 配置已应用！需点击【一键注入底层】并重启客户端方可在应用内显示', 6000);
-          }
-          await fetchStatus();
-        } else {
-          showToast('应用基线失败: ' + (data.error || '未知错误'));
-        }
-      } catch (e) {
-        showToast('应用基线失败: ' + e.message);
-      }
-    };
-
-    presetListEl.appendChild(baselineCard);
-  }
 
   // 2. Vanilla System Preset
   if (!filterText || '官方原版纯净 vanilla'.includes(filterText)) {
@@ -2304,6 +2198,7 @@ function setupEventListeners() {
 
   // Native Browse
   btnBrowseNative.onclick = (e) => {
+      if (e) e.stopPropagation();
     e.stopPropagation();
     handleNativeBrowse();
   };
@@ -2377,43 +2272,7 @@ function setupEventListeners() {
     }
   };
 
-  // Reset Baseline in Presets Page
-  if (btnResetBaselinePresets) {
-    btnResetBaselinePresets.onclick = async () => {
-      if (!confirm('确定要恢复为初版黄金基线全套配置吗？\n（包含 5 大槽位壁纸、对齐位置与纯白高对比字体）')) return;
-      if (state.patchStatus && !state.patchStatus.isPatched) {
-        const shouldInject = confirm(
-          '⚠️ 检测到 Antigravity 客户端尚未注入美化底层！\n\n' +
-          '若不注入底层，官方客户端将无法加载基线壁纸与动态效果。\n\n' +
-          '点击【确定】立即一键注入美化底层，\n点击【取消】仅应用配置到磁盘。'
-        );
-        if (shouldInject) {
-          await executeInstallPatch();
-        }
-      }
-      try {
-        showToast('正在应用【初版黄金基线】...', 2500);
-        const res = await fetch('/api/theme/baseline', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          cleanBlobUrls();
-          setDraftDirty(false);
-          if (state.isCdpOnline) {
-            showToast('✨ 已成功恢复为【初版黄金基线】！0.3s 热重载生效');
-          } else if (state.patchStatus && state.patchStatus.isPatched) {
-            showToast('✨ 已成功恢复为【初版黄金基线】！请重启一次客户端使其生效', 6000);
-          } else {
-            showToast('⚠️ 配置已应用！需点击【一键注入底层】并重启客户端方可在应用内显示', 6000);
-          }
-          await fetchStatus();
-        } else {
-          showToast('恢复基线失败: ' + (data.error || '未知错误'));
-        }
-      } catch (e) {
-        showToast('恢复基线失败: ' + e.message);
-      }
-    };
-  }
+
 
   // Patch and Injection Actions (Unified across View 1, View 4, Guide Modal, Header)
   if (btnInstallPatch) btnInstallPatch.onclick = executeInstallPatch;
@@ -2623,3 +2482,32 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+
+// =========================================================================
+// Dual-Mode Theme Switcher (Dark / Light)
+// =========================================================================
+function initThemeSwitcher() {
+  const btnThemeToggle = document.getElementById('btn-theme-toggle');
+  const themeIcon = document.getElementById('theme-toggle-icon');
+  const themeText = document.getElementById('theme-toggle-text');
+  const savedTheme = localStorage.getItem('ag_studio_theme') || 'dark';
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('ag_studio_theme', theme);
+    if (themeIcon) themeIcon.textContent = theme === 'light' ? '☀️' : '🌙';
+    if (themeText) themeText.textContent = theme === 'light' ? '亮色' : '暗色';
+  }
+
+  applyTheme(savedTheme);
+
+  if (btnThemeToggle) {
+    btnThemeToggle.onclick = () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const next = current === 'light' ? 'dark' : 'light';
+      applyTheme(next);
+      showToast(`已切换至【${next === 'light' ? '亮色清爽' : '暗色极客'}】主题模式`);
+    };
+  }
+}
