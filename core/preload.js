@@ -5004,6 +5004,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
   // 此处改为：用元素整体文本命中整句词典，再用内联元素的锚点文本把译文切回各节点。
   function tryCombinedSentenceTranslation(element) {
     if (!element || element.nodeType !== Node.ELEMENT_NODE) return false;
+    if (combinedTranslatedElements.has(element)) return false;
     const children = Array.prototype.slice.call(element.childNodes);
     if (children.length < 2) return false;
 
@@ -5070,28 +5071,29 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     return true;
   }
 
-  // 性能优化 3：已处理文本节点记忆化 WeakSet，消除父容器重绘时的重复遍历
-  const translatedNodes = new WeakSet();
+  // 性能优化 3：已处理文本节点记忆化 WeakMap，消除父容器重绘时的重复遍历与循环互调
+  const translatedTexts = new WeakMap();
+  const combinedTranslatedElements = new WeakSet();
 
   function translateNode(node) {
     if (!node) return;
     if (shouldSkipNode(node)) return;
 
     if (node.nodeType === Node.TEXT_NODE) {
-      if (translatedNodes.has(node)) return;
       const original = node.nodeValue;
-      if (!original || !original.trim()) return;
+      if (!original || !original.trim() || !/[a-zA-Z]/.test(original)) return;
+      if (translatedTexts.get(node) === original) return;
+
       const translated = translateString(original);
       if (original !== translated) {
         node.nodeValue = translated;
-        translatedNodes.add(node);
-      } else if (!/[a-zA-Z]/.test(original)) {
-        translatedNodes.add(node);
+        translatedTexts.set(node, translated);
+      } else {
+        translatedTexts.set(node, original);
       }
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       ['placeholder', 'title', 'aria-label', 'value'].forEach(attr => {
         if (node.hasAttribute && node.hasAttribute(attr)) {
-          // 双重锁死：绝对不翻译任何输入框或编辑区的用户 value 属性
           if (attr === 'value' && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA')) {
             return;
           }
@@ -5104,8 +5106,12 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           }
         }
       });
-      // 组合句翻译兜底：React 片段化导致整句词典条目无法命中时启用
-      tryCombinedSentenceTranslation(node);
+
+      if (!combinedTranslatedElements.has(node)) {
+        if (tryCombinedSentenceTranslation(node)) {
+          combinedTranslatedElements.add(node);
+        }
+      }
 
       if (node.shadowRoot) {
         observeRoot(node.shadowRoot);
@@ -5131,29 +5137,18 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
   const observedRoots = new WeakSet();
   let isTranslating = false;
-  let batchRafHandle = null;
+  let batchTimerHandle = null;
   const pendingAddedNodes = new Set();
   const pendingTextNodes = new Set();
   const pendingAttrNodes = new Map();
 
-  const scheduleBatchFrame = (fn) => {
-    if (typeof queueMicrotask === 'function') {
-      queueMicrotask(fn);
-    } else if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(fn);
-    } else {
-      setTimeout(fn, 0);
-    }
-  };
-
   function scheduleBatchTranslation() {
-    if (batchRafHandle !== null) return;
-    batchRafHandle = true;
-    scheduleBatchFrame(processBatchTranslation);
+    if (batchTimerHandle !== null) return;
+    batchTimerHandle = setTimeout(processBatchTranslation, 35);
   }
 
   function processBatchTranslation() {
-    batchRafHandle = null;
+    batchTimerHandle = null;
     if (isTranslating) return;
     isTranslating = true;
 
@@ -5184,13 +5179,15 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
         for (const node of pendingTextNodes) {
           if (!shouldSkipNode(node)) {
             const original = node.nodeValue;
-            if (original && original.trim()) {
-              const translated = translateString(original);
-              if (original !== translated) {
-                node.nodeValue = translated;
-                translatedNodes.add(node);
-              } else if (!/[a-zA-Z]/.test(original)) {
-                translatedNodes.add(node);
+            if (original && original.trim() && /[a-zA-Z]/.test(original)) {
+              if (translatedTexts.get(node) !== original) {
+                const translated = translateString(original);
+                if (original !== translated) {
+                  node.nodeValue = translated;
+                  translatedTexts.set(node, translated);
+                } else {
+                  translatedTexts.set(node, original);
+                }
               }
             }
           }
@@ -5198,7 +5195,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
         pendingTextNodes.clear();
       }
 
-      // 3. 批量处理新增节点（性能优化 6：祖先包含剪枝，彻底消灭 O(N^2) 嵌套递归）
+      // 3. 批量处理新增节点（祖先包含剪枝，彻底消灭 O(N^2) 嵌套递归）
       if (pendingAddedNodes.size > 0) {
         const rootNodes = [];
         for (const node of pendingAddedNodes) {
@@ -5253,9 +5250,13 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             needsSchedule = true;
           }
         } else if (mutation.type === 'characterData') {
-          translatedNodes.delete(mutation.target);
-          pendingTextNodes.add(mutation.target);
-          needsSchedule = true;
+          const target = mutation.target;
+          if (target && target.nodeValue && /[a-zA-Z]/.test(target.nodeValue)) {
+            if (translatedTexts.get(target) !== target.nodeValue) {
+              pendingTextNodes.add(target);
+              needsSchedule = true;
+            }
+          }
         } else if (mutation.type === 'attributes') {
           const target = mutation.target;
           let attrSet = pendingAttrNodes.get(target);
@@ -5296,6 +5297,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
   }
 
   function startObserver() {
+    window.__antigravityScanChinese = safeScan;
     safeScan();
 
     // 1. 渐进式多阶挂载兜底 (Progressive Mounting Backstop)
@@ -6498,8 +6500,16 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       if (debounceTimer) return;
       debounceTimer = setTimeout(function() {
         debounceTimer = null;
+        const hasDialog = !!document.querySelector('[role="dialog"], .settings-modal-container');
+        if (hasDialog) {
+          const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
+          for (let i = 0; i < allVids.length; i++) {
+            if (!allVids[i].paused) allVids[i].pause();
+          }
+          return;
+        }
         applyVideos();
-      }, 120);
+      }, 60);
     };
 
     window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
