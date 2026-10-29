@@ -1750,17 +1750,17 @@ div[role="listbox"][data-mention-menu] svg,
 ${!isBottomNone ? `
 .antigravity-slot-video[data-slot="bottom"] {
   position: absolute !important;
-  bottom: 0 !important;
+  top: 0 !important;
   left: 0 !important;
   width: 100% !important;
-  height: 360px !important;
+  height: 100% !important;
   object-fit: cover !important;
   object-position: ${posBottom} !important;
   pointer-events: none !important;
   z-index: 0 !important;
   border-radius: 15px !important;
-  contain: strict !important;
-  will-change: transform !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
 }
 ` : ''}
 
@@ -3254,19 +3254,10 @@ function getClientVideoScript(config) {
               vid.disableRemotePlayback = true;
               vid.setAttribute('disableremoteplayback', '');
               vid.style.position = 'absolute';
-              if (slotKey === 'bottom') {
-                vid.style.top = '';
-                vid.style.bottom = '0';
-                vid.style.left = '0';
-                vid.style.width = '100%';
-                vid.style.height = '360px';
-              } else {
-                vid.style.top = '0';
-                vid.style.bottom = '';
-                vid.style.left = '0';
-                vid.style.width = '100%';
-                vid.style.height = '100%';
-              }
+              vid.style.top = '0';
+              vid.style.left = '0';
+              vid.style.width = '100%';
+              vid.style.height = '100%';
               vid.style.objectFit = 'cover';
               vid.style.objectPosition = slotPositions[slotKey] || 'center center';
               vid.style.pointerEvents = 'none';
@@ -3347,19 +3338,10 @@ function getClientVideoScript(config) {
                 stagingContainerVid.disablePictureInPicture = true;
                 stagingContainerVid.disableRemotePlayback = true;
                 stagingContainerVid.style.position = 'absolute';
-                if (slotKey === 'bottom') {
-                  stagingContainerVid.style.top = '';
-                  stagingContainerVid.style.bottom = '0';
-                  stagingContainerVid.style.left = '0';
-                  stagingContainerVid.style.width = '100%';
-                  stagingContainerVid.style.height = '360px';
-                } else {
-                  stagingContainerVid.style.top = '0';
-                  stagingContainerVid.style.bottom = '';
-                  stagingContainerVid.style.left = '0';
-                  stagingContainerVid.style.width = '100%';
-                  stagingContainerVid.style.height = '100%';
-                }
+                stagingContainerVid.style.top = '0';
+                stagingContainerVid.style.left = '0';
+                stagingContainerVid.style.width = '100%';
+                stagingContainerVid.style.height = '100%';
                 stagingContainerVid.style.objectFit = 'cover';
                 stagingContainerVid.style.objectPosition = slotPositions[slotKey] || 'center center';
                 stagingContainerVid.style.pointerEvents = 'none';
@@ -3419,84 +3401,6 @@ function getClientVideoScript(config) {
     }
 
     window.__antigravityActiveConfig = config;
-    
-      // --- Input Bar Idle Governor (性能回收与动态自适应调度) ---
-      (function setupInputGovernor() {
-        if (window._agInputGovernorInitialized) return;
-        window._agInputGovernorInitialized = true;
-
-        let idleTimer = null;
-        const IDLE_TIMEOUT_MS = 6000;
-
-        function getBottomVideo() {
-          return document.querySelector('.antigravity-slot-video[data-slot="bottom"]');
-        }
-
-        function wakeBottomVideo() {
-          const bVid = getBottomVideo();
-          if (bVid) {
-            if (bVid.paused && !document.hidden) {
-              bVid.play().catch(function() {});
-            }
-          }
-          resetIdleTimer();
-        }
-
-        function checkInputFocus() {
-          const active = document.activeElement;
-          if (active && (
-            active.closest('[id*="InputBox"]') ||
-            active.tagName === 'TEXTAREA' ||
-            active.getAttribute('contenteditable') === 'true'
-          )) {
-            return true;
-          }
-          return false;
-        }
-
-        function resetIdleTimer() {
-          if (idleTimer) clearTimeout(idleTimer);
-          idleTimer = setTimeout(function() {
-            if (checkInputFocus()) {
-              resetIdleTimer();
-              return;
-            }
-            const bVid = getBottomVideo();
-            if (bVid && !bVid.paused) {
-              bVid.pause();
-            }
-          }, IDLE_TIMEOUT_MS);
-        }
-
-        const events = ['pointerenter', 'pointermove', 'focusin', 'input', 'keydown'];
-        events.forEach(function(evName) {
-          window.addEventListener(evName, function(e) {
-            const target = e.target;
-            if (target && target.nodeType === 1) {
-              if (target.closest && (
-                target.closest('[id*="InputBox"]') ||
-                target.closest('div.rounded-2xl.bg-card-border') ||
-                target.closest('.antigravity-slot-video[data-slot="bottom"]')
-              )) {
-                wakeBottomVideo();
-              }
-            }
-          }, { passive: true, capture: true });
-        });
-
-        window.addEventListener('blur', function() {
-          const bVid = getBottomVideo();
-          if (bVid && !bVid.paused) {
-            bVid.pause();
-          }
-        });
-
-        window.addEventListener('focus', function() {
-          wakeBottomVideo();
-        });
-
-        resetIdleTimer();
-      })();
 
     window.__antigravityApplyVideos = applyVideos;
     applyVideos();
