@@ -19,7 +19,7 @@
         <div class="brand-icon">🌸</div>
         <div class="brand-info">
           <h1>Antigravity Theme Studio</h1>
-          <span class="badge badge-subtle">v3.1 实时预览工坊 · 零后台常驻</span>
+          <span class="badge badge-subtle">v3.1</span>
         </div>
       </div>
     </div>
@@ -261,25 +261,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Typography & High Contrast Presets -->
-        <div class="inspector-section">
-          <div class="section-title-row">
-            <span class="section-tag">TYPOGRAPHY CONTRAST</span>
-            <button class="btn-text-action" id="btn-reset-font" title="重置字体配色为默认纯白高对比">重置纯白</button>
-          </div>
-
-          <div class="font-presets-grid" id="font-presets">
-            <!-- Injected via JS -->
-          </div>
-
-          <div class="custom-color-row">
-            <input type="color" id="font-color-picker" value="#ffffff">
-            <input type="text" id="font-hex-input" class="input-text font-mono" placeholder="#ffffff" maxlength="7">
-            <button class="btn btn-secondary btn-sm" id="btn-apply-font">设定制色</button>
-          </div>
-        </div>
-
       </aside>
 
       <!-- Right Column: 1:1 Antigravity Interactive Live Mockup Canvas -->
@@ -297,91 +278,19 @@
         </div>
 
         <!-- Newbie / Status Hero Action Banner -->
-        <div class="workspace-hero-banner" id="workspace-hero-banner">
+        <div class="workspace-hero-banner" id="workspace-hero-banner" style="display:none;">
           <div class="hero-banner-main">
             <div class="hero-banner-icon-wrap" id="hero-banner-icon">⚡</div>
             <div class="hero-banner-content">
-              <div class="hero-banner-title" id="hero-banner-title">欢迎使用 Antigravity 主题工坊！第一步：注入美化底层</div>
-              <div class="hero-banner-sub" id="hero-banner-sub">官方客户端尚未注入美化扩展。点击右侧按钮一键安全注入，即可开启自定义动态壁纸与极速热重载。</div>
+              <div class="hero-banner-title" id="hero-banner-title">请先注入美化底层</div>
+              <div class="hero-banner-sub" id="hero-banner-sub">点击一键注入以开启自定义壁纸与极速热重载。</div>
             </div>
           </div>
           <div class="hero-banner-actions" id="hero-banner-actions">
-            <button class="btn btn-primary btn-sm btn-glow" id="btn-hero-inject">
-              ⚡ 一键注入美化底层
-            </button>
-            <button class="btn btn-warning-ghost btn-sm" id="btn-hero-restart" style="display:none;">
-              🔄 一键重启客户端
-            </button>
-            <button class="btn btn-secondary btn-sm" id="btn-hero-guide">
-              💡 新手快速指引
-            </button>
+            <button class="btn btn-primary btn-sm btn-glow" id="btn-hero-inject">⚡ 一键注入</button>
+            <button class="btn btn-warning-ghost btn-sm" id="btn-hero-restart" style="display:none;">🔄 重启客户端</button>
+            <button class="btn btn-secondary btn-sm" id="btn-hero-guide">💡 快速指引</button>
             <button class="btn-banner-close" id="btn-banner-close" style="display:none;" title="收起此提示">✕</button>
-          </div>
-        </div>
-
-        <!-- Interactive Preview Stage Toolbar -->
-        <div class="preview-toolbar">
-          <div class="toolbar-left-group">
-            <div class="quick-preset-wrap" title="工作区内快速载入预设方案">
-              <span class="toolbar-label">预设:</span>
-              <select id="quick-preset-select" class="toolbar-select">
-                <option value="">(选择预设方案...)</option>
-              </select>
-            </div>
-            
-            <div class="view-mode-pills" id="view-mode-pills">
-              <button class="btn-mode-pill active" data-mode="full" title="完整 16:9 全景桌面视口">🖥️ 全景</button>
-              <button class="btn-mode-pill" data-mode="compact" title="16:10 紧凑笔记本视口">💻 紧凑</button>
-              <button class="btn-mode-pill" data-mode="focus" title="特写放大当前调节的壁纸槽位">🔍 特写</button>
-            </div>
-
-            <!-- Right Pane View Switcher -->
-            <div class="view-mode-pills" id="right-pane-pills">
-              <button class="btn-mode-pill active" data-pane="subagents" title="显示右侧副栏 (槽位: right)">🤖 任务栏</button>
-              <button class="btn-mode-pill" data-pane="terminal" title="显示活跃终端 (槽位: mid)">💻 终端</button>
-              <button class="btn-mode-pill" data-pane="split" title="分屏对比同时预览终端与任务栏">🪟 双显分屏</button>
-            </div>
-          </div>
-
-          <div class="toolbar-right-group">
-            <!-- Dynamic Auto-Fit & Zoom Controls -->
-            <div class="preview-zoom-controls">
-              <button class="btn-zoom-pill active" id="btn-auto-fit" title="全自适应缩放 (开箱即全景完整呈现，杜绝裁剪)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                <span class="auto-fit-text">自适应填满</span>
-              </button>
-              <span class="zoom-divider"></span>
-              <button class="btn-zoom-step" id="btn-zoom-out" title="缩小预览视窗">-</button>
-              <span class="zoom-level-text" id="zoom-level-label">100%</span>
-              <button class="btn-zoom-step" id="btn-zoom-in" title="放大预览视窗">+</button>
-              <button class="btn-zoom-reset" id="btn-zoom-100" title="还原 100% 原始尺寸">100%</button>
-            </div>
-
-            <!-- Video & Audio Controls -->
-            <div class="media-controls-pill">
-              <button class="btn-media-ctrl" id="btn-toggle-play" title="播放 / 暂停所有动态视频壁纸">
-                <span id="play-icon">⏸️</span>
-              </button>
-              <button class="btn-media-ctrl" id="btn-toggle-audio" title="开启 / 静音视频原声音频 (BGM试听)">
-                <span id="audio-icon">🔇</span>
-              </button>
-              <select id="video-speed-select" class="toolbar-select-sm" title="动态壁纸播放倍速">
-                <option value="1">1.0x</option>
-                <option value="0.5">0.5x</option>
-                <option value="1.5">1.5x</option>
-                <option value="2">2.0x</option>
-              </select>
-            </div>
-
-            <!-- Pure Wallpaper Mode Button -->
-            <button class="btn btn-secondary btn-sm" id="btn-toggle-pure-wallpaper" title="切换纯净壁纸观赏模式 (隐藏对话文字)">
-              🖼️ <span class="pure-wp-text">纯壁纸</span>
-            </button>
-
-            <!-- Peek Vanilla Comparison Button -->
-            <button class="btn btn-secondary btn-sm btn-peek-vanilla" id="btn-peek-vanilla" title="长按此按钮可即时透视对比 Google 官方原生纯净暗黑界面，松开还原">
-              👁️ <span class="peek-text">按住对比原版</span>
-            </button>
           </div>
         </div>
 
@@ -938,13 +847,10 @@
         <div class="guide-step-card" id="guide-step-1">
           <div class="guide-step-num">1</div>
           <div class="guide-step-content">
-            <h4>⚡ 第一步：一键注入美化底层 (必备操作)</h4>
-            <p>
-              Google 官方客户端原生不具备透明毛玻璃与动态壁纸渲染支持。点击注入会自动为核心注入 <strong>CDP 8314 热重载通道</strong> 与 <strong>8315 本地流媒体加速服务</strong>。<br>
-              <span class="guide-highlight">🛡️ 100% 安全：注入时全自动备份官方出厂 <code>app.asar.orig.bak</code>，在安全中心随时可一键物理出厂还原，零残留。</span>
-            </p>
+            <h4>⚡ 第一步：注入美化底层</h4>
+            <p>点击一键安全注入美化内核，自动备份官方出厂文件，随时可出厂还原。</p>
             <div class="guide-step-action">
-              <button class="btn btn-primary btn-sm" id="btn-guide-step1-inject">⚡ 立即一键注入美化底层</button>
+              <button class="btn btn-primary btn-sm" id="btn-guide-step1-inject">⚡ 立即注入</button>
               <span class="guide-status-tag" id="guide-step1-tag">检测中...</span>
             </div>
           </div>
@@ -953,12 +859,10 @@
         <div class="guide-step-card" id="guide-step-2">
           <div class="guide-step-num">2</div>
           <div class="guide-step-content">
-            <h4>🔄 第二步：重启 Antigravity 客户端</h4>
-            <p>
-              注入底层后，重启一次 Antigravity 客户端以加载新内核。右上角 CDP 状态将显示为【🟢 CDP 在线】，标志着免重启热重载链路已打通。
-            </p>
+            <h4>🔄 第二步：重启客户端</h4>
+            <p>注入后重启 Antigravity 客户端加载内核，右上角显示【CDP 在线】即可免重启热重载。</p>
             <div class="guide-step-action">
-              <button class="btn btn-warning-ghost btn-sm" id="btn-guide-step2-restart">🔄 一键重启 Antigravity 客户端</button>
+              <button class="btn btn-warning-ghost btn-sm" id="btn-guide-step2-restart">🔄 一键重启</button>
               <span class="guide-status-tag" id="guide-step2-tag">检测中...</span>
             </div>
           </div>
@@ -967,14 +871,11 @@
         <div class="guide-step-card" id="guide-step-3">
           <div class="guide-step-num">3</div>
           <div class="guide-step-content">
-            <h4>🎨 第三步：挑选槽位壁纸与微调</h4>
-            <p>
-              工坊支持 <strong>5 大界面槽位</strong>（主对话、活跃终端、独立侧栏、提问框、设置）。可直接拖拽本地图片/MP4 视频，或在【Steam 创意工坊】浏览已订阅的高清动态壁纸。<br>
-              在左侧面板中可实时微调画面对齐位置 (X/Y 轴)、毛玻璃模糊度与字体对比度。
-            </p>
+            <h4>🎨 第三步：挑选壁纸与微调</h4>
+            <p>拖拽本地图片/视频或挑选 Steam 创意工坊壁纸，支持微调各槽位对齐与毛玻璃。</p>
             <div class="guide-step-action">
-              <button class="btn btn-secondary btn-sm" id="btn-guide-step3-workspace">🖥️ 前往工作区挑选</button>
-              <button class="btn btn-secondary btn-sm" id="btn-guide-step3-we">🎮 浏览创意工坊壁纸</button>
+              <button class="btn btn-secondary btn-sm" id="btn-guide-step3-workspace">🖥️ 工作区</button>
+              <button class="btn btn-secondary btn-sm" id="btn-guide-step3-we">🎮 创意工坊</button>
             </div>
           </div>
         </div>
@@ -982,12 +883,10 @@
         <div class="guide-step-card" id="guide-step-4">
           <div class="guide-step-num">4</div>
           <div class="guide-step-content">
-            <h4>🚀 第四步：点击【应用生效】秒级生效</h4>
-            <p>
-              在工作区微调完毕后，点击【应用生效】，新壁纸与布局将在 <strong>0.3 秒内免重启极速热推</strong> 到客户端！满意的方案还可【💾 存为预设】，一键随心切换。
-            </p>
+            <h4>🚀 第四步：点击【应用生效】</h4>
+            <p>微调完毕后点击【应用生效】，新壁纸与布局秒级免重启推送到客户端。</p>
             <div class="guide-step-action">
-              <button class="btn btn-primary btn-sm btn-glow" id="btn-guide-step4-go">🚀 进入工作区开始创作</button>
+              <button class="btn btn-primary btn-sm btn-glow" id="btn-guide-step4-go">🚀 开始体验</button>
             </div>
           </div>
         </div>

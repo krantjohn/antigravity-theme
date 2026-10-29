@@ -1117,7 +1117,7 @@ div.pointer-events-none[style*="linear-gradient(to bottom"] {
 
 /* 5. Left Sidebar & Navigation & Conversation History List (深色磨砂背景保护区：纯净浅白文本，彻底杜绝黑色字体与发虚白光晕) */
 aside, nav, [role="navigation"], [class*="sidebar"], [class*="Sidebar"], [class*="navigation"], [class*="Navigation"],
-div.bg-sidebar, [data-panel="conversations"], [data-testid*="sidebar"], [data-testid*="conversation-list"] {
+div.bg-sidebar:not([data-testid="title-menu-bar"]), [data-panel="conversations"], [data-testid*="sidebar"], [data-testid*="conversation-list"] {
   background-color: rgba(14, 15, 26, 0.78) !important;
   border-right: 1px solid rgba(226, 232, 240, 0.12) !important;
   box-shadow: none !important;
@@ -1222,10 +1222,66 @@ header a,
 [class*="titlebar"] a,
 div.absolute.top-0 button,
 div.absolute.top-0 [role="button"],
-.titlebar-button {
+.titlebar-button,
+[data-testid="title-menu-bar"] button,
+[data-testid="title-menu-bar"] [data-testid="title-menu-bar-item"],
+[data-testid="title-menu-bar"] [role="button"],
+[data-testid="title-menu-bar"] div.relative,
+[data-testid="title-menu-bar"] div.relative *,
+[data-testid="title-menu-bar-option"] {
   -webkit-app-region: no-drag !important;
   pointer-events: auto !important;
   cursor: pointer !important;
+  user-select: none !important;
+}
+
+.agy-shell > div.shrink-0:first-child,
+div.shrink-0:has([data-testid="title-menu-bar"]),
+[data-testid="title-menu-bar"],
+[data-testid="title-menu-bar"] * {
+  contain: none !important;
+}
+
+.agy-shell > div.shrink-0:first-child,
+div.shrink-0:has([data-testid="title-menu-bar"]),
+[data-testid="title-menu-bar"] {
+  position: relative !important;
+  z-index: 9000 !important;
+  overflow: visible !important;
+}
+
+[data-testid="title-menu-bar"] div.absolute.top-full,
+div.absolute.top-full:has([data-testid="title-menu-bar-option"]),
+div.absolute.top-full:has(button),
+div.absolute.top-full.border.shadow-lg {
+  position: absolute !important;
+  z-index: 10000 !important;
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+  contain: none !important;
+  background: rgba(22, 24, 34, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(16px) !important;
+  overflow: hidden !important;
+}
+
+[data-testid="title-menu-bar-option"],
+div.absolute.top-full:has(button) button {
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  padding: 6px 12px !important;
+  color: #f1f5f9 !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+}
+
+[data-testid="title-menu-bar-option"]:hover,
+div.absolute.top-full:has(button) button:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
 }
 
 /* 6.1 顶部标题栏与窗口原生控制按钮防碰撞防御 (Windows Electron Native Window Controls Collision Prevention) */
@@ -3440,26 +3496,56 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         '  padding-right: 0px !important;',
                         '}',
                         '/* 6.2 顶部原生菜单栏与下拉菜单层级保障 (Menubar Stacking Context & Dropdown Quality) */',
-                        'div.h-screen.w-screen > div.shrink-0:has(div.flex.items-center.gap-1.bg-sidebar),',
-                        'div.h-screen.w-screen > div.shrink-0:has(button) {',
+                        '.agy-shell > div.shrink-0:first-child,',
+                        'div.shrink-0:has([data-testid="title-menu-bar"]),',
+                        '[data-testid="title-menu-bar"],',
+                        '[data-testid="title-menu-bar"] * {',
+                        '  contain: none !important;',
+                        '}',
+                        '.agy-shell > div.shrink-0:first-child,',
+                        'div.shrink-0:has([data-testid="title-menu-bar"]),',
+                        '[data-testid="title-menu-bar"] {',
                         '  position: relative !important;',
                         '  z-index: 9000 !important;',
+                        '  overflow: visible !important;',
                         '}',
+                        '[data-testid="title-menu-bar"] button,',
+                        '[data-testid="title-menu-bar"] [data-testid="title-menu-bar-item"],',
+                        '[data-testid="title-menu-bar"] [role="button"],',
+                        '[data-testid="title-menu-bar"] div.relative,',
+                        '[data-testid="title-menu-bar"] div.relative * {',
+                        '  -webkit-app-region: no-drag !important;',
+                        '  pointer-events: auto !important;',
+                        '  cursor: pointer !important;',
+                        '  user-select: none !important;',
+                        '}',
+                        '[data-testid="title-menu-bar"] div.absolute.top-full,',
+                        'div.absolute.top-full:has([data-testid="title-menu-bar-option"]),',
                         'div.absolute.top-full:has(button),',
                         'div.absolute.top-full.border.shadow-lg {',
-                        '  background: rgba(22, 24, 34, 0.96) !important;',
-                        '  border: 1px solid rgba(255, 255, 255, 0.12) !important;',
-                        '  border-radius: 8px !important;',
-                        '  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5) !important;',
+                        '  position: absolute !important;',
                         '  z-index: 10000 !important;',
+                        '  -webkit-app-region: no-drag !important;',
+                        '  pointer-events: auto !important;',
+                        '  contain: none !important;',
+                        '  background: rgba(22, 24, 34, 0.98) !important;',
+                        '  border: 1px solid rgba(255, 255, 255, 0.15) !important;',
+                        '  border-radius: 8px !important;',
+                        '  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;',
+                        '  backdrop-filter: blur(16px) !important;',
                         '  overflow: hidden !important;',
                         '}',
+                        '[data-testid="title-menu-bar-option"],',
                         'div.absolute.top-full:has(button) button {',
+                        '  -webkit-app-region: no-drag !important;',
+                        '  pointer-events: auto !important;',
+                        '  cursor: pointer !important;',
                         '  padding: 6px 12px !important;',
                         '  color: #f1f5f9 !important;',
                         '  font-weight: 500 !important;',
                         '  transition: all 0.15s ease !important;',
                         '}',
+                        '[data-testid="title-menu-bar-option"]:hover,',
                         'div.absolute.top-full:has(button) button:hover {',
                         '  background: rgba(255, 255, 255, 0.12) !important;',
                         '  color: #ffffff !important;',

@@ -1505,6 +1505,7 @@ function initPositionControls() {
 // 15. Typography & High-Contrast Presets
 // =========================================================================
 function renderFontPresets() {
+  if (!fontPresetsGrid) return;
   fontPresetsGrid.innerHTML = '';
   let currentFontHex = '#ffffff';
   const fontConf = (state.draftConfig && state.draftConfig.fontColor) || (state.slotsConfig && state.slotsConfig.fontColor);
@@ -1547,6 +1548,7 @@ function applyDraftFont(presetOrHex) {
 }
 
 function initFontControls() {
+  if (!fontColorPicker || !btnApplyFont || !btnResetFont) return;
   fontColorPicker.oninput = () => {
     fontHexInput.value = fontColorPicker.value;
     applyDraftFont(fontColorPicker.value);
@@ -2219,18 +2221,8 @@ function renderPatchStatus(patchStatus, hasBackup, backupSize) {
       if (btnHeroRestart) btnHeroRestart.style.display = 'inline-flex';
       if (btnBannerClose) btnBannerClose.style.display = 'none';
     } else {
-      if (state.isHeroBannerDismissed) {
-        workspaceHeroBanner.style.display = 'none';
-      } else {
-        workspaceHeroBanner.style.display = 'flex';
-        workspaceHeroBanner.className = 'workspace-hero-banner ready';
-        if (heroBannerIcon) heroBannerIcon.textContent = '✨';
-        if (heroBannerTitle) heroBannerTitle.textContent = '全景美化引擎与 8314 免重启极速热重载已全就绪！';
-        if (heroBannerSub) heroBannerSub.textContent = '在左侧挑选壁纸槽位（支持本地图片/MP4/Steam创意工坊），点击【应用生效】立即可见。';
-        if (btnHeroInject) btnHeroInject.style.display = 'none';
-        if (btnHeroRestart) btnHeroRestart.style.display = 'none';
-        if (btnBannerClose) btnBannerClose.style.display = 'inline-flex';
-      }
+      // Ready state: keep preview canvas uncluttered and maximize viewport
+      workspaceHeroBanner.style.display = 'none';
     }
   }
 

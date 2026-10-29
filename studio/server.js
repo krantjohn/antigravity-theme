@@ -111,14 +111,15 @@ function restartAntigravity() {
     }
 
     console.log('[Studio] 正在重启 Antigravity 客户端...');
+    const exeDir = path.dirname(exePath);
     const psScript = [
       'Remove-Item Env:\\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue',
       '$p = Get-Process Antigravity -ErrorAction SilentlyContinue',
       'if ($p) {',
       '  $p | Stop-Process -Force -ErrorAction SilentlyContinue',
-      '  Start-Sleep -Milliseconds 800',
+      '  Start-Sleep -Milliseconds 1200',
       '}',
-      `Start-Process -FilePath "explorer.exe" -ArgumentList "${exePath.replace(/\\/g, '\\\\')}"`
+      `Start-Process -FilePath "${exePath.replace(/\\/g, '\\\\')}" -WorkingDirectory "${exeDir.replace(/\\/g, '\\\\')}"`
     ].join("\r\n");
 
     const b64 = Buffer.from(psScript, 'utf16le').toString('base64');
