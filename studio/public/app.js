@@ -270,15 +270,14 @@ function switchTab(viewId) {
 // =========================================================================
 function setDraftDirty(dirty) {
   state.isDirty = dirty;
-  if (dirty) {
-    draftIndicator.className = 'draft-indicator dirty';
-    draftStatusText.textContent = '有未应用的实时草稿';
-    btnCommitDraft.disabled = false;
-    btnDiscardDraft.disabled = false;
-  } else {
-    draftIndicator.className = 'draft-indicator synced';
-    draftStatusText.textContent = '与当前客户端同步';
+  if (draftIndicator) {
+    draftIndicator.className = dirty ? 'draft-indicator dirty' : 'draft-indicator synced';
   }
+  if (draftStatusText) {
+    draftStatusText.textContent = dirty ? t('inspector.unsaved') : t('inspector.synced');
+  }
+  if (btnCommitDraft) btnCommitDraft.disabled = !dirty;
+  if (btnDiscardDraft) btnDiscardDraft.disabled = !dirty;
 }
 
 function cleanBlobUrls() {
@@ -347,28 +346,28 @@ function renderHeaderStatus(data) {
   const cdpText = cdpStatusEl.querySelector('.status-text');
   if (data.isCdpOnline) {
     cdpDot.className = 'status-dot online';
-    cdpText.textContent = 'CDP 在线';
-    cdpStatusEl.title = 'CDP 8314 在线 (0.3s 秒级热重载就绪)';
+    cdpText.textContent = t('header.cdp_online');
+    cdpStatusEl.title = t('header.cdp_title');
   } else if (data.isAntigravityRunning) {
     cdpDot.className = 'status-dot warning';
-    cdpText.textContent = 'CDP 待重启';
-    cdpStatusEl.title = '需完全重启客户端以激活 8314 热重载通道';
+    cdpText.textContent = t('header.cdp_restarting');
+    cdpStatusEl.title = t('header.cdp_restarting');
   } else {
     cdpDot.className = 'status-dot offline';
-    cdpText.textContent = '客户端离线';
-    cdpStatusEl.title = 'Antigravity 客户端未启动';
+    cdpText.textContent = t('header.cdp_offline');
+    cdpStatusEl.title = t('header.cdp_offline');
   }
 
   const mediaDot = mediaStatusEl.querySelector('.status-dot');
   const mediaText = mediaStatusEl.querySelector('.status-text');
   if (data.isMediaOnline) {
     mediaDot.className = 'status-dot online';
-    mediaText.textContent = '流媒体 8315';
-    mediaStatusEl.title = '动态壁纸本地流媒体加速通道 8315 运行中';
+    mediaText.textContent = t('header.media_online');
+    mediaStatusEl.title = t('header.media_title');
   } else {
     mediaDot.className = 'status-dot offline';
-    mediaText.textContent = '流媒体离线';
-    mediaStatusEl.title = '动态壁纸本地流媒体加速服务离线';
+    mediaText.textContent = t('header.media_offline');
+    mediaStatusEl.title = t('header.media_offline');
   }
 }
 
@@ -380,26 +379,20 @@ function renderSlotInspector() {
   const slotData = (state.draftConfig && state.draftConfig[slotKey]) || (state.slotsConfig && state.slotsConfig[slotKey]) || {};
   const meta = state.slotsMeta[slotKey] || {};
 
-  const slotChineseMap = {
-    left: '主对话 (左)',
-    mid: '活跃终端 (中)',
-    right: '独立侧栏 (右)',
-    bottom: '提问输入框 (底)',
-    settings: '设置弹窗'
-  };
+  const slotName = t('slots.' + slotKey + '_full') || t('slots.' + slotKey) || slotKey;
 
   if (inspectorFocusLabel) {
-    inspectorFocusLabel.textContent = `正在调节：${slotChineseMap[slotKey] || slotKey}`;
+    inspectorFocusLabel.textContent = `${t('slots.tag')}: ${slotName}`;
   }
 
-  activeSlotNameEl.textContent = meta.desc || slotKey;
+  activeSlotNameEl.textContent = t('inspector.target_' + slotKey + '_desc') || meta.desc || slotKey;
   
   if (slotData.stagedFilePath) {
-    activeSlotFileEl.textContent = '✨ [草稿] ' + (slotData.stagedFileName || slotData.stagedFilePath.split(/[\\/]/).pop());
+    activeSlotFileEl.textContent = `✨ [${t('inspector.unsaved')}] ` + (slotData.stagedFileName || slotData.stagedFilePath.split(/[\\/]/).pop());
   } else if (slotData.stagedFileName) {
-    activeSlotFileEl.textContent = '✨ [草稿] ' + slotData.stagedFileName;
+    activeSlotFileEl.textContent = `✨ [${t('inspector.unsaved')}] ` + slotData.stagedFileName;
   } else {
-    activeSlotFileEl.textContent = slotData.file || '(未配置壁纸)';
+    activeSlotFileEl.textContent = slotData.file || t('inspector.type_none');
   }
 
   const isVid = slotData.type === 'video' || 
@@ -409,14 +402,14 @@ function renderSlotInspector() {
   const isVanilla = slotData.type === 'none' || slotData.isOriginal || (!slotData.file && !slotData.stagedFilePath && !slotData.stagedFileName);
   if (isVanilla) {
     typeBadgeEl.className = 'badge badge-subtle';
-    typeBadgeEl.textContent = '🛡️ 原版纯净 (Vanilla)';
-    activeSlotFileEl.textContent = '官方原生深色主题 (无壁纸)';
+    typeBadgeEl.textContent = '🛡️ ' + t('inspector.type_vanilla');
+    activeSlotFileEl.textContent = t('inspector.type_vanilla');
   } else if (isVid) {
     typeBadgeEl.className = 'badge badge-accent';
-    typeBadgeEl.textContent = '🎬 4K/2K 动态视频';
+    typeBadgeEl.textContent = '🎬 ' + t('inspector.type_video');
   } else {
     typeBadgeEl.className = 'badge badge-subtle';
-    typeBadgeEl.textContent = '🖼️ 静态图像';
+    typeBadgeEl.textContent = '🖼️ ' + t('inspector.type_image');
   }
 
   // Parse Position Coordinates
@@ -607,6 +600,14 @@ function renderMockupPreview() {
     agMockup.classList.toggle(`mode-focus-${slot}`, state.viewMode === 'focus' && state.activeSlot === slot);
   });
   agMockup.classList.toggle('mode-split', state.rightPaneMode === 'split');
+
+  // Localize Mockup Dynamic Simulation Texts
+  const mockUserText = document.getElementById('mock-user-text');
+  if (mockUserText) mockUserText.textContent = t('mock.user_text');
+  const mockAiText = document.getElementById('mock-ai-text');
+  if (mockAiText) mockAiText.innerHTML = '<p class="msg-desc">' + t('mock.ai_text') + '</p>';
+  const mockInputText = document.getElementById('mock-input-text');
+  if (mockInputText) mockInputText.textContent = t('mock.input_placeholder');
 }
 
 function calculateLuminance(hex) {
@@ -1232,7 +1233,7 @@ function renderWePickerGrid() {
   }
 
   if (filtered.length === 0) {
-    wePickerGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">未找到符合条件的壁纸</div>';
+    wePickerGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">${t('we.no_match')}</div>`;
     return;
   }
 
@@ -1321,9 +1322,9 @@ async function commitDraftToAntigravity() {
       setDraftDirty(false);
 
       if (state.isCdpOnline) {
-        showToast('✨ 全套视觉配置已正式生效！CDP 0.3s 极速热更新完成！', 4000);
+        showToast(t('toast.apply_success'), 4000);
       } else if (state.patchStatus && state.patchStatus.isPatched) {
-        showToast('✨ 配置已固化！请重启一次 Antigravity 客户端使其生效并激活热更新', 6000);
+        showToast(t('toast.apply_need_restart'), 6000);
       } else {
         showToast('⚠️ 配置已保存！但需点击顶部【一键注入底层】并重启客户端方可在应用内显示', 6000);
       }
@@ -1340,7 +1341,7 @@ async function commitDraftToAntigravity() {
 }
 
 function discardDraftChanges() {
-  if (!confirm('确定要放弃当前工作区未保存的预览调节，还原为客户端当前生效配置吗？')) return;
+  if (!confirm(t('confirm.discard_draft'))) return;
   cleanBlobUrls();
   state.draftConfig = JSON.parse(JSON.stringify(state.slotsConfig || {}));
   setDraftDirty(false);
@@ -1380,7 +1381,7 @@ function initPositionControls() {
     const defaultPos = meta.defaultPosition || 'center center';
     const coords = parsePositionString(defaultPos);
     updateActiveSlotPosition(coords.x, coords.y);
-    showToast(`槽位 [${slot}] 对齐位置已重置为默认基准`);
+    showToast(t('toast.reset_slot_pos', { slot: t('slots.' + slot) || slot }));
   };
 
   btnResetAllPos.onclick = () => {
@@ -1417,7 +1418,7 @@ function initPositionControls() {
       setDraftDirty(true);
       renderSlotInspector();
       renderMockupPreview();
-      showToast(`🛡️ 已将【${meta.desc || slot}】恢复为官方原版纯净样式（点击上方“应用生效”即可生效）`);
+      showToast(t('toast.slot_vanilla_restored', { slot: t('slots.' + slot) || slot }));
     };
   }
 
@@ -1570,50 +1571,53 @@ function renderPresetsList() {
 
   const filterText = presetSearchInput ? presetSearchInput.value.trim().toLowerCase() : '';
 
+  const isEn = getLanguage() === 'en';
+
   // 2. Vanilla System Preset
   if (!filterText || '官方原版纯净 vanilla'.includes(filterText)) {
     const vanillaCard = document.createElement('div');
     vanillaCard.className = 'preset-card system-preset';
+    const noneText = isEn ? 'None' : '无';
     vanillaCard.innerHTML = `
       <div class="preset-header">
         <div class="preset-title-wrap">
-          <h4>🛡️ 官方原版纯净</h4>
-          <span class="preset-badge-system" style="background:rgba(255,255,255,0.08);color:#e2e8f0;border-color:rgba(255,255,255,0.16);">官方出厂</span>
+          <h4>🛡️ ${t('inspector.type_vanilla')}</h4>
+          <span class="preset-badge-system" style="background:rgba(255,255,255,0.08);color:#e2e8f0;border-color:rgba(255,255,255,0.16);">${isEn ? 'Official' : '官方出厂'}</span>
         </div>
-        <span class="preset-date">零素材占用</span>
+        <span class="preset-date">${isEn ? 'Zero Asset' : '零素材占用'}</span>
       </div>
       <div class="preset-meta-tags">
-        <span class="preset-tag">⚡ 零素材占用</span>
-        <span class="preset-tag">🔤 原生极简</span>
+        <span class="preset-tag">⚡ ${isEn ? 'Zero Asset' : '零素材占用'}</span>
+        <span class="preset-tag">🔤 ${isEn ? 'Native Minimal' : '原生极简'}</span>
       </div>
       <div class="preset-slots-preview">
-        <span class="slot-pill-tag">主对话: 无</span>
-        <span class="slot-pill-tag">活跃终端: 无</span>
-        <span class="slot-pill-tag">提问输入: 无</span>
+        <span class="slot-pill-tag">${t('slots.left')}: ${noneText}</span>
+        <span class="slot-pill-tag">${t('slots.mid')}: ${noneText}</span>
+        <span class="slot-pill-tag">${t('slots.bottom')}: ${noneText}</span>
       </div>
       <div class="preset-actions-bar">
         <button class="btn btn-primary btn-sm btn-apply-preset" id="btn-apply-vanilla-preset">
-          🚀 立即应用官方原版
+          🚀 ${t('safety.vanilla_btn')}
         </button>
       </div>
     `;
 
     vanillaCard.querySelector('#btn-apply-vanilla-preset').onclick = async () => {
-      if (!confirm('确定要切换为官方原版纯净模式吗？\n（当前美化状态将自动暂存为预设快照）')) return;
+      if (!confirm(t('confirm.vanilla'))) return;
       try {
-        showToast('正在还原官方原版...', 2500);
+        showToast(isEn ? 'Restoring official vanilla...' : '正在还原官方原版...', 2500);
         const res = await fetch('/api/theme/vanilla', { method: 'POST' });
         const data = await res.json();
         if (data.success) {
           cleanBlobUrls();
           setDraftDirty(false);
-          showToast('✨ 已成功切换为官方原版纯净模式！');
+          showToast(t('toast.apply_vanilla_success'));
           await fetchStatus();
         } else {
-          showToast('还原原版失败: ' + (data.error || '未知错误'));
+          showToast(t('toast.apply_failed', { error: data.error || 'Unknown' }));
         }
       } catch (e) {
-        showToast('还原原版失败: ' + e.message);
+        showToast(t('toast.apply_failed', { error: e.message }));
       }
     };
 
@@ -1628,35 +1632,28 @@ function renderPresetsList() {
       const userCard = document.createElement('div');
       userCard.className = 'preset-card';
 
-      const slotChineseMap = {
-        left: '主对话',
-        mid: '活跃终端',
-        right: '独立侧栏',
-        bottom: '提问输入',
-        settings: '设置弹窗'
-      };
-
       const slotTagsHtml = [];
       if (p.slotsConfig) {
         for (const [sKey, sConf] of Object.entries(p.slotsConfig)) {
           if (sKey === 'fontColor' || sKey === 'isOriginal' || !sConf || typeof sConf !== 'object') continue;
-          const label = slotChineseMap[sKey] || sKey;
+          const label = t('slots.' + sKey) || sKey;
           const isVid = sConf.type === 'video' || (sConf.file && sConf.file.match(/\.(mp4|webm)$/i));
-          const typeStr = isVid ? '视频' : '图像';
+          const typeStr = isVid ? (isEn ? 'Video' : '视频') : (isEn ? 'Image' : '图像');
           slotTagsHtml.push(`<span class="slot-pill-tag ${isVid ? 'video' : ''}">${label}: ${typeStr}</span>`);
         }
       }
 
       const sizeStr = p.totalSizeFormatted || (p.totalSize ? (p.totalSize / 1024 / 1024).toFixed(1) + ' MB' : '');
-      const countStr = `${p.fileCount || (p.files ? p.files.length : '5')} 素材`;
-      const fontName = p.slotsConfig?.fontColor?.name?.split(' ')[0] || '纯白';
+      const countVal = p.fileCount || (p.files ? p.files.length : '5');
+      const countStr = isEn ? `${countVal} Assets` : `${countVal} 素材`;
+      const fontName = p.slotsConfig?.fontColor?.name?.split(' ')[0] || (isEn ? 'White' : '纯白');
       const timeStr = p.createdAtFormatted || (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '');
 
       userCard.innerHTML = `
         <div class="preset-header">
           <div class="preset-title-wrap">
             <h4>📦 ${p.name}</h4>
-            <span class="preset-badge-user">我的预设</span>
+            <span class="preset-badge-user">${isEn ? 'My Preset' : '我的预设'}</span>
           </div>
           <span class="preset-date">${timeStr}</span>
         </div>
@@ -1670,13 +1667,13 @@ function renderPresetsList() {
         </div>
         <div class="preset-actions-bar">
           <button class="btn btn-secondary btn-sm btn-preview-user-p" data-name="${p.name}">
-            🖥️ 在工作区预览
+            ${t('presets.preview_btn')}
           </button>
           <button class="btn btn-primary btn-sm btn-apply-preset btn-apply-user-p" data-name="${p.name}">
-            🚀 立即应用
+            ${t('presets.apply_btn')}
           </button>
           <button class="btn btn-danger-ghost btn-sm btn-del-p" data-name="${p.name}">
-            🗑️ 删除
+            ${t('presets.delete_btn')}
           </button>
         </div>
       `;
@@ -1816,7 +1813,7 @@ function renderWeGallery() {
   });
 
   if (filtered.length === 0) {
-    weGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">未找到符合搜索条件的创意工坊壁纸</div>';
+    weGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">${t('we.no_match')}</div>`;
     return;
   }
 
@@ -1841,10 +1838,10 @@ function renderWeGallery() {
         <h4 class="we-title" title="${item.title}">${item.title}</h4>
         <div class="we-actions">
           <button class="btn-we-preview" data-slot="left">
-            🖥️ 预览到主底座
+            🖥️ ${t('we.btn_apply')}
           </button>
-          <button class="btn btn-secondary btn-sm btn-we-more" title="预览到指定其他槽位">
-            更多 ▾
+          <button class="btn btn-secondary btn-sm btn-we-more" title="${t('we.btn_more')}">
+            ${getLanguage() === 'en' ? 'More ▾' : '更多 ▾'}
           </button>
         </div>
       </div>
@@ -1984,10 +1981,10 @@ function renderPatchStatus(patchStatus, hasBackup, backupSize) {
         patchDot.style.background = 'var(--accent-emerald)';
         patchDot.style.boxShadow = '0 0 10px rgba(52, 211, 153, 0.6)';
       }
-      const bakStr = hasBackup ? ` (出厂备份: ${backupSize}MB)` : '';
-      patchText.textContent = `🟢 核心补丁已就绪 (CDP与流媒体双引擎已激活)${bakStr}`;
+      const bakStr = hasBackup ? ` (Backup: ${backupSize}MB)` : '';
+      patchText.textContent = `🟢 ${t('safety.title')}${bakStr}`;
       if (btnInstallPatch) {
-        btnInstallPatch.textContent = '🔄 重新注入 / 官方更新后重补';
+        btnInstallPatch.textContent = `🔄 ${t('safety.step1_btn')}`;
         btnInstallPatch.className = 'btn btn-secondary btn-block';
       }
     } else if (isFreshOfficialUpdate) {
@@ -1998,9 +1995,9 @@ function renderPatchStatus(patchStatus, hasBackup, backupSize) {
         patchDot.style.background = '#eab308';
         patchDot.style.boxShadow = '0 0 10px rgba(234, 179, 8, 0.6)';
       }
-      patchText.textContent = '⚡ 检测到 Google 官方刚完成更新！当前为原生未注入状态';
+      patchText.textContent = `⚡ ${t('stage.hero_title_updated')}`;
       if (btnInstallPatch) {
-        btnInstallPatch.textContent = '⚡ 一键注入美化底层 (自动继承官方新特性)';
+        btnInstallPatch.textContent = `⚡ ${t('safety.step1_btn')}`;
         btnInstallPatch.className = 'btn btn-primary btn-block';
       }
     } else {
@@ -2011,9 +2008,9 @@ function renderPatchStatus(patchStatus, hasBackup, backupSize) {
         patchDot.style.background = 'var(--accent-rose)';
         patchDot.style.boxShadow = '0 0 10px rgba(244, 63, 94, 0.6)';
       }
-      patchText.textContent = '⚠️ 当前处于官方原生未注入状态，点击下方一键注入';
+      patchText.textContent = `⚠️ ${t('stage.hero_title_need_inject')}`;
       if (btnInstallPatch) {
-        btnInstallPatch.textContent = '⚡ 一键注入 / 安装美化底层';
+        btnInstallPatch.textContent = `⚡ ${t('safety.step1_btn')}`;
         btnInstallPatch.className = 'btn btn-primary btn-block';
       }
     }
@@ -2022,18 +2019,19 @@ function renderPatchStatus(patchStatus, hasBackup, backupSize) {
   // 2. Global Header Status Pill & Nav Badge Dot
   if (patchStatusPill) {
     const pDot = patchStatusPill.querySelector('.status-dot');
+    const isEn = getLanguage() === 'en';
     if (isPatched) {
       if (pDot) pDot.className = 'status-dot online';
-      if (patchStatusText) patchStatusText.textContent = '底层已注入';
-      patchStatusPill.title = '核心美化底层已就绪 (CDP 8314 与流媒体 8315 已配置)';
+      if (patchStatusText) patchStatusText.textContent = isEn ? 'Core Ready' : '底层已就绪';
+      patchStatusPill.title = t('header.patch_pill_title');
     } else if (isFreshOfficialUpdate) {
       if (pDot) pDot.className = 'status-dot warning';
-      if (patchStatusText) patchStatusText.textContent = '官方已更新';
-      patchStatusPill.title = '检测到 Google 官方完成更新，底层文件被重置，点击一键重新注入';
+      if (patchStatusText) patchStatusText.textContent = isEn ? 'Updated' : '官方已更新';
+      patchStatusPill.title = t('stage.hero_title_updated');
     } else {
       if (pDot) pDot.className = 'status-dot offline';
-      if (patchStatusText) patchStatusText.textContent = '未注入底层';
-      patchStatusPill.title = '⚠️ Antigravity 官方原生文件尚未注入美化内核，点击立即注入';
+      if (patchStatusText) patchStatusText.textContent = isEn ? 'Not Injected' : '未注入底层';
+      patchStatusPill.title = t('stage.hero_title_need_inject');
     }
   }
 
@@ -2159,20 +2157,20 @@ function renderPatchStatus(patchStatus, hasBackup, backupSize) {
 }
 
 async function handleRestartAntigravity() {
-  if (!confirm('确定要重启 Antigravity 客户端吗？\n（将加载全新注入的底层架构并激活 8314 免重启极速热重载）')) return;
-  showToast('⚡ 正在重启 Antigravity 客户端，请稍候...', 5000);
+  if (!confirm(t('confirm.restart_app'))) return;
+  showToast(t('toast.restarting'), 5000);
   try {
     const res = await fetch('/api/app/restart', { method: 'POST' });
     const data = await res.json();
     if (data.success) {
-      showToast('✨ 重启指令已发送！客户端正在重新启动并连接 8314...', 4000);
+      showToast(t('toast.restart_success'), 4000);
       setTimeout(fetchStatus, 2500);
       setTimeout(fetchStatus, 5000);
     } else {
-      showToast('❌ 重启失败: ' + (data.error || '未知错误'), 4000);
+      showToast(t('toast.restart_failed', { error: data.error || 'Unknown' }), 4000);
     }
   } catch (e) {
-    showToast('❌ 请求重启失败: ' + e.message, 4000);
+    showToast(t('toast.restart_failed', { error: e.message }), 4000);
   }
 }
 
@@ -2422,7 +2420,7 @@ function setupEventListeners() {
     btnShutdown.disabled = true;
 
     try {
-      showToast('正在退出软件并释放所有后台服务...', 800);
+      showToast(t('toast.exit_msg'), 800);
       await fetch('/api/shutdown', { method: 'POST' });
     } catch (_) {}
 
@@ -2443,8 +2441,27 @@ function setupEventListeners() {
 // 20. Bootstrap
 // =========================================================================
 window.addEventListener('DOMContentLoaded', () => {
-  // 初始化双色模式切换器
+  // 初始化双色模式与双语国际化
   initThemeSwitcher();
+  initI18n();
+
+  document.addEventListener('languagechange', () => {
+    renderHeaderStatus({
+      isCdpOnline: state.isCdpOnline,
+      isMediaOnline: state.isMediaOnline,
+      isAntigravityRunning: state.isAntigravityRunning
+    });
+    renderSlotInspector();
+    renderMockupPreview();
+    if (state.patchStatus) {
+      renderPatchStatus(state.patchStatus, state.hasBackup, state.backupSize);
+    }
+    if (state.activeTab === 'view-presets') {
+      renderPresetsList();
+    } else if (state.activeTab === 'view-we') {
+      renderWeGallery();
+    }
+  });
 
   // 杜绝异常全屏：若窗口尺寸接近全屏，自动回缩至舒适适中尺寸 (1400x860)
   try {

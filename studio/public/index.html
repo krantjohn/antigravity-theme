@@ -10,9 +10,13 @@
       try {
         var t = localStorage.getItem('ag_studio_theme') || 'dark';
         document.documentElement.setAttribute('data-theme', t);
+        var l = localStorage.getItem('ag_studio_lang') || 'zh';
+        document.documentElement.setAttribute('data-lang', l);
+        document.documentElement.lang = l === 'en' ? 'en' : 'zh-CN';
       } catch (e) {}
     })();
   </script>
+  <script src="i18n.js?v=3.1"></script>
   <link rel="stylesheet" href="style.css?v=3.1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,61 +41,65 @@
     <nav class="nav-segmented" id="app-nav">
       <button class="nav-tab active" data-tab="view-preview" id="nav-tab-preview">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        <span>实时装配预览</span>
+        <span data-i18n="nav.preview">实时装配预览</span>
       </button>
       <button class="nav-tab" data-tab="view-presets" id="nav-tab-presets">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        <span>预设保险库</span>
+        <span data-i18n="nav.presets">预设保险库</span>
       </button>
       <button class="nav-tab" data-tab="view-we" id="nav-tab-we">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        <span>Steam 创意工坊</span>
+        <span data-i18n="nav.we">Steam 创意工坊</span>
         <span class="nav-badge" id="nav-we-count">0</span>
       </button>
       <button class="nav-tab" data-tab="view-safety" id="nav-tab-safety">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>底层与安全</span>
-        <span class="nav-tab-dot" id="nav-safety-dot" style="display:none;" title="尚未注入美化底层"></span>
+        <span data-i18n="nav.safety">底层与安全</span>
+        <span class="nav-tab-dot" id="nav-safety-dot" style="display:none;" title="尚未注入美化底层" data-i18n-title="nav.safety_not_injected"></span>
       </button>
     </nav>
 
     <!-- Right: Telemetry & Controls -->
     <div class="header-status">
-      <button class="btn btn-secondary btn-sm btn-header" id="btn-theme-toggle" title="切换暗色 / 亮色主题">
+      <button class="btn btn-secondary btn-sm btn-header" id="btn-theme-toggle" title="切换暗色 / 亮色主题" data-i18n-title="header.switch_theme">
         <span id="theme-toggle-icon">🌙</span>
-        <span class="header-btn-text" id="theme-toggle-text">暗色</span>
+        <span class="header-btn-text" id="theme-toggle-text" data-i18n="header.theme_dark">暗色</span>
       </button>
-      <div class="status-pill cursor-pointer" id="patch-status-pill" title="核心美化底层注入状态 (点击查看或一键注入)">
+      <button class="btn btn-secondary btn-sm btn-header" id="btn-lang-toggle" title="切换语言 (中文 / English)" data-i18n-title="header.switch_lang">
+        <span id="lang-toggle-icon">🌐</span>
+        <span class="header-btn-text" id="lang-toggle-text">EN</span>
+      </button>
+      <div class="status-pill cursor-pointer" id="patch-status-pill" title="核心美化底层注入状态 (点击查看或一键注入)" data-i18n-title="header.patch_pill_title">
         <span class="status-dot"></span>
-        <span class="status-text" id="patch-status-text">底层状态...</span>
+        <span class="status-text" id="patch-status-text" data-i18n="header.patch_status_loading">底层状态...</span>
       </div>
-      <div class="status-pill" id="cdp-status" title="CDP 8314 热重载通道">
+      <div class="status-pill" id="cdp-status" title="CDP 8314 热重载通道" data-i18n-title="header.cdp_title">
         <span class="status-dot"></span>
-        <span class="status-text">正在探测 CDP...</span>
+        <span class="status-text" id="cdp-status-text" data-i18n="header.cdp_detecting">正在探测 CDP...</span>
       </div>
-      <div class="status-pill" id="media-status" title="动态壁纸本地流媒体加速通道">
+      <div class="status-pill" id="media-status" title="动态壁纸本地流媒体加速通道" data-i18n-title="header.media_title">
         <span class="status-dot"></span>
-        <span class="status-text">流媒体 8315</span>
+        <span class="status-text" id="media-status-text" data-i18n="header.media_online">流媒体 8315</span>
       </div>
-      <button class="btn btn-secondary btn-sm btn-header" id="btn-open-guide" title="新手快速上手指南与工作流程说明">
+      <button class="btn btn-secondary btn-sm btn-header" id="btn-open-guide" title="新手快速上手指南与工作流程说明" data-i18n-title="header.guide_title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span class="header-btn-text">新手指南</span>
+        <span class="header-btn-text" data-i18n="header.guide">新手指南</span>
       </button>
-      <button class="btn btn-warning-ghost btn-sm btn-header" id="btn-restart-app" title="一键重启 Antigravity 客户端以激活 8314 热重载或装载最新补丁">
+      <button class="btn btn-warning-ghost btn-sm btn-header" id="btn-restart-app" title="一键重启 Antigravity 客户端以激活 8314 热重载或装载最新补丁" data-i18n-title="header.restart_title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-        <span class="header-btn-text">重启</span>
+        <span class="header-btn-text" data-i18n="header.restart">重启</span>
       </button>
-      <button class="btn btn-secondary btn-sm btn-header" id="btn-reset-window" title="一键还原至推荐适中窗口大小 (1400x860，居中平铺)">
+      <button class="btn btn-secondary btn-sm btn-header" id="btn-reset-window" title="一键还原至推荐适中窗口大小 (1400x860，居中平铺)" data-i18n-title="header.reset_window_title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-        <span class="header-btn-text">还原</span>
+        <span class="header-btn-text" data-i18n="header.reset_window">还原</span>
       </button>
-      <button class="btn btn-secondary btn-sm btn-header" id="btn-reload" title="刷新工坊配置与状态">
+      <button class="btn btn-secondary btn-sm btn-header" id="btn-reload" title="刷新工坊配置与状态" data-i18n-title="header.reload_title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-        <span class="header-btn-text">刷新</span>
+        <span class="header-btn-text" data-i18n="header.reload">刷新</span>
       </button>
-      <button class="btn btn-danger-ghost btn-sm btn-header" id="btn-shutdown" title="退出软件 (完全关闭后台服务与视窗)">
+      <button class="btn btn-danger-ghost btn-sm btn-header" id="btn-shutdown" title="退出软件 (完全关闭后台服务与视窗)" data-i18n-title="header.exit_title">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
-        <span class="header-btn-text">退出</span>
+        <span class="header-btn-text" data-i18n="header.exit">退出</span>
       </button>
     </div>
   </header>
@@ -105,7 +113,7 @@
         
         <!-- Inspector Collapsed Thin Bar (When collapsed for max preview) -->
         <div class="inspector-collapsed-bar" id="inspector-collapsed-bar">
-          <button class="btn-toggle-inspector" id="btn-expand-inspector" title="展开参数调节侧栏">
+          <button class="btn-toggle-inspector" id="btn-expand-inspector" title="展开参数调节侧栏" data-i18n-title="inspector.expand_title">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
           <span class="collapsed-inspector-text">INSPECTOR</span>
@@ -114,17 +122,17 @@
         <!-- Quick Step 1 Injection / Onboarding Card -->
         <div class="inspector-guide-card" id="inspector-guide-card">
           <div class="guide-card-header">
-            <span class="guide-card-badge" id="guide-card-badge">第一步</span>
-            <span class="guide-card-title" id="guide-card-title">注入美化底层</span>
+            <span class="guide-card-badge" id="guide-card-badge" data-i18n="inspector.step1_badge">第一步</span>
+            <span class="guide-card-title" id="guide-card-title" data-i18n="inspector.step1_title">注入美化底层</span>
           </div>
-          <p class="guide-card-desc" id="guide-card-desc">
+          <p class="guide-card-desc" id="guide-card-desc" data-i18n="inspector.step1_desc">
             首次使用需一键注入美化内核，方可在 Antigravity 中渲染壁纸与激活热重载。
           </p>
           <div class="guide-card-actions">
-            <button class="btn btn-primary btn-sm btn-block btn-glow" id="btn-quick-inject">
+            <button class="btn btn-primary btn-sm btn-block btn-glow" id="btn-quick-inject" data-i18n="inspector.quick_inject">
               ⚡ 一键注入美化底层
             </button>
-            <button class="btn btn-warning-ghost btn-sm btn-block" id="btn-quick-restart" style="display:none;">
+            <button class="btn btn-warning-ghost btn-sm btn-block" id="btn-quick-restart" style="display:none;" data-i18n="inspector.quick_restart">
               🔄 一键重启客户端
             </button>
           </div>
@@ -135,23 +143,23 @@
           <div class="draft-top-row" style="display:flex; justify-content:space-between; align-items:center;">
             <div class="draft-status-wrap">
               <span class="draft-indicator synced" id="draft-indicator"></span>
-              <span class="draft-status-text" id="draft-status-text">已同步</span>
+              <span class="draft-status-text" id="draft-status-text" data-i18n="inspector.synced">已同步</span>
             </div>
-            <button class="btn-toggle-inspector" id="btn-toggle-inspector" title="收起参数调节面板以获得更大全景预览视口">
+            <button class="btn-toggle-inspector" id="btn-toggle-inspector" title="收起参数调节面板以获得更大全景预览视口" data-i18n-title="inspector.collapse_title">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
           </div>
           <div class="draft-btn-group">
-            <button class="btn btn-primary btn-sm btn-glow btn-block" id="btn-commit-draft" title="将当前实时预览的全部槽位壁纸、位置对齐与字体正式应用至 Antigravity">
+            <button class="btn btn-primary btn-sm btn-glow btn-block" id="btn-commit-draft" title="将当前实时预览的全部槽位壁纸、位置对齐与字体正式应用至 Antigravity" data-i18n-title="inspector.apply_title">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
-              应用生效
+              <span data-i18n="inspector.apply">应用生效</span>
             </button>
             <div class="draft-sub-btns">
-              <button class="btn btn-secondary btn-sm" id="btn-discard-draft" title="放弃当前未应用的预览调节，还原为客户端当前生效配置">
+              <button class="btn btn-secondary btn-sm" id="btn-discard-draft" title="放弃当前未应用的预览调节，还原为客户端当前生效配置" data-i18n-title="inspector.discard_title">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                还原
+                <span data-i18n="inspector.discard">还原</span>
               </button>
-              <button class="btn btn-secondary btn-sm" id="btn-draft-save-preset" title="将当前实时预览的方案另存为新预设">
+              <button class="btn btn-secondary btn-sm" id="btn-draft-save-preset" title="将当前实时预览的方案另存为新预设" data-i18n-title="inspector.save_preset_title" data-i18n="inspector.save_preset">
                 💾 存为预设
               </button>
             </div>
@@ -165,11 +173,11 @@
             <span class="active-focus-label" id="inspector-focus-label">主对话 (左)</span>
           </div>
           <div class="slot-pills" id="slot-selector">
-            <button class="slot-pill active" data-slot="left">主对话</button>
-            <button class="slot-pill" data-slot="mid">活跃终端</button>
-            <button class="slot-pill" data-slot="right">独立侧栏</button>
-            <button class="slot-pill" data-slot="bottom">提问框</button>
-            <button class="slot-pill" data-slot="settings">设置</button>
+            <button class="slot-pill active" data-slot="left" data-i18n="slots.left">主对话</button>
+            <button class="slot-pill" data-slot="mid" data-i18n="slots.mid">活跃终端</button>
+            <button class="slot-pill" data-slot="right" data-i18n="slots.right">独立侧栏</button>
+            <button class="slot-pill" data-slot="bottom" data-i18n="slots.bottom">提问框</button>
+            <button class="slot-pill" data-slot="settings" data-i18n="slots.settings">设置</button>
           </div>
         </div>
 
@@ -177,17 +185,17 @@
         <div class="inspector-section">
           <div class="info-card">
             <div class="info-row">
-              <span class="info-label">槽位目标</span>
+              <span class="info-label" data-i18n="inspector.slot_target">槽位目标</span>
               <span class="info-val highlight-val" id="active-slot-name">AI主对话界面 / 全局底图</span>
             </div>
             <div class="info-row">
-              <span class="info-label">当前素材</span>
-              <span class="info-val font-mono" id="active-slot-file">正在获取...</span>
+              <span class="info-label" data-i18n="inspector.current_asset">当前素材</span>
+              <span class="info-val font-mono" id="active-slot-file" data-i18n="inspector.fetching">正在获取...</span>
             </div>
             <div class="info-row">
-              <span class="info-label">素材类型</span>
+              <span class="info-label" data-i18n="inspector.asset_type">素材类型</span>
               <span class="info-val" id="active-slot-type">
-                <span class="badge badge-accent" id="type-badge">动态视频</span>
+                <span class="badge badge-accent" id="type-badge" data-i18n="inspector.type_video">动态视频</span>
               </span>
             </div>
           </div>
@@ -202,19 +210,19 @@
                   <polyline points="21 15 16 10 5 21"></polyline>
                 </svg>
               </div>
-              <div class="drop-title">拖拽素材到此处</div>
+              <div class="drop-title" data-i18n="dropzone.title">拖拽素材到此处</div>
               <div class="drop-actions">
-                <button class="btn btn-secondary btn-sm" id="btn-browse-native" title="从本地磁盘挑选图片或视频素材">
+                <button class="btn btn-secondary btn-sm" id="btn-browse-native" title="从本地磁盘挑选图片或视频素材" data-i18n-title="dropzone.local_title">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  本地文件
+                  <span data-i18n="dropzone.local">本地文件</span>
                 </button>
-                <button class="btn btn-accent-ghost btn-sm" id="btn-open-we-picker" title="免切页面，直接在工作区挑选本地 Steam 创意工坊壁纸">
+                <button class="btn btn-accent-ghost btn-sm" id="btn-open-we-picker" title="免切页面，直接在工作区挑选本地 Steam 创意工坊壁纸" data-i18n-title="dropzone.we_title" data-i18n="dropzone.we">
                   🎮 创意工坊
                 </button>
-                <button class="btn btn-secondary btn-sm" id="btn-restore-slot-vanilla" title="将当前槽位的壁纸清除，恢复为 Antigravity 官方原生纯净深色主题模样">
+                <button class="btn btn-secondary btn-sm" id="btn-restore-slot-vanilla" title="将当前槽位的壁纸清除，恢复为 Antigravity 官方原生纯净深色主题模样" data-i18n-title="dropzone.vanilla_title" data-i18n="dropzone.vanilla">
                   🛡️ 恢复原版
                 </button>
-                <button class="btn btn-secondary btn-sm" id="btn-reset-slot" title="重置当前槽位壁纸">
+                <button class="btn btn-secondary btn-sm" id="btn-reset-slot" title="重置当前槽位壁纸" data-i18n-title="dropzone.reset_title" data-i18n="dropzone.reset">
                   ↺ 重置槽位
                 </button>
               </div>
@@ -227,15 +235,15 @@
           <div class="section-title-row">
             <span class="section-tag">ALIGNMENT & POSITION</span>
             <div class="quick-pos-actions">
-              <button class="btn-text-action" id="btn-reset-pos" title="重置当前槽位对齐位置">重置当前对齐</button>
-              <button class="btn-text-action" id="btn-reset-all-pos" title="重置全部槽位对齐位置">重置全部</button>
+              <button class="btn-text-action" id="btn-reset-pos" title="重置当前槽位对齐位置" data-i18n-title="pos.reset_pos_title" data-i18n="pos.reset_pos">重置当前对齐</button>
+              <button class="btn-text-action" id="btn-reset-all-pos" title="重置全部槽位对齐位置" data-i18n-title="pos.reset_all_pos_title" data-i18n="pos.reset_all_pos">重置全部</button>
             </div>
           </div>
 
           <div class="pos-control-group">
             <div class="slider-row">
               <div class="slider-label-line">
-                <span>水平位置 (X轴对齐)</span>
+                <span data-i18n="pos.label_x">水平位置 (X轴对齐)</span>
                 <span class="slider-val-tag" id="val-pos-x">50%</span>
               </div>
               <input type="range" class="range-slider" id="slider-pos-x" min="0" max="100" value="50">
@@ -243,7 +251,7 @@
 
             <div class="slider-row">
               <div class="slider-label-line">
-                <span>垂直位置 (Y轴对齐)</span>
+                <span data-i18n="pos.label_y">垂直位置 (Y轴对齐)</span>
                 <span class="slider-val-tag" id="val-pos-y">50%</span>
               </div>
               <input type="range" class="range-slider" id="slider-pos-y" min="0" max="100" value="50">
@@ -259,10 +267,10 @@
         <div class="stage-header">
           <div class="stage-title-wrap">
             <span class="section-tag">1:1 LIVE SIMULATION</span>
-            <h2>Antigravity 界面仿真视窗</h2>
+            <h2 data-i18n="stage.title">Antigravity 界面仿真视窗</h2>
           </div>
           <div class="stage-actions">
-            <button class="btn btn-secondary btn-sm" id="btn-toggle-mock-settings" title="打开/收起设置弹窗外观仿真">
+            <button class="btn btn-secondary btn-sm" id="btn-toggle-mock-settings" title="打开/收起设置弹窗外观仿真" data-i18n-title="stage.mock_settings_btn_title" data-i18n="stage.mock_settings_btn">
               ⚙️ 预览设置弹窗
             </button>
           </div>
@@ -273,14 +281,14 @@
           <div class="hero-banner-main">
             <div class="hero-banner-icon-wrap" id="hero-banner-icon">⚡</div>
             <div class="hero-banner-content">
-              <div class="hero-banner-title" id="hero-banner-title">请先注入美化底层</div>
-              <div class="hero-banner-sub" id="hero-banner-sub">点击一键注入以开启自定义壁纸与极速热重载。</div>
+              <div class="hero-banner-title" id="hero-banner-title" data-i18n="stage.hero_title_need_inject">请先注入美化底层</div>
+              <div class="hero-banner-sub" id="hero-banner-sub" data-i18n="stage.hero_sub_need_inject">点击一键注入以开启自定义壁纸与极速热重载。</div>
             </div>
           </div>
           <div class="hero-banner-actions" id="hero-banner-actions">
-            <button class="btn btn-primary btn-sm btn-glow" id="btn-hero-inject">⚡ 一键注入</button>
-            <button class="btn btn-warning-ghost btn-sm" id="btn-hero-restart" style="display:none;">🔄 重启客户端</button>
-            <button class="btn btn-secondary btn-sm" id="btn-hero-guide">💡 快速指引</button>
+            <button class="btn btn-primary btn-sm btn-glow" id="btn-hero-inject" data-i18n="stage.hero_inject_btn">⚡ 一键注入</button>
+            <button class="btn btn-warning-ghost btn-sm" id="btn-hero-restart" style="display:none;" data-i18n="stage.hero_restart_btn">🔄 重启客户端</button>
+            <button class="btn btn-secondary btn-sm" id="btn-hero-guide" data-i18n="stage.hero_guide_btn">💡 快速指引</button>
             <button class="btn-banner-close" id="btn-banner-close" style="display:none;" title="收起此提示">✕</button>
           </div>
         </div>
@@ -475,8 +483,8 @@
                         <button class="mock-hdr-icon" title="展开 / 全屏">
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -960 960 960" fill="currentColor"><path d="M120-120v-200h60v140h140v60H120Zm540 0v-60h140v-140h60v200H660ZM120-640v-200h200v60H180v140h-60Zm660 0v-140H640v-60h200v200h-60Z"/></svg>
                         </button>
-                        <button class="mock-hdr-icon" id="btn-toggle-chat-visibility" title="隐藏/显示对话文字 (纯净壁纸观赏)">👁️</button>
-                        <button class="mock-hdr-icon active" id="btn-toggle-aux-pane" title="展开/收起右侧副栏">
+                        <button class="mock-hdr-icon" id="btn-toggle-chat-visibility" title="隐藏/显示对话文字 (纯净壁纸观赏)" data-i18n-title="stage.toggle_chat">👁️</button>
+                        <button class="mock-hdr-icon active" id="btn-toggle-aux-pane" title="展开/收起右侧副栏" data-i18n-title="stage.toggle_aux">
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 -960 960 960" fill="currentColor">
                             <path d="M212.31-140q-29.92,0-51.11-21.19T140-212.31V-747.69q0-29.92 21.19-51.11T212.31-820H747.69q29.92,0 51.11,21.19T820-747.69v535.38q0,29.92-21.19,51.11T747.69-140H212.31ZM640-200H747.69q4.62,0 8.46,0t3.85,0V-747.69q0-4.62-3.85-8.46T747.69-760H640v560Zm-60,0V-760H212.31q-4.62,0-8.46,3.85T200-747.69v535.38q0,4.62 3.85,8.46t8.46,3.85H580Zm60,0H747.69q4.62,0 8.46,0t3.85,0q0,0-3.85,0t-8.46,0H640Z"></path>
                           </svg>
@@ -665,19 +673,19 @@
       <div class="page-header">
         <div class="page-title-wrap">
           <span class="section-tag">PRESET VAULT</span>
-          <h2>💾 预设保险库</h2>
-          <p class="section-desc">管理、存储并一键装配您的全套视觉配置预设（包含 5 大槽位壁纸、对齐坐标与专属字体配色）。</p>
+          <h2 data-i18n="presets.title">💾 预设保险库</h2>
+          <p class="section-desc" data-i18n="presets.desc">管理、存储并一键装配您的全套视觉配置预设（包含 5 大槽位壁纸、对齐坐标与专属字体配色）。</p>
         </div>
         <div class="page-header-actions">
           
-          <button class="btn btn-primary btn-sm btn-glow" id="btn-open-save-modal">
+          <button class="btn btn-primary btn-sm btn-glow" id="btn-open-save-modal" data-i18n="presets.save_new">
             + 另存当前为新预设
           </button>
         </div>
       </div>
 
       <div class="preset-search-bar">
-        <input type="text" id="preset-search-input" class="input-text" placeholder="🔍 快速过滤预设名称...">
+        <input type="text" id="preset-search-input" class="input-text" placeholder="🔍 快速过滤预设名称..." data-i18n-placeholder="presets.search_placeholder">
       </div>
 
       <div class="presets-gallery-grid" id="preset-list">
@@ -692,17 +700,17 @@
       <div class="page-header">
         <div class="page-title-wrap">
           <span class="section-tag">WALLPAPER ENGINE BRIDGE</span>
-          <h2>🎮 Steam 创意工坊素材库</h2>
-          <p class="section-desc">直接读取您本地 Steam 安装的 Wallpaper Engine 创意工坊壁纸，一键载入工作区预览或装配至指定槽位。</p>
+          <h2 data-i18n="we.title">🎮 Steam 创意工坊素材库</h2>
+          <p class="section-desc" data-i18n="we.desc">直接读取您本地 Steam 安装的 Wallpaper Engine 创意工坊壁纸，一键载入工作区预览或装配至指定槽位。</p>
         </div>
         <div class="page-header-actions">
-          <span class="badge badge-accent" id="we-badge">检测中...</span>
+          <span class="badge badge-accent" id="we-badge" data-i18n="we.detecting">检测中...</span>
           <span class="badge badge-subtle" id="we-count-badge">0 项素材</span>
         </div>
       </div>
 
       <div class="we-filter-bar">
-        <input type="text" id="we-search-input" class="input-text" placeholder="🔍 搜索创意工坊壁纸标题或 ID...">
+        <input type="text" id="we-search-input" class="input-text" placeholder="🔍 搜索创意工坊壁纸标题或 ID..." data-i18n-placeholder="we.search_placeholder">
       </div>
 
       <div class="we-gallery-grid" id="we-grid">
@@ -717,8 +725,8 @@
       <div class="page-header">
         <div class="page-title-wrap">
           <span class="section-tag">CORE ENGINE & SAFETY</span>
-          <h2>🛡️ 底层核心与安全维护中心</h2>
-          <p class="section-desc">检测 Antigravity 官方原生文件注入状态、CDP 通信与流媒体健康度，支持出厂还原与一键重启。</p>
+          <h2 data-i18n="safety.title">🛡️ 底层核心与安全维护中心</h2>
+          <p class="section-desc" data-i18n="safety.desc">检测 Antigravity 官方原生文件注入状态、CDP 通信与流媒体健康度，支持出厂还原与一键重启。</p>
         </div>
       </div>
 
@@ -727,13 +735,13 @@
         <div class="telemetry-card spotlight-card">
           <div class="card-title-group">
             <span class="section-tag">STEP 1 · PATCH STATUS</span>
-            <h3>① 核心注入环境 (必选第一步)</h3>
+            <h3 data-i18n="safety.step1_title">① 核心注入环境 (必选第一步)</h3>
           </div>
           <div class="backup-status-banner" id="patch-banner">
             <span class="backup-dot" id="patch-dot"></span>
             <span id="patch-text">正在检测核心补丁状态...</span>
           </div>
-          <button class="btn btn-primary btn-block" id="btn-install-patch">
+          <button class="btn btn-primary btn-block" id="btn-install-patch" data-i18n="safety.step1_btn">
             ⚡ 一键注入 / 安装美化底层
           </button>
         </div>
@@ -741,36 +749,36 @@
         <div class="telemetry-card spotlight-card">
           <div class="card-title-group">
             <span class="section-tag">STEP 2 · CLIENT CONTROL</span>
-            <h3>② 客户端控制与重启 (第二步)</h3>
+            <h3 data-i18n="safety.step2_title">② 客户端控制与重启 (第二步)</h3>
           </div>
-          <p class="telemetry-desc">当官方更新后或底层补丁注入后，点击一键全自动重启客户端，激活 8314 热重载通道。</p>
+          <p class="telemetry-desc" data-i18n="safety.step2_desc">当官方更新后或底层补丁注入后，点击一键全自动重启客户端，激活 8314 热重载通道。</p>
           <button class="btn btn-warning-ghost btn-block" id="btn-restart-app-card">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-            🔄 一键重启 Antigravity 客户端
+            <span data-i18n="safety.step2_btn">🔄 一键重启 Antigravity 客户端</span>
           </button>
         </div>
 
         <div class="telemetry-card spotlight-card">
           <div class="card-title-group">
             <span class="section-tag">SAFETY · VANILLA RESTORE</span>
-            <h3>官方原版纯净模式 (安全出厂备用)</h3>
+            <h3 data-i18n="safety.vanilla_title">官方原版纯净模式 (安全出厂备用)</h3>
           </div>
-          <p class="telemetry-desc">一键恢复 Google 官方原生界面风格（当前壁纸自动保存为快照预设，稍后随时可还原）。</p>
+          <p class="telemetry-desc" data-i18n="safety.vanilla_desc">一键恢复 Google 官方原生界面风格（当前壁纸自动保存为快照预设，稍后随时可还原）。</p>
           <button class="btn btn-secondary btn-block" id="btn-vanilla">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            一键恢复官方原版纯净模式
+            <span data-i18n="safety.vanilla_btn">一键恢复官方原版纯净模式</span>
           </button>
         </div>
 
         <div class="telemetry-card spotlight-card">
           <div class="card-title-group">
             <span class="section-tag">PHYSICAL UNINSTALL</span>
-            <h3>出厂物理卸载</h3>
+            <h3 data-i18n="safety.uninstall_title">出厂物理卸载</h3>
           </div>
-          <p class="telemetry-desc">完全还原官方出厂 app.asar 镜像，彻底移除所有注入模块，完全恢复出厂状态。</p>
+          <p class="telemetry-desc" data-i18n="safety.uninstall_desc">完全还原官方出厂 app.asar 镜像，彻底移除所有注入模块，完全恢复出厂状态。</p>
           <button class="btn btn-danger-ghost btn-block" id="btn-uninstall">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            彻底物理卸载出厂还原
+            <span data-i18n="safety.uninstall_btn">彻底物理卸载出厂还原</span>
           </button>
         </div>
       </div>
@@ -782,18 +790,18 @@
   <div class="modal-overlay" id="save-preset-modal">
     <div class="modal-box">
       <div class="modal-header">
-        <h3>💾 保存当前配置为新预设</h3>
+        <h3 data-i18n="modal.save_preset_title">💾 保存当前配置为新预设</h3>
         <button class="modal-close" id="btn-close-save-modal">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="new-preset-name">预设名称</label>
-          <input type="text" id="new-preset-name" class="input-text" placeholder="输入预设名称 (如：守岸人、赛博朋克)">
+          <label for="new-preset-name" data-i18n="modal.preset_name_label">预设名称</label>
+          <input type="text" id="new-preset-name" class="input-text" placeholder="输入预设名称 (如：守岸人、赛博朋克)" data-i18n-placeholder="modal.preset_name_placeholder">
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="btn-cancel-save-modal">取消</button>
-        <button class="btn btn-primary" id="btn-confirm-save-preset">确定保存</button>
+        <button class="btn btn-secondary" id="btn-cancel-save-modal" data-i18n="modal.cancel">取消</button>
+        <button class="btn btn-primary" id="btn-confirm-save-preset" data-i18n="modal.confirm_save">确定保存</button>
       </div>
     </div>
   </div>
@@ -803,20 +811,20 @@
     <div class="modal-box modal-box-lg">
       <div class="modal-header">
         <div class="modal-title-wrap">
-          <h3>🎮 创意工坊素材快速装配</h3>
+          <h3 data-i18n="modal.we_picker_title">🎮 创意工坊素材快速装配</h3>
           <span class="badge badge-accent" id="we-picker-count">127 项</span>
         </div>
         <button class="modal-close" id="btn-close-we-picker">✕</button>
       </div>
       <div class="we-picker-search-bar">
-        <input type="text" id="we-picker-search-input" class="input-text" placeholder="🔍 快速过滤壁纸标题或工坊ID...">
+        <input type="text" id="we-picker-search-input" class="input-text" placeholder="🔍 快速过滤壁纸标题或工坊ID..." data-i18n-placeholder="modal.we_picker_search">
       </div>
       <div class="we-picker-grid" id="we-picker-grid">
         <!-- Injected via JS -->
       </div>
       <div class="modal-footer we-picker-footer">
-        <span class="picker-hint">💡 点击任意壁纸即可直接装配到当前选中的槽位，并在视窗 0ms 实时预览</span>
-        <button class="btn btn-secondary" id="btn-cancel-we-picker">关闭</button>
+        <span class="picker-hint" data-i18n="modal.we_picker_hint">💡 点击任意壁纸即可直接装配到当前选中的槽位，并在视窗 0ms 实时预览</span>
+        <button class="btn btn-secondary" id="btn-cancel-we-picker" data-i18n="modal.close">关闭</button>
       </div>
     </div>
   </div>
@@ -826,8 +834,8 @@
     <div class="modal-box modal-box-guide">
       <div class="modal-header">
         <div class="modal-title-wrap">
-          <h3>💡 Antigravity Theme Studio 快速上手指南</h3>
-          <span class="badge badge-accent">30秒掌握操作流程</span>
+          <h3 data-i18n="guide.title">💡 Antigravity Theme Studio 快速上手指南</h3>
+          <span class="badge badge-accent" data-i18n="guide.badge">30秒掌握操作流程</span>
         </div>
         <button class="modal-close" id="btn-close-guide-modal">✕</button>
       </div>
@@ -835,10 +843,10 @@
         <div class="guide-step-card" id="guide-step-1">
           <div class="guide-step-num">1</div>
           <div class="guide-step-content">
-            <h4>⚡ 第一步：注入美化底层</h4>
-            <p>点击一键安全注入美化内核，自动备份官方出厂文件，随时可出厂还原。</p>
+            <h4 data-i18n="guide.step1_h4">⚡ 第一步：注入美化底层</h4>
+            <p data-i18n="guide.step1_p">点击一键安全注入美化内核，自动备份官方出厂文件，随时可出厂还原。</p>
             <div class="guide-step-action">
-              <button class="btn btn-primary btn-sm" id="btn-guide-step1-inject">⚡ 立即注入</button>
+              <button class="btn btn-primary btn-sm" id="btn-guide-step1-inject" data-i18n="guide.step1_btn">⚡ 立即注入</button>
               <span class="guide-status-tag" id="guide-step1-tag">检测中...</span>
             </div>
           </div>
@@ -847,10 +855,10 @@
         <div class="guide-step-card" id="guide-step-2">
           <div class="guide-step-num">2</div>
           <div class="guide-step-content">
-            <h4>🔄 第二步：重启客户端</h4>
-            <p>注入后重启 Antigravity 客户端加载内核，右上角显示【CDP 在线】即可免重启热重载。</p>
+            <h4 data-i18n="guide.step2_h4">🔄 第二步：重启客户端</h4>
+            <p data-i18n="guide.step2_p">注入后重启 Antigravity 客户端加载内核，右上角显示【CDP 在线】即可免重启热重载。</p>
             <div class="guide-step-action">
-              <button class="btn btn-warning-ghost btn-sm" id="btn-guide-step2-restart">🔄 一键重启</button>
+              <button class="btn btn-warning-ghost btn-sm" id="btn-guide-step2-restart" data-i18n="guide.step2_btn">🔄 一键重启</button>
               <span class="guide-status-tag" id="guide-step2-tag">检测中...</span>
             </div>
           </div>
@@ -859,11 +867,11 @@
         <div class="guide-step-card" id="guide-step-3">
           <div class="guide-step-num">3</div>
           <div class="guide-step-content">
-            <h4>🎨 第三步：挑选壁纸与微调</h4>
-            <p>拖拽本地图片/视频或挑选 Steam 创意工坊壁纸，支持微调各槽位对齐与毛玻璃。</p>
+            <h4 data-i18n="guide.step3_h4">🎨 第三步：挑选壁纸与微调</h4>
+            <p data-i18n="guide.step3_p">拖拽本地图片/视频或挑选 Steam 创意工坊壁纸，支持微调各槽位对齐与毛玻璃。</p>
             <div class="guide-step-action">
-              <button class="btn btn-secondary btn-sm" id="btn-guide-step3-workspace">🖥️ 工作区</button>
-              <button class="btn btn-secondary btn-sm" id="btn-guide-step3-we">🎮 创意工坊</button>
+              <button class="btn btn-secondary btn-sm" id="btn-guide-step3-workspace" data-i18n="guide.step3_workspace">🖥️ 工作区</button>
+              <button class="btn btn-secondary btn-sm" id="btn-guide-step3-we" data-i18n="guide.step3_we">🎮 创意工坊</button>
             </div>
           </div>
         </div>
@@ -871,10 +879,10 @@
         <div class="guide-step-card" id="guide-step-4">
           <div class="guide-step-num">4</div>
           <div class="guide-step-content">
-            <h4>🚀 第四步：点击【应用生效】</h4>
-            <p>微调完毕后点击【应用生效】，新壁纸与布局秒级免重启推送到客户端。</p>
+            <h4 data-i18n="guide.step4_h4">🚀 第四步：点击【应用生效】</h4>
+            <p data-i18n="guide.step4_p">微调完毕后点击【应用生效】，新壁纸与布局秒级免重启推送到客户端。</p>
             <div class="guide-step-action">
-              <button class="btn btn-primary btn-sm btn-glow" id="btn-guide-step4-go">🚀 开始体验</button>
+              <button class="btn btn-primary btn-sm btn-glow" id="btn-guide-step4-go" data-i18n="guide.step4_btn">🚀 开始体验</button>
             </div>
           </div>
         </div>
@@ -882,9 +890,9 @@
       <div class="modal-footer guide-modal-footer">
         <label class="guide-checkbox-label">
           <input type="checkbox" id="chk-never-show-guide">
-          <span>下次启动不再自动弹出</span>
+          <span data-i18n="guide.never_show">下次启动不再自动弹出</span>
         </label>
-        <button class="btn btn-primary" id="btn-finish-guide">开始体验工坊</button>
+        <button class="btn btn-primary" id="btn-finish-guide" data-i18n="guide.finish_btn">开始体验工坊</button>
       </div>
     </div>
   </div>
