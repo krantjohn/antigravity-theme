@@ -180,11 +180,11 @@ const VIDEO_EXTS = new Set(['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v']);
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']);
 
 const SLOTS_META = {
-  'left': { key: 'left', defaultFile: '', desc: 'AI主对话界面 / 全局底图', defaultPosition: 'center center' },
-  'mid': { key: 'mid', defaultFile: '', desc: '终端界面 (活跃终端壁纸)', defaultPosition: 'center 20%' },
-  'right': { key: 'right', defaultFile: '', desc: '最右侧界面 (独立终端/侧栏壁纸)', defaultPosition: 'center 20%' },
-  'bottom': { key: 'bottom', defaultFile: '', desc: '底部输入框', defaultPosition: 'center 6%' },
-  'settings': { key: 'settings', defaultFile: '', desc: '设置界面', defaultPosition: 'center 65%' }
+  'left': { key: 'left', defaultFile: 'left_wallpaper.jpg', desc: 'AI主对话界面 / 全局底图', defaultPosition: 'center center' },
+  'mid': { key: 'mid', defaultFile: 'mid_wallpaper.jpg', desc: '终端界面 (活跃终端壁纸)', defaultPosition: 'center 20%' },
+  'right': { key: 'right', defaultFile: 'right_wallpaper.jpg', desc: '最右侧界面 (独立终端/侧栏壁纸)', defaultPosition: 'center 20%' },
+  'bottom': { key: 'bottom', defaultFile: 'input_wallpaper.jpg', desc: '底部输入框', defaultPosition: 'center 6%' },
+  'settings': { key: 'settings', defaultFile: 'settings_wallpaper.png', desc: '设置界面', defaultPosition: 'center 65%' }
 };
 
 const SLOT_ALIASES = {
@@ -1281,7 +1281,6 @@ div.absolute.top-full.border.shadow-lg {
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 8px !important;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
-  backdrop-filter: blur(16px) !important;
   overflow: hidden !important;
 }
 
@@ -2154,23 +2153,17 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background {
 }
 `}
 
-/* 拖拽与缩放时禁用过渡动画，实现 60FPS 零延迟跟随（针对关键容器精准定向，杜绝全局通配符 * 样式重算） */
-body.is-resizing,
-body.is-resizing #root,
-body.is-resizing main,
-body.is-resizing [role="region"],
-body.is-resizing .antigravity-slot-video,
-body.is-resizing [id="antigravity.agentSidePanelInputBox"] {
-  transition: none !important;
-  user-select: none !important;
-}
-
+/* 极致原生性能：动态视频硬件加速独立合成层隔离与图层约束 */
 .antigravity-slot-video {
   pointer-events: none !important;
   contain: strict !important;
   transform: translateZ(0) !important;
   backface-visibility: hidden !important;
   will-change: transform !important;
+}
+
+.is-resizing iframe {
+  pointer-events: none !important;
 }
 
 div:has([id="antigravity.agentSidePanelInputBox"]) > div,
@@ -2564,16 +2557,9 @@ function getClientVideoScript(config) {
         videoEl.play().catch(function(){});
       });
 
-      // 2. 提前 150ms 优雅循环，规避 Chromium / Blink 在 MP4 末尾 EOF 掉帧停顿
-      videoEl.addEventListener('timeupdate', function() {
-        if (videoEl.duration > 0 && videoEl.currentTime >= videoEl.duration - 0.15) {
-          videoEl.currentTime = 0;
-          if (videoEl.paused) videoEl.play().catch(function(){});
-        }
-      });
-
-      // 3. 异常意外暂停自愈守护 (只要视频在 DOM 中且可见，若意外暂停自动唤醒)
+      // 2. 异常意外暂停自愈守护 (只要视频在 DOM 中且可见，若非缩放/分栏拖拽导致的意外暂停则自动唤醒)
       videoEl.addEventListener('pause', function() {
+        if (window.__isResizing || window.__isDraggingSplit) return;
         if (!document.hidden && videoEl.isConnected && (videoEl.id === 'antigravity-video-left' || (typeof isVideoVisible === 'function' && isVideoVisible(videoEl)))) {
           if (videoEl.currentTime >= videoEl.duration - 0.2 || videoEl.ended || videoEl.currentTime === 0) {
             videoEl.currentTime = 0;
@@ -2582,11 +2568,12 @@ function getClientVideoScript(config) {
         }
       });
 
-      // 4. 卡顿与等待自愈
+      // 3. 卡顿与等待自愈
       videoEl.addEventListener('waiting', function() {
+        if (window.__isResizing || window.__isDraggingSplit) return;
         if (videoEl._waitingTimer) clearTimeout(videoEl._waitingTimer);
         videoEl._waitingTimer = setTimeout(function() {
-          if (!document.hidden && videoEl.paused && videoEl.isConnected && (videoEl.id === 'antigravity-video-left' || (typeof isVideoVisible === 'function' && isVideoVisible(videoEl)))) {
+          if (!window.__isResizing && !window.__isDraggingSplit && !document.hidden && videoEl.paused && videoEl.isConnected && (videoEl.id === 'antigravity-video-left' || (typeof isVideoVisible === 'function' && isVideoVisible(videoEl)))) {
             videoEl.play().catch(function(){});
           }
         }, 500);
@@ -2612,11 +2599,18 @@ function getClientVideoScript(config) {
     function syncVideoPlaybackState(v) {
       if (!v) return;
       if (isVideoVisible(v)) {
-        if (v.paused && v.readyState >= 1) {
-          if (v.currentTime >= v.duration - 0.2 || v.ended) {
-            v.currentTime = 0;
+        if (v.paused) {
+          if (v.readyState >= 1) {
+            if (v.currentTime >= v.duration - 0.2 || v.ended) {
+              v.currentTime = 0;
+            }
+            v.play().catch(function() {});
+          } else {
+            v.addEventListener('canplay', function onCanPlay() {
+              v.removeEventListener('canplay', onCanPlay);
+              if (isVideoVisible(v) && v.paused) v.play().catch(function() {});
+            });
           }
-          v.play().catch(function() {});
         }
         checkAndShowVideo(v);
       } else {
@@ -2834,6 +2828,18 @@ function getClientVideoScript(config) {
         }
         return;
       }
+      // 容灾守护：清理已挂起超时的残留 staging 视频
+      const staleStaging = document.querySelectorAll('.antigravity-slot-video-staging, #antigravity-video-left-staging');
+      for (let i = 0; i < staleStaging.length; i++) {
+        if (!staleStaging[i]._swapped && (staleStaging[i].paused && staleStaging[i].readyState <= 1)) {
+          try {
+            staleStaging[i].pause();
+            staleStaging[i].removeAttribute('src');
+            staleStaging[i].load();
+            staleStaging[i].remove();
+          } catch(e) {}
+        }
+      }
       // 1. Slot: left (Global base wallpaper)
       const left = config.left;
       if (left && left.type === 'video' && left.file) {
@@ -2893,7 +2899,7 @@ function getClientVideoScript(config) {
               }
               stagingVid = document.createElement('video');
               stagingVid.id = 'antigravity-video-left-staging';
-              stagingVid.className = 'antigravity-slot-video';
+              stagingVid.className = 'antigravity-slot-video antigravity-slot-video-staging';
               stagingVid.setAttribute('data-slot', 'left');
               stagingVid.muted = true;
               stagingVid.defaultMuted = true;
@@ -2930,22 +2936,50 @@ function getClientVideoScript(config) {
               const performSwap = function() {
                 if (stagingVid._swapped) return;
                 stagingVid._swapped = true;
+                if (stagingVid._watchdog) {
+                  clearTimeout(stagingVid._watchdog);
+                  stagingVid._watchdog = null;
+                }
                 stagingVid.style.opacity = '1';
-                setTimeout(function() {
-                  const oldLeft = document.getElementById('antigravity-video-left');
-                  if (oldLeft && oldLeft !== stagingVid) {
-                    try { oldLeft.pause(); oldLeft.removeAttribute('src'); oldLeft.load(); oldLeft.remove(); } catch(e) {}
+                stagingVid.id = 'antigravity-video-left';
+                stagingVid.classList.remove('antigravity-slot-video-staging');
+                stagingVid.style.zIndex = '0';
+                stagingVid.style.transition = '';
+                const oldLefts = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
+                for (let i = 0; i < oldLefts.length; i++) {
+                  if (oldLefts[i] !== stagingVid) {
+                    try { oldLefts[i].pause(); oldLefts[i].removeAttribute('src'); oldLefts[i].load(); oldLefts[i].remove(); } catch(e) {}
                   }
-                  stagingVid.id = 'antigravity-video-left';
-                  stagingVid.style.zIndex = '0';
-                  stagingVid.style.transition = '';
-                }, 300);
+                }
               };
 
               stagingVid.addEventListener('playing', performSwap, { once: true });
               stagingVid.addEventListener('canplay', function() {
-                if (stagingVid.paused) stagingVid.play().catch(function() {});
+                if (!stagingVid._swapped) {
+                  if (document.hidden || !stagingVid.paused) {
+                    performSwap();
+                  } else {
+                    stagingVid.play().then(performSwap).catch(function() {
+                      performSwap();
+                    });
+                  }
+                }
               }, { once: true });
+              stagingVid.addEventListener('error', function() {
+                if (stagingVid._watchdog) clearTimeout(stagingVid._watchdog);
+                try { stagingVid.remove(); } catch(e) {}
+              });
+              stagingVid._watchdog = setTimeout(function() {
+                if (!stagingVid._swapped) {
+                  if (stagingVid.readyState >= 2) {
+                    performSwap();
+                  } else if (stagingVid.readyState === 0 && !stagingVid.currentTime) {
+                    try { stagingVid.remove(); } catch(e) {}
+                  } else {
+                    performSwap();
+                  }
+                }
+              }, 2000);
 
               stagingVid.dataset.currentSrc = src;
               stagingVid.src = src;
@@ -2959,6 +2993,18 @@ function getClientVideoScript(config) {
               }
               stagingVid.load();
               stagingVid.play().catch(function() {});
+            } else if (stagingVid && !stagingVid._swapped && stagingVid.readyState >= 2) {
+              stagingVid.style.opacity = '1';
+              stagingVid.id = 'antigravity-video-left';
+              stagingVid.classList.remove('antigravity-slot-video-staging');
+              stagingVid.style.zIndex = '0';
+              stagingVid._swapped = true;
+              const oldLefts = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
+              for (let i = 0; i < oldLefts.length; i++) {
+                if (oldLefts[i] !== stagingVid) {
+                  try { oldLefts[i].pause(); oldLefts[i].removeAttribute('src'); oldLefts[i].load(); oldLefts[i].remove(); } catch(e) {}
+                }
+              }
             }
           } else {
             const allLeftVids = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
@@ -3171,6 +3217,9 @@ function getClientVideoScript(config) {
 
             // Fast-path: already mounted in targetContainer with expected source
             if (vid && vid.dataset.currentSrc === src) {
+              vid.classList.remove('antigravity-slot-video-staging');
+              vid.style.opacity = '1';
+              vid.style.zIndex = '0';
               if (posterSrc && vid.getAttribute('poster') !== posterSrc) {
                 vid.poster = posterSrc;
                 vid.setAttribute('poster', posterSrc);
@@ -3182,6 +3231,7 @@ function getClientVideoScript(config) {
               vid.style.contain = 'strict';
               vid.style.backfaceVisibility = 'hidden';
               vid.style.willChange = 'transform';
+              vid.style.objectPosition = slotPositions[slotKey] || 'center center';
               if (vid.error) {
                 const now = Date.now();
                 vid._lastErrorRetry = vid._lastErrorRetry || 0;
@@ -3196,9 +3246,13 @@ function getClientVideoScript(config) {
               } else {
                 syncVideoPlaybackState(vid);
               }
+              if (window.__antigravityVideoVisibilityObserver) {
+                window.__antigravityVideoVisibilityObserver.observe(vid);
+              }
               continue;
             }
 
+            // If no video exists yet, create directly with target src (no staging, no duplicates)
             if (!vid) {
               vid = document.createElement('video');
               vid.className = 'antigravity-slot-video';
@@ -3233,6 +3287,7 @@ function getClientVideoScript(config) {
               vid.style.contain = 'strict';
               vid.style.backfaceVisibility = 'hidden';
               vid.style.willChange = 'transform';
+              vid.style.opacity = '1';
               vid.style.display = 'block';
               if (posterSrc) {
                 vid.poster = posterSrc;
@@ -3241,6 +3296,8 @@ function getClientVideoScript(config) {
                 vid.style.backgroundSize = 'cover';
                 vid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
               }
+              vid.dataset.currentSrc = src;
+              vid.src = src;
               setupVideoLoopGuards(vid);
               vid.addEventListener('playing', function() {
                 checkAndShowVideo(vid);
@@ -3273,7 +3330,15 @@ function getClientVideoScript(config) {
                 targetContainer.style.willChange = 'transform';
               }
               targetContainer.prepend(vid);
+              vid.load();
+              if (isVideoVisible(vid)) vid.play().catch(function(){});
+              syncVideoPlaybackState(vid);
+              if (window.__antigravityVideoVisibilityObserver) {
+                window.__antigravityVideoVisibilityObserver.observe(vid);
+              }
+              continue;
             }
+
             if (posterSrc && vid.getAttribute('poster') !== posterSrc) {
               vid.poster = posterSrc;
               vid.setAttribute('poster', posterSrc);
@@ -3281,7 +3346,7 @@ function getClientVideoScript(config) {
               vid.style.backgroundSize = 'cover';
               vid.style.backgroundPosition = slotPositions[slotKey] || 'center center';
             }
-            if (vid.dataset.currentSrc !== src) {
+            if (vid && vid.dataset.currentSrc && vid.dataset.currentSrc !== src) {
               let stagingContainerVid = targetContainer.querySelector(':scope > .antigravity-slot-video-staging');
               if (!stagingContainerVid || stagingContainerVid.dataset.currentSrc !== src) {
                 if (stagingContainerVid) {
@@ -3324,28 +3389,66 @@ function getClientVideoScript(config) {
                 const performContainerSwap = function() {
                   if (stagingContainerVid._swapped) return;
                   stagingContainerVid._swapped = true;
+                  if (stagingContainerVid._watchdog) {
+                    clearTimeout(stagingContainerVid._watchdog);
+                    stagingContainerVid._watchdog = null;
+                  }
                   stagingContainerVid.style.opacity = '1';
-                  setTimeout(function() {
-                    const oldVids = targetContainer.querySelectorAll(':scope > .antigravity-slot-video:not(.antigravity-slot-video-staging)');
-                    for (let i = 0; i < oldVids.length; i++) {
+                  stagingContainerVid.classList.remove('antigravity-slot-video-staging');
+                  stagingContainerVid.style.zIndex = '0';
+                  stagingContainerVid.style.transition = '';
+                  const oldVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
+                  for (let i = 0; i < oldVids.length; i++) {
+                    if (oldVids[i] !== stagingContainerVid) {
                       try { oldVids[i].pause(); oldVids[i].removeAttribute('src'); oldVids[i].load(); oldVids[i].remove(); } catch(e) {}
                     }
-                    stagingContainerVid.classList.remove('antigravity-slot-video-staging');
-                    stagingContainerVid.style.zIndex = '0';
-                    stagingContainerVid.style.transition = '';
-                  }, 300);
+                  }
                 };
 
                 stagingContainerVid.addEventListener('playing', performContainerSwap, { once: true });
                 stagingContainerVid.addEventListener('canplay', function() {
-                  if (stagingContainerVid.paused) stagingContainerVid.play().catch(function() {});
+                  if (!stagingContainerVid._swapped) {
+                    if (document.hidden || !stagingContainerVid.paused) {
+                      performContainerSwap();
+                    } else {
+                      stagingContainerVid.play().then(performContainerSwap).catch(function() {
+                        performContainerSwap();
+                      });
+                    }
+                  }
                 }, { once: true });
+                stagingContainerVid.addEventListener('error', function() {
+                  if (stagingContainerVid._watchdog) clearTimeout(stagingContainerVid._watchdog);
+                  try { stagingContainerVid.remove(); } catch(e) {}
+                });
+                stagingContainerVid._watchdog = setTimeout(function() {
+                  if (!stagingContainerVid._swapped) {
+                    if (stagingContainerVid.readyState >= 2) {
+                      performContainerSwap();
+                    } else if (stagingContainerVid.readyState === 0 && !stagingContainerVid.currentTime) {
+                      try { stagingContainerVid.remove(); } catch(e) {}
+                    } else {
+                      performContainerSwap();
+                    }
+                  }
+                }, 2000);
 
                 stagingContainerVid.dataset.currentSrc = src;
                 stagingContainerVid.src = src;
                 targetContainer.prepend(stagingContainerVid);
                 stagingContainerVid.load();
                 stagingContainerVid.play().catch(function() {});
+              } else if (stagingContainerVid && !stagingContainerVid._swapped && stagingContainerVid.readyState >= 2) {
+                stagingContainerVid.style.opacity = '1';
+                stagingContainerVid.classList.remove('antigravity-slot-video-staging');
+                stagingContainerVid.style.zIndex = '0';
+                stagingContainerVid._swapped = true;
+                const oldVids = document.querySelectorAll('.antigravity-slot-video[data-slot="' + slotKey + '"]');
+                for (let i = 0; i < oldVids.length; i++) {
+                  if (oldVids[i] !== stagingContainerVid) {
+                    try { oldVids[i].pause(); oldVids[i].removeAttribute('src'); oldVids[i].load(); oldVids[i].remove(); } catch(e) {}
+                  }
+                }
               }
             }
             vid.style.objectPosition = slotPositions[slotKey] || 'center center';
@@ -3391,9 +3494,10 @@ function getClientVideoScript(config) {
           const target = m.target;
           if (!target || target.nodeType === 3) continue;
           // 深度性能过滤：彻底忽略用户打字、光标移动、代码块渲染与AI流式输出DOM扰动
+          if (target.id === 'antigravity.agentSidePanelInputBox' || target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable) continue;
           if (target.closest && (
-              target.closest('.markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"], textarea, input, [contenteditable], [role="textbox"], form') ||
-              target.closest('[id="antigravity.agentSidePanelInputBox"]')
+              target.closest('input, textarea, [contenteditable="true"], [role="textbox"], form, .markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"]') ||
+              target.closest('#antigravity\\.agentSidePanelInputBox, [id="antigravity.agentSidePanelInputBox"]')
           )) {
             continue;
           }
@@ -3444,7 +3548,7 @@ function getClientVideoScript(config) {
       if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
         return;
       }
-      if (window.__isDraggingSplit || (document.body && document.body.classList.contains('is-resizing'))) {
+      if (window.__isDraggingSplit || window.__isResizing) {
         return;
       }
       if (debounceTimer) return;
@@ -3464,15 +3568,17 @@ function getClientVideoScript(config) {
       attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
     });
 
-    // 极致原生 60FPS/120FPS 性能：原生窗口拖拽缩放与分栏调整协调器
+    // 极致原生 60FPS/120FPS 性能：原生窗口拖拽缩放与分栏调整协调器 (零阻塞、零重绘重排雪崩)
     let resizeThrottleTimer = null;
-    let isResizeActive = false;
+    window.__isResizing = false;
 
     const pauseVideosForResize = function() {
-      if (isResizeActive) return;
-      isResizeActive = true;
-      if (document.body) document.body.classList.add('is-resizing');
-      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left, video');
+      if (window.__isResizing) return;
+      window.__isResizing = true;
+      if (document.body && !document.body.classList.contains('is-resizing')) {
+        document.body.classList.add('is-resizing');
+      }
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
       for (let i = 0; i < allVids.length; i++) {
         const v = allVids[i];
         if (!v.paused) {
@@ -3480,15 +3586,35 @@ function getClientVideoScript(config) {
           v.pause();
         }
       }
+      const iframes = document.querySelectorAll('iframe');
+      for (let i = 0; i < iframes.length; i++) {
+        iframes[i].style.pointerEvents = 'none';
+      }
     };
 
     const resumeVideosAfterResize = function() {
-      if (!isResizeActive) return;
-      isResizeActive = false;
-      if (document.body) document.body.classList.remove('is-resizing');
-      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left, video');
+      if (!window.__isResizing && !window.__isDraggingSplit) return;
+      if (window.__isDraggingSplit) return;
+      window.__isResizing = false;
+      if (document.body && document.body.classList.contains('is-resizing')) {
+        document.body.classList.remove('is-resizing');
+      }
+      const iframes = document.querySelectorAll('iframe');
+      for (let i = 0; i < iframes.length; i++) {
+        iframes[i].style.pointerEvents = '';
+      }
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
       for (let i = 0; i < allVids.length; i++) {
-        syncVideoPlaybackState(allVids[i]);
+        const v = allVids[i];
+        if (v._wasPlayingBeforeResize || v.paused) {
+          v._wasPlayingBeforeResize = false;
+          syncVideoPlaybackState(v);
+        }
+      }
+      if (window.__antigravityApplyVideos) {
+        window.__antigravityApplyVideos();
+      } else if (typeof applyVideos === 'function') {
+        applyVideos();
       }
     };
 
@@ -3496,9 +3622,13 @@ function getClientVideoScript(config) {
       const target = e.target;
       if (!target) return;
       let isHandle = false;
-      if (target.classList && (target.classList.contains('cursor-col-resize') || target.classList.contains('cursor-row-resize'))) {
-        isHandle = true;
-      } else if (target.style && target.style.cursor && target.style.cursor.includes('resize')) {
+      if (target.closest) {
+        const handleEl = target.closest('.cursor-col-resize, .cursor-row-resize, [class*="cursor-col-resize"], [class*="cursor-row-resize"], [class*="sash"], [role="separator"]');
+        if (handleEl) {
+          isHandle = true;
+        }
+      }
+      if (!isHandle && target.style && target.style.cursor && target.style.cursor.includes('resize')) {
         isHandle = true;
       }
       if (isHandle) {
@@ -3511,26 +3641,25 @@ function getClientVideoScript(config) {
       if (window.__isDraggingSplit) {
         window.__isDraggingSplit = false;
         resumeVideosAfterResize();
-        if (window.__antigravityApplyVideos) {
-          window.__antigravityApplyVideos();
-        } else if (typeof applyVideos === 'function') {
-          applyVideos();
-        }
+      }
+    };
+
+    const onPointerMove = function(e) {
+      if (window.__isDraggingSplit && e && e.buttons === 0) {
+        onDragEnd();
       }
     };
 
     const onWindowResize = function() {
-      pauseVideosForResize();
+      if (!window.__isResizing) {
+        pauseVideosForResize();
+      }
       if (resizeThrottleTimer) clearTimeout(resizeThrottleTimer);
       resizeThrottleTimer = setTimeout(function() {
         resizeThrottleTimer = null;
+        if (window.__isDraggingSplit) return;
         resumeVideosAfterResize();
-        if (window.__antigravityApplyVideos) {
-          window.__antigravityApplyVideos();
-        } else if (typeof applyVideos === 'function') {
-          applyVideos();
-        }
-      }, 90);
+      }, 80);
     };
 
     try {
@@ -3538,14 +3667,21 @@ function getClientVideoScript(config) {
         window.removeEventListener('pointerdown', window.__antigravityDragStartHandler, true);
         window.removeEventListener('pointerup', window.__antigravityDragEndHandler, true);
         window.removeEventListener('pointercancel', window.__antigravityDragEndHandler, true);
+        if (window.__antigravityPointerMoveHandler) {
+          window.removeEventListener('pointermove', window.__antigravityPointerMoveHandler);
+        }
+        window.removeEventListener('blur', window.__antigravityDragEndHandler);
         window.removeEventListener('resize', window.__antigravityResizeHandler);
       }
       window.__antigravityDragStartHandler = onDragStart;
       window.__antigravityDragEndHandler = onDragEnd;
+      window.__antigravityPointerMoveHandler = onPointerMove;
       window.__antigravityResizeHandler = onWindowResize;
       window.addEventListener('pointerdown', onDragStart, true);
       window.addEventListener('pointerup', onDragEnd, true);
       window.addEventListener('pointercancel', onDragEnd, true);
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      window.addEventListener('blur', onDragEnd);
       window.addEventListener('resize', onWindowResize, { passive: true });
     } catch(e) {}
 
@@ -3657,7 +3793,6 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         '  border: 1px solid rgba(255, 255, 255, 0.15) !important;',
                         '  border-radius: 8px !important;',
                         '  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;',
-                        '  backdrop-filter: blur(16px) !important;',
                         '  overflow: hidden !important;',
                         '}',
                         '[data-testid="title-menu-bar-option"],',
@@ -4180,7 +4315,7 @@ async function revertToBaseline() {
   try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch(e) {}
 
   // Also update baselineCssPath so that baseline backup does not contain stale buggy selectors
-  if (fs.existsSync(baselineCssPath)) {
+  if (baselineCssPath && fs.existsSync(baselineCssPath)) {
     fs.writeFileSync(baselineCssPath, css, 'utf-8');
   }
 

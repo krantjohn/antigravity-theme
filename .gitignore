@@ -86,3 +86,5 @@ studio/src/obj/
 studio/lib/*.zip
 
 
+
+.agents/
