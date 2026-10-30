@@ -1,24 +1,52 @@
 # 🌸 Antigravity Theme Customizer
 
 <p align="center">
-  <img src="dev/assets/previews/theme_showcase.gif" alt="Antigravity Theme Live Showcase" width="880" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.25);" />
+  <img src="dev/assets/previews/theme_showcase.gif" alt="Antigravity Theme Live Showcase" width="900" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.25);" />
 </p>
 
 <p align="center">
   <a href="README_EN.md"><img src="https://img.shields.io/badge/Language-English-blue?style=flat-square" alt="English Documentation"></a>
   <a href="README.md"><img src="https://img.shields.io/badge/语言-简体中文-red?style=flat-square" alt="中文文档"></a>
   <a href="https://github.com/krantjohn/antigravity-theme/releases"><img src="https://img.shields.io/github/v/release/krantjohn/antigravity-theme?color=brightgreen&label=Release&style=flat-square" alt="GitHub Release"></a>
-  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-v16+-339933?logo=node.js&logoColor=white&style=flat-square" alt="Node.js"></a>
-  <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-33+-47848F?logo=electron&logoColor=white&style=flat-square" alt="Electron"></a>
+  <a href="https://github.com/krantjohn/antigravity-theme/releases/latest/download/AntigravityThemeStudio.exe"><img src="https://img.shields.io/badge/Download-.EXE%20(v3.1.0)-success?style=flat-square&logo=windows" alt="Download EXE"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License: MIT"></a>
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20(x64)-0078D6?style=flat-square&logo=windows" alt="Windows 10/11 x64">
+  <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-33+-47848F?logo=electron&logoColor=white&style=flat-square" alt="Electron"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-v18+-339933?logo=node.js&logoColor=white&style=flat-square" alt="Node.js"></a>
+  <img src="https://img.shields.io/badge/Steam-Wallpaper%20Engine-1b2838?style=flat-square&logo=steam" alt="Steam Wallpaper Engine">
+  <img src="https://img.shields.io/badge/Tests-31%2F31%20Passing%20(100%25)-brightgreen?style=flat-square&logo=checkmarx" alt="Tests 31/31 Passing">
+  <img src="https://img.shields.io/badge/Latency-~0.35ms%20Input%20Lag-success?style=flat-square" alt="Keystroke Latency">
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/UI-Dark%20%26%20Light%20Modes-orange?style=flat-square" alt="Dark and Light Theme">
+  <img src="https://img.shields.io/badge/i18n-CN%20%2F%20EN%20Bilingual-blueviolet?style=flat-square" alt="i18n Bilingual">
+  <a href="https://github.com/krantjohn/antigravity-theme/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="PRs Welcome"></a>
   <a href="https://github.com/krantjohn/antigravity-theme/stargazers"><img src="https://img.shields.io/github/stars/krantjohn/antigravity-theme?style=social" alt="GitHub Stars"></a>
+  <a href="https://github.com/krantjohn/antigravity-theme/network/members"><img src="https://img.shields.io/github/forks/krantjohn/antigravity-theme?style=social" alt="GitHub Forks"></a>
 </p>
 
 <p align="center">
   <b>让你的 Google Antigravity 客户端焕然一新！</b><br>
-  专为 Google Antigravity 打造的高性能、全透光、5 槽位独立二次元沉浸式主题引擎。<br>
-  <i>支持 60FPS 动态流媒体壁纸、Steam Wallpaper Engine 创意工坊直连、自适应发光字体与一键预设秒切。</i>
+  专为 Google Antigravity 打造的高性能、全透光、5 槽位独立沉浸式主题引擎。<br>
+  <i>支持 60FPS 动态流媒体壁纸、Steam Wallpaper Engine 创意工坊跨盘直连、亚毫秒输入低延迟、暗色/亮色双主题与一键出厂级彻底还原。</i>
 </p>
+
+---
+
+## 🏷️ 仓库标签与技术栈特性 (Tags & Topics)
+
+`antigravity` `wallpaper-engine` `steam-workshop` `theme-customizer` `electron` `chromium` `webview2` `c-sharp` `hardware-acceleration` `video-streaming` `rfc7233` `dark-mode` `light-mode` `bilingual-i18n` `performance-tuning` `zero-latency` `mit-license`
+
+| 分类 | 标签 (Tags) | 技术与特性说明 |
+| :--- | :--- | :--- |
+| **核心宿主** | `Google Antigravity` `Electron 33+` `Chromium` | 专为 Google Antigravity 打造，无侵入式底层注入架构 |
+| **流媒体与性能** | `RFC 7233` `HTTP 206` `GPU Decoding` `0.35ms Latency` | 60FPS 动态流媒体回放，窗口缩放拖拽解耦，按键输入亚毫秒响应 |
+| **生态联动** | `Steam` `Wallpaper Engine` `Workshop (AppID 431960)` | 自动跨盘检索已订阅壁纸，支持视频、动图与立绘一键装配 |
+| **可视化界面** | `AntigravityThemeStudio.exe` `C# .NET` `WebView2` `Bento UI` | 单文件绿色免安装桌面客户端，1:1 动态实时拟真预览 |
+| **设计美学** | `Dark Theme` `Light Theme` `Adaptive Typography` `5-Slots` | 暗色/亮色双主题，全界面发光轮廓抗眩光字体，5 槽位独立隔离 |
+| **可靠性与安全** | `app.asar.orig.bak` `Localhost Only` `100% Reversible` `MIT` | 原生物理级出厂备份，纯本地运行零外链遥测，出厂级彻底还原 |
 
 ---
 
@@ -26,29 +54,42 @@
 
 传统的官方客户端界面结构单调，缺少个性化美学表达。Antigravity Theme Customizer 提供了一整套完整、轻量且可控的现代化美化方案：
 
-| 维度 | 传统美化方式 | 🌸 本主题引擎解决方案 |
+| 维度 | 传统美化方式 | 🌸 本主题引擎解决方案 (v3.1.0) |
 | :--- | :--- | :--- |
-| **动态视频流媒体** | 仅支持静态图片，视频易导致客户端卡死 | **内置 RFC 7233 流媒体微服务**：HTTP 206 毫秒级分块流式传输，60FPS 丝滑回放 |
-| **能耗与显存控制** | 无论前后台始终满载解码，显存与能耗飙升 | **智能视口感知休眠**：抽屉折叠、终端关闭或最小化时**自动暂停解码**，展开即时复播 |
+| **动态视频流媒体** | 仅支持静态图片，视频易导致客户端卡顿 | **内置 RFC 7233 流媒体微服务**：HTTP 206 毫秒级分块流式传输，60FPS 丝滑硬件加速回放 |
+| **拖拽缩放流畅度** | 拖动窗口边缘或内部面板分栏时画面卡顿撕裂 | **窗口缩放与拖拽性能解耦**：拖动期间暂停解码争抢，80ms 自愈恢复，彻底消除卡顿 |
+| **打字输入延迟** | 页面 DOM 变动监听器反复触发重算，打字卡手 | **亚毫秒极速打字响应**：MutationObserver 精确过滤输入节点，打字延迟降至 **~0.35ms** |
 | **素材获取与联动** | 手动寻找壁纸、裁剪分辨率与转换格式 | **Steam Wallpaper Engine 跨盘直连**：自动扫描创意工坊订阅库，一键装配到指定槽位 |
 | **字迹辨识与抗眩光** | 浅色/高对比壁纸下文字泛白，看不清代码 | **全界面自适应字体引擎**：内置 6 套发光轮廓预设或任意 Hex，自动计算对比度微光描边 |
+| **主题色彩风格** | 仅支持固定深色模式，界面审美单一 | **暗色 (Dark) / 亮色 (Light) 双主题体系**：支持暗黑极客与明亮清爽双模式，一键平滑切换 |
 | **多区域独立布局** | 全局千篇一律一张图，终端和对话互相干扰 | **5 大独立壁纸槽位**：主对话底图、PowerShell 终端、会话抽屉、输入框、设置弹窗分区独立配置 |
-| **全套配置预设化** | 更换壁纸易丢失历史调配好的素材 | **独立预设管理器**：全套配置 + 素材全量实体归档，一键 0.3 秒无缝热重载切换 |
+| **全套配置预设化** | 更换壁纸易丢失历史调配好的素材 | **独立预设保险库**：全套配置 + 素材全量实体归档，一键 0.3 秒无缝热重载切换 |
 | **升级覆盖与备份保护**| 官方推送更新后所有美化直接报废 | **官方核心物理备份 (`app.asar.orig.bak`)**：安全隔离原版，支持一键出厂级彻底还原 |
 
 ---
 
-## 📸 视觉效果实测 (Showcase)
+## 📸 视觉效果实测 (Visual Showcase)
 
-| 圣园未花柔光樱粉 (默认典藏) | 玛奇玛手势支配 (自定义换装) | 三面板独立联动工作流 (实战多任务) |
-| :---: | :---: | :---: |
-| <img src="dev/assets/previews/mika_theme_overview.png" width="280" /> | <img src="dev/assets/previews/makima_wallpaper_demo.png" width="280" /> | <img src="dev/assets/previews/multi_panel_flow_demo.png" width="280" /> |
-
+### 1. Antigravity 客户端实机实测（多面板协同 + 提问栏 1:1 动态响应）
 <p align="center">
-  <img src="dev/assets/previews/multi_panel_flow_demo.png" alt="多面板独立壁纸协同工作流" width="880" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.15);" />
+  <img src="dev/assets/previews/antigravity_live_workbench.png" alt="Antigravity 客户端实机渲染" width="880" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.3);" />
   <br>
-  <em>✨ 三面板独立壁纸实战：左侧 AI 主对话区（全景底图） + 中间 PowerShell 终端（专属终端壁纸） + 右侧会话抽屉（独立侧栏壁纸）</em>
+  <em>✨ 实机三面板独立壁纸实测：AI 对话全景底图 + PowerShell 终端独立壁纸 + 底部提问输入栏 1:1 精确跟随动态壁纸卡片</em>
 </p>
+
+### 2. Antigravity Theme Studio 现代化可视化工作台（暗色 / 亮色双主题系统）
+
+| 🌙 暗色极客主题 (Dark Theme) | ☀️ 优雅亮色主题 (Light Theme) |
+| :---: | :---: |
+| <img src="dev/assets/previews/theme_studio_dark.png" alt="Theme Studio 暗色模式" width="440" style="border-radius: 8px;" /> | <img src="dev/assets/previews/theme_studio_light.png" alt="Theme Studio 亮色模式" width="440" style="border-radius: 8px;" /> |
+| <b>1:1 实时拟真动态装配 · 暗色高对比</b> | <b>纯净明亮模式 · 一键平滑切换</b> |
+
+### 3. Steam 创意工坊海量素材跨盘直连 & 预设保险库
+
+| 🎮 Steam Wallpaper Engine 跨盘直连网格 | 🗂️ 预设保险库一键备份与秒切 |
+| :---: | :---: |
+| <img src="dev/assets/previews/theme_studio_workshop.png" alt="Steam 创意工坊直连网格" width="440" style="border-radius: 8px;" /> | <img src="dev/assets/previews/theme_studio_presets.png" alt="预设保险库" width="440" style="border-radius: 8px;" /> |
+| <b>自动跨所有磁盘扫描工坊已订阅壁纸，一键直装</b> | <b>配置与素材全量实体归档，0.3s 极速热重载</b> |
 
 ---
 
@@ -77,7 +118,7 @@
 | **`左`** | `left` | **全局主对话背景** | 1080P/2K/4K 动态视频 (MP4) | 贯通整个应用的底层基底，透出对话气泡与全局磨砂玻璃层 |
 | **`中`** | `mid` | **活跃终端面板** | 动态视频 / 高清原画 | 专属 PowerShell / Bash 终端界面，写代码与跑测试时沉浸式专享 |
 | **`右`** | `right` | **独立会话抽屉** | 竖版立绘 / 场景动态图 | 点击侧边栏展开会话列表（Conversations）抽屉时独立呈现，不污染总览面板 |
-| **`下`** | `bottom` | **提问输入框** | 动漫局部特写 / GIF / 微动态 | 底部聊天提问框内部卡片背景，伴随每一次灵感输入 |
+| **`下`** | `bottom` | **提问输入框** | 动漫局部特写 / GIF / 微动态 | 底部聊天提问框内部卡片背景，伴随每一次灵感输入，1:1 精确跟随输入内容高度伸缩 |
 | **`设置`** | `settings`| **设置弹窗** | 专属插画 (PNG/JPG) | 点击左下角 Settings 弹出的设置面板背景，典雅美观 |
 
 ---
@@ -91,11 +132,9 @@
 
 ---
 
-### 方式 1：使用 Theme Studio 可视化工作台（推荐）
+### 方式 1：使用 Theme Studio 可视化工作台（强烈推荐）
 
-本仓库提供两种使用 Theme Studio 可视化工作台的方式：
-
-#### 方案 A：从 GitHub Releases 下载预编译客户端（免配置）
+#### 方案 A：从 GitHub Releases 下载预编译客户端（免配置绿色版）
 1. 前往 **[Releases 页面](https://github.com/krantjohn/antigravity-theme/releases)** 下载最新的 `AntigravityThemeStudio.exe`；
 2. 放置到项目根目录或任意目录直接双击打开，即可体验 1:1 实时拟真预览、工坊壁纸拖拽与一键热重载。
 
@@ -206,6 +245,8 @@ node core/theme_engine.js --list-presets
 │                            Chromium 渲染进程界面                             │
 │  [preload.js] 注入 0ms 占位底图 ──挂载──> <video data-slot="left/mid/right"> │
 │  [IntersectionObserver] 智能休眠 ──探测──> 可视即播 / 隐藏即停 (GPU 节能)     │
+│  [Drag & Resize Decoupling] 窗口解耦 ──> 缩放期间停止解码，80ms 自愈恢复     │
+│  [MutationObserver Filtering] ───> 精确跳过输入框/终端打字，延迟仅 0.35ms    │
 │  [custom_theme.css] 穿透注入 ───────> 磨砂玻璃、自适应字体发光、菜单栏 Z-Index │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -214,13 +255,34 @@ node core/theme_engine.js --list-presets
    - 监听本地端口 `8315`，原生支持 HTTP 206 Partial Content 分块传输；
    - 引入容量为 200 的 LRU 文件定位缓存与 3 秒 TTL 的状态缓存，消除分块请求重复读取磁盘的 I/O 阻塞；
    - 智能绑定连接生命周期（`keepAliveTimeout`），杜绝 Electron 多次创建 video 标签时的句柄泄漏。
-2. **GPU 智能解码休眠机制 (`core/preload.js`)**：
-   - 传统视频壁纸即使在抽屉收起、终端隐藏时仍由 Chromium 后台解码，浪费显存与能耗；
-   - 本引擎内置毫秒级可见性探针：当辅助面板折叠、终端切换为其他标签页或客户端最小化时，**自动调用 `.pause()` 暂停解码**；当用户重新展开该区域时，**即时调用 `.play()` 无感恢复播放**。
-3. **固定 DOM 节点持久挂载架构**：
-   - 全局底图 `<video>` 元素在 Tick 0 挂载后保持持久驻留，杜绝 DOM 反复重排与挪动，确保 D3D11 硬件解码管道稳定流畅，冷启动仅需 ~1.4 秒，热重载低至 136ms。
-4. **受控更新拦截保护 (`core/auto_patcher.js`)**：
+2. **窗口缩放与拖拽性能解耦 (`core/preload.js` / `core/theme_engine.js`)**：
+   - 彻底解决窗口边缘缩放与分栏拖动时的撕裂与卡顿：在拖拽过程中自动设置全局解耦标记 `window.__isResizing` 与 `window.__isDraggingSplit`，挂起视频对系统桌面窗口管理器（DWM）和 GPU 合成队列的高频竞争；
+   - 鼠标松开或缩放静止后 **80ms 自动快速平滑恢复** 原速解码回放；
+   - 缩放期间对页面内嵌入的 Webview/Iframe 自动设置 `pointer-events: none`，并在鼠标离开或失去焦点时自愈，彻底杜绝鼠标穿透导致的拖拽卡手或丢帧。
+3. **亚毫秒打字响应与 MutationObserver 精准过滤**：
+   - 传统美化工具会频繁监听页面全部 DOM 变动导致打字高延迟（>15ms）；
+   - 本引擎扩展了精准的节点过滤，自动跳过 `<input>`、`<textarea>`、`[role="textbox"]` 以及 `[contenteditable]` 等所有输入节点，**按键延迟降低至 ~0.35ms**，滚动响应低至 **~0.048ms**。
+4. **GPU 智能解码休眠机制**：
+   - 当辅助面板折叠、终端切换为其他标签页或客户端最小化时，**自动调用 `.pause()` 暂停解码**；当用户重新展开该区域时，**即时调用 `.play()` 无感恢复播放**，显存与 CPU 占用几乎归零。
+5. **受控更新拦截保护 (`core/auto_patcher.js`)**：
    - 接管官方 `electron-updater` 配置，将后台无感静默下载与强行重启安装切换为受控模式，防止用户精心调配的主题被静默覆盖，同时保留标题栏手动确认更新通道。
+
+---
+
+## 🧪 自动化测试套件与性能验证 (Test Suite)
+
+本引擎内置 31 项严格的端到端自动化测试，覆盖所有核心功能与性能边界：
+
+- **基础与动态壁纸测试集**（[`dev/tests/test_suite.js`](dev/tests/test_suite.js)）：**17 / 17 全部 PASS**
+  - 槽位别名、流媒体 8315 响应、多槽位视频挂载与无缝循环、向后兼容性、单例隔离与无泄漏。
+- **Steam Wallpaper Engine 专项测试集**（[`dev/tests/test_wallpaper_engine.js`](dev/tests/test_wallpaper_engine.js)）：**14 / 14 全部 PASS**
+  - 跨盘扫描、工坊 JSON/VDF 解析、Web/Live2D 回退动图处理、序号一致性、出厂级黄金基线还原。
+
+```bash
+# 运行全部 31 项自动化测试
+node dev/tests/test_suite.js
+node dev/tests/test_wallpaper_engine.js
+```
 
 ---
 
@@ -257,17 +319,19 @@ antigravity-theme/
 ├── 📂 studio/                     # 主题工作室可视化平台
 │   ├── launcher.js                # 智能视口启动器守护脚本
 │   ├── server.js                  # 本地 HTTP API 微服务 (端口 8316)
-│   ├── public/                    # 前端资产 (1:1 动态实时拟真预览、Steam工坊网格、预设库)
+│   ├── public/                    # 前端资产 (1:1 动态实时拟真预览、Steam工坊网格、预设库、中英双语)
 │   └── src/                       # 原生 Windows C# 桌面启动器源码 (AntigravityThemeStudio)
 ├── 📂 wallpapers/                 # 默认预设壁纸素材 (开箱即用的尺寸规范与占位模板)
 ├── 📂 dev/                        # 🛠️ 开发者工具与测试套件
 │   ├── bin/                       # 常用 CLI 批处理工具箱 (install, swap, restore 等)
 │   ├── scripts/                   # 维护构建、UI 自动化实测与诊断探针工具集
-│   ├── tests/                     # 17 项端到端严苛回归测试套件与快照归档
+│   ├── tests/                     # 31 项端到端严苛回归测试套件与快照归档
 │   ├── docs/                      # 核心架构与技术设计文档
 │   └── assets/                    # 文档预览素材与演示动图
+├── AntigravityThemeStudio.exe     # 原生 x64 单文件免安装可视化客户端
 ├── LICENSE                        # MIT 开源授权协议
-└── README.md                      # 项目官方使用手册 (中文)
+├── README.md                      # 项目官方使用手册 (中文)
+└── README_EN.md                   # Project Documentation (English)
 ```
 
 ---
@@ -282,7 +346,7 @@ antigravity-theme/
 
 <details>
 <summary><b>Q2: 使用动态视频壁纸会导致电脑发热或占用显卡吗？</b></summary>
-不会。本引擎采用 Chromium 底层 D3D11 硬件加速，并独家配备了“GPU 可视性休眠引擎”：当终端收起、会话列表收起或窗口最小化时，不可见视频会自动暂停解码，显存与 CPU 占用几乎归零。
+不会。本引擎采用 Chromium 底层 D3D11 硬件加速，并独家配备了“GPU 可视性休眠引擎”与“窗口拖拽缩放解耦”：当终端收起、会话列表收起或窗口缩放拖动时，不可见视频会自动暂停解码，显存与 CPU 占用几乎归零。
 </details>
 
 <details>

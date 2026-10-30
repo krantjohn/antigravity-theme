@@ -88,3 +88,5 @@ studio/lib/*.zip
 
 
 .agents/
+
+.tmp_chrome_*
