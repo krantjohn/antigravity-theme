@@ -70,21 +70,14 @@
 
 ## 📸 视觉效果实测 (Visual Showcase)
 
-### 1. Antigravity 客户端实机实测（多面板协同 + 提问栏 1:1 动态响应）
-<p align="center">
-  <img src="dev/assets/previews/antigravity_live_workbench.png" alt="Antigravity 客户端实机渲染" width="880" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.3);" />
-  <br>
-  <em>✨ 实机三面板独立壁纸实测：AI 对话全景底图 + PowerShell 终端独立壁纸 + 底部提问输入栏 1:1 精确跟随动态壁纸卡片</em>
-</p>
-
-### 2. Antigravity Theme Studio 现代化可视化工作台（暗色 / 亮色双主题系统）
+### 1. Antigravity Theme Studio 现代化可视化工作台（暗色 / 亮色双主题系统）
 
 | 🌙 暗色极客主题 (Dark Theme) | ☀️ 优雅亮色主题 (Light Theme) |
 | :---: | :---: |
 | <img src="dev/assets/previews/theme_studio_dark.png" alt="Theme Studio 暗色模式" width="440" style="border-radius: 8px;" /> | <img src="dev/assets/previews/theme_studio_light.png" alt="Theme Studio 亮色模式" width="440" style="border-radius: 8px;" /> |
 | <b>1:1 实时拟真动态装配 · 暗色高对比</b> | <b>纯净明亮模式 · 一键平滑切换</b> |
 
-### 3. Steam 创意工坊海量素材跨盘直连 & 预设保险库
+### 2. Steam 创意工坊海量素材跨盘直连 & 预设保险库
 
 | 🎮 Steam Wallpaper Engine 跨盘直连网格 | 🗂️ 预设保险库一键备份与秒切 |
 | :---: | :---: |

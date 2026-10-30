@@ -10,52 +10,8 @@ async function wait(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-async function captureCDPAntigravity() {
-  console.log('[1/4] Capturing Antigravity Live Client via CDP 8314...');
-  return new Promise((resolve) => {
-    http.get('http://127.0.0.1:8314/json', (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const list = JSON.parse(data);
-          const page = list.find(p => p.type === 'page');
-          if (!page) {
-            console.warn('No Antigravity page found');
-            return resolve(false);
-          }
-          const ws = new WebSocket(page.webSocketDebuggerUrl);
-          ws.addEventListener('open', () => {
-            ws.send(JSON.stringify({
-              id: 1,
-              method: 'Page.captureScreenshot',
-              params: { format: 'png', quality: 100 }
-            }));
-          });
-          ws.addEventListener('message', (evt) => {
-            const resp = JSON.parse(evt.data);
-            if (resp.id === 1 && resp.result && resp.result.data) {
-              const out = path.join(__dirname, '../assets/previews/antigravity_live_workbench.png');
-              fs.writeFileSync(out, Buffer.from(resp.result.data, 'base64'));
-              console.log('✓ Saved:', out);
-              ws.close();
-              resolve(true);
-            }
-          });
-        } catch (e) {
-          console.error(e);
-          resolve(false);
-        }
-      });
-    }).on('error', (e) => {
-      console.warn('Antigravity CDP not responding:', e.message);
-      resolve(false);
-    });
-  });
-}
-
 async function captureStudioViews() {
-  console.log('[2/4] Launching Headless Chrome to capture Theme Studio views...');
+  console.log('[1/2] Launching Headless Chrome to capture Theme Studio views...');
   const profileDir = path.join(__dirname, '../../.tmp_chrome_readme_profile');
   if (fs.existsSync(profileDir)) {
     fs.rmSync(profileDir, { recursive: true, force: true });
@@ -159,11 +115,10 @@ async function captureStudioViews() {
 
   ws.close();
   chromeProc.kill();
-  console.log('[2/4] Headless Chrome captures finished successfully.');
+  console.log('[2/2] Headless Chrome captures finished successfully.');
 }
 
 async function run() {
-  await captureCDPAntigravity();
   await captureStudioViews();
   process.exit(0);
 }

@@ -70,21 +70,14 @@ Traditional client customization solutions often degrade performance or break up
 
 ## 📸 Visual Showcase
 
-### 1. Antigravity Live Client Running (Multi-Panel Synergy & 1:1 Input Card Tracking)
-<p align="center">
-  <img src="dev/assets/previews/antigravity_live_workbench.png" alt="Antigravity Live Client" width="880" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.3);" />
-  <br>
-  <em>✨ Live 3-Panel Setup: Panoramic AI Chat Wallpaper + Independent PowerShell Terminal Artwork + Floating 1:1 Dynamic Input Bar Video Card</em>
-</p>
-
-### 2. Antigravity Theme Studio Modern GUI (Dark & Light Dual Theme System)
+### 1. Antigravity Theme Studio Modern GUI (Dark & Light Dual Theme System)
 
 | 🌙 Sleek Dark Theme | ☀️ Clean Light Theme |
 | :---: | :---: |
 | <img src="dev/assets/previews/theme_studio_dark.png" alt="Theme Studio Dark Mode" width="440" style="border-radius: 8px;" /> | <img src="dev/assets/previews/theme_studio_light.png" alt="Theme Studio Light Mode" width="440" style="border-radius: 8px;" /> |
 | <b>1:1 Real-time Interactive Mockup · Dark High Contrast</b> | <b>Pure & Elegant Bright Aesthetic · 1-Click Smooth Toggle</b> |
 
-### 3. Steam Workshop Cross-Drive Browser & Preset Vault
+### 2. Steam Workshop Cross-Drive Browser & Preset Vault
 
 | 🎮 Steam Wallpaper Engine Workshop Grid | 🗂️ Presets Vault with 1-Click Instant Switching |
 | :---: | :---: |
