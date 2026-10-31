@@ -4725,9 +4725,19 @@ async function swapWallpaperFromWE(idOrIndex, slotInput) {
   return swapWallpaper(slotInput, wallpaper.mediaPath, wallpaper.previewPath);
 }
 
-function listWallpaperEngineWallpapers(search = '', limit = 50) {
-  const list = scanWorkshopWallpapers({ search });
-  console.log(formatWallpaperTable(list, limit));
+function listWallpaperEngineWallpapers(optionsOrSearch = '', limit = 50, refresh = false) {
+  let search = '';
+  let lim = limit;
+  let ref = refresh;
+  if (typeof optionsOrSearch === 'object' && optionsOrSearch !== null) {
+    search = optionsOrSearch.search || '';
+    lim = optionsOrSearch.limit || 50;
+    ref = Boolean(optionsOrSearch.refresh);
+  } else {
+    search = optionsOrSearch || '';
+  }
+  const list = scanWorkshopWallpapers({ search, refresh: ref });
+  console.log(formatWallpaperTable(list, lim));
   return list;
 }
 

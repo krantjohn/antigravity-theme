@@ -335,11 +335,26 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 1.1. GET /api/we/list - Return scanned Steam Wallpaper Engine items
+  // 1.1. GET /api/we/list - Return scanned Steam Wallpaper Engine items (supports ?refresh=true)
   if (req.method === 'GET' && pathname === '/api/we/list') {
     try {
-      const items = themeEngine.listWallpaperEngineWallpapers ? themeEngine.listWallpaperEngineWallpapers() : [];
-      return sendJson(res, 200, { success: true, count: items.length, items });
+      const refresh = parsedUrl.searchParams.get('refresh') === 'true' || parsedUrl.searchParams.get('refresh') === '1';
+      const items = themeEngine.listWallpaperEngineWallpapers 
+        ? themeEngine.listWallpaperEngineWallpapers({ refresh }) 
+        : [];
+      return sendJson(res, 200, { success: true, count: items.length, items, refreshed: refresh });
+    } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message, items: [] });
+    }
+  }
+
+  // 1.2. POST /api/we/refresh - Explicit rescan & detect Steam Wallpaper Engine items
+  if (req.method === 'POST' && pathname === '/api/we/refresh') {
+    try {
+      const items = themeEngine.listWallpaperEngineWallpapers 
+        ? themeEngine.listWallpaperEngineWallpapers({ refresh: true }) 
+        : [];
+      return sendJson(res, 200, { success: true, count: items.length, items, refreshed: true });
     } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message, items: [] });
     }
