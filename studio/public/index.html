@@ -714,7 +714,31 @@
       </div>
 
       <div class="we-filter-bar">
-        <input type="text" id="we-search-input" class="input-text" placeholder="🔍 搜索创意工坊壁纸标题或 ID..." data-i18n-placeholder="we.search_placeholder">
+        <div class="we-filter-search">
+          <input type="text" id="we-search-input" class="input-text" placeholder="🔍 搜索创意工坊壁纸标题或 ID..." data-i18n-placeholder="we.search_placeholder">
+        </div>
+        <div class="we-filter-controls">
+          <div class="we-type-pills" id="we-type-filter">
+            <button class="filter-pill active" data-type="all" data-i18n="we.type_all">全部</button>
+            <button class="filter-pill" data-type="video" data-i18n="we.type_video">🎬 视频</button>
+            <button class="filter-pill" data-type="image" data-i18n="we.type_image">🖼️ 静态</button>
+          </div>
+          <div class="we-sort-wrap">
+            <label for="we-sort-select" class="we-sort-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+              <span data-i18n="we.sort_label">排序</span>
+            </label>
+            <select id="we-sort-select" class="select-input select-sort" title="选择壁纸排序方式" data-i18n-title="we.sort_title">
+              <option value="default" data-i18n="we.sort_default">默认推荐 (视频优先)</option>
+              <option value="time-desc" data-i18n="we.sort_time_desc">添加时间 (从新到旧)</option>
+              <option value="time-asc" data-i18n="we.sort_time_asc">添加时间 (从旧到新)</option>
+              <option value="size-desc" data-i18n="we.sort_size_desc">文件大小 (从大到小)</option>
+              <option value="size-asc" data-i18n="we.sort_size_asc">文件大小 (从小到大)</option>
+              <option value="name-asc" data-i18n="we.sort_name_asc">壁纸标题 (A-Z / 拼音)</option>
+              <option value="name-desc" data-i18n="we.sort_name_desc">壁纸标题 (Z-A / 倒序)</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="we-gallery-grid" id="we-grid">
@@ -826,6 +850,23 @@
       </div>
       <div class="we-picker-search-bar">
         <input type="text" id="we-picker-search-input" class="input-text" placeholder="🔍 快速过滤壁纸标题或工坊ID..." data-i18n-placeholder="modal.we_picker_search">
+        <div class="we-picker-filter-controls">
+          <div class="we-type-pills we-type-pills-sm" id="we-picker-type-filter">
+            <button class="filter-pill active" data-type="all" data-i18n="we.type_all">全部</button>
+            <button class="filter-pill" data-type="video" data-i18n="we.type_video">🎬 视频</button>
+            <button class="filter-pill" data-type="image" data-i18n="we.type_image">🖼️ 静态</button>
+          </div>
+          <div class="we-sort-wrap">
+            <select id="we-picker-sort-select" class="select-input select-sort select-sort-sm" title="选择壁纸排序方式" data-i18n-title="we.sort_title">
+              <option value="default" data-i18n="we.sort_default">默认推荐</option>
+              <option value="time-desc" data-i18n="we.sort_time_desc">添加时间 (从新到旧)</option>
+              <option value="time-asc" data-i18n="we.sort_time_asc">添加时间 (从旧到新)</option>
+              <option value="size-desc" data-i18n="we.sort_size_desc">文件大小 (从大到小)</option>
+              <option value="size-asc" data-i18n="we.sort_size_asc">文件大小 (从小到大)</option>
+              <option value="name-asc" data-i18n="we.sort_name_asc">标题 (A-Z)</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="we-picker-grid" id="we-picker-grid">
         <!-- Injected via JS -->

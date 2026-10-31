@@ -15,6 +15,10 @@ let state = {
   slotsMeta: {},        // 各槽位元信息描述
   weList: [],           // Steam Wallpaper Engine 壁纸列表
   weFiltered: [],       // 经过搜索过滤的 WE 壁纸列表
+  weSortBy: 'default',  // 'default' | 'time-desc' | 'time-asc' | 'size-desc' | 'size-asc' | 'name-asc' | 'name-desc'
+  weTypeFilter: 'all',  // 'all' | 'video' | 'image'
+  wePickerSortBy: 'default',
+  wePickerTypeFilter: 'all',
   isCdpOnline: false,
   isMediaOnline: false,
   isAntigravityRunning: false,
@@ -125,10 +129,14 @@ const btnRefreshWe = document.getElementById('btn-refresh-we');
 const btnRefreshWePicker = document.getElementById('btn-refresh-we-picker');
 const navWeCount = document.getElementById('nav-we-count');
 const weSearchInput = document.getElementById('we-search-input');
+const weSortSelect = document.getElementById('we-sort-select');
+const weTypeFilterWrap = document.getElementById('we-type-filter');
 const weGrid = document.getElementById('we-grid');
 const wePickerModal = document.getElementById('we-picker-modal');
 const wePickerCount = document.getElementById('we-picker-count');
 const wePickerSearchInput = document.getElementById('we-picker-search-input');
+const wePickerSortSelect = document.getElementById('we-picker-sort-select');
+const wePickerTypeFilterWrap = document.getElementById('we-picker-type-filter');
 const wePickerGrid = document.getElementById('we-picker-grid');
 const btnCloseWePicker = document.getElementById('btn-close-we-picker');
 const btnCancelWePicker = document.getElementById('btn-cancel-we-picker');
@@ -1219,16 +1227,58 @@ function initWeQuickPicker() {
   }
 }
 
+
+function sortWallpapersList(list, sortBy = 'default') {
+  if (!Array.isArray(list)) return [];
+  const items = [...list];
+
+  switch (sortBy) {
+    case 'time-desc':
+    case 'time_desc':
+    case 'newest':
+      return items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    case 'time-asc':
+    case 'time_asc':
+    case 'oldest':
+      return items.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    case 'size-desc':
+    case 'size_desc':
+    case 'largest':
+      return items.sort((a, b) => (b.sizeBytes || 0) - (a.sizeBytes || 0));
+    case 'size-asc':
+    case 'size_asc':
+    case 'smallest':
+      return items.sort((a, b) => (a.sizeBytes || 0) - (b.sizeBytes || 0));
+    case 'name-asc':
+    case 'name_asc':
+    case 'title':
+      return items.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'zh-CN'));
+    case 'name-desc':
+    case 'name_desc':
+      return items.sort((a, b) => (b.title || '').localeCompare(a.title || '', 'zh-CN'));
+    case 'default':
+    default:
+      return items.sort((a, b) => (a.index || 0) - (b.index || 0));
+  }
+}
+
 function renderWePickerGrid() {
   if (!wePickerGrid) return;
   wePickerGrid.innerHTML = '';
 
   const filterText = wePickerSearchInput ? wePickerSearchInput.value.trim().toLowerCase() : '';
-  const filtered = state.weList.filter(item => {
+  const typeFilter = state.wePickerTypeFilter || 'all';
+
+  let filtered = state.weList.filter(item => {
+    if (typeFilter === 'video' && item.mediaType !== 'video') return false;
+    if (typeFilter === 'image' && item.mediaType !== 'image') return false;
     if (!filterText) return true;
     return (item.title && item.title.toLowerCase().includes(filterText)) ||
            (item.workshopId && item.workshopId.includes(filterText));
   });
+
+  const sortBy = state.wePickerSortBy || (wePickerSortSelect ? wePickerSortSelect.value : 'default');
+  filtered = sortWallpapersList(filtered, sortBy);
 
   if (wePickerCount) {
     wePickerCount.textContent = `${filtered.length} 项`;
@@ -1255,6 +1305,7 @@ function renderWePickerGrid() {
         <div class="we-picker-meta">
           <span>${isVid ? '🎬 视频' : '🖼️ 图像'}</span>
           <span>${item.sizeMb || 0} MB</span>
+          <span>📅 ${item.createdAtFormatted ? item.createdAtFormatted.slice(0, 10) : ''}</span>
         </div>
       </div>
     `;
@@ -1857,11 +1908,18 @@ function renderWeGallery() {
   }
 
   const filterText = weSearchInput ? weSearchInput.value.trim().toLowerCase() : '';
-  const filtered = state.weList.filter(item => {
+  const typeFilter = state.weTypeFilter || 'all';
+
+  let filtered = state.weList.filter(item => {
+    if (typeFilter === 'video' && item.mediaType !== 'video') return false;
+    if (typeFilter === 'image' && item.mediaType !== 'image') return false;
     if (!filterText) return true;
     return (item.title && item.title.toLowerCase().includes(filterText)) ||
            (item.workshopId && item.workshopId.includes(filterText));
   });
+
+  const sortBy = state.weSortBy || (weSortSelect ? weSortSelect.value : 'default');
+  filtered = sortWallpapersList(filtered, sortBy);
 
   if (filtered.length === 0) {
     weGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">${t('we.no_match')}</div>`;
@@ -1887,6 +1945,10 @@ function renderWeGallery() {
       </div>
       <div class="we-content">
         <h4 class="we-title" title="${item.title}">${item.title}</h4>
+        <div class="we-meta-row">
+          <span class="we-meta-date" title="${t('we.meta_added')}: ${item.createdAtFormatted || ''}">📅 ${item.createdAtFormatted ? item.createdAtFormatted.slice(0, 10) : ''}</span>
+          <span class="we-meta-id">#${item.workshopId || item.id}</span>
+        </div>
         <div class="we-actions">
           <button class="btn-we-preview" data-slot="left">
             🖥️ ${t('we.btn_apply')}
@@ -1934,6 +1996,42 @@ function renderWeGallery() {
 
 if (weSearchInput) {
   weSearchInput.oninput = () => renderWeGallery();
+}
+
+if (weSortSelect) {
+  weSortSelect.onchange = (e) => {
+    state.weSortBy = e.target.value;
+    renderWeGallery();
+  };
+}
+
+if (weTypeFilterWrap) {
+  weTypeFilterWrap.querySelectorAll('.filter-pill').forEach(btn => {
+    btn.onclick = () => {
+      weTypeFilterWrap.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.weTypeFilter = btn.dataset.type || 'all';
+      renderWeGallery();
+    };
+  });
+}
+
+if (wePickerSortSelect) {
+  wePickerSortSelect.onchange = (e) => {
+    state.wePickerSortBy = e.target.value;
+    renderWePickerGrid();
+  };
+}
+
+if (wePickerTypeFilterWrap) {
+  wePickerTypeFilterWrap.querySelectorAll('.filter-pill').forEach(btn => {
+    btn.onclick = () => {
+      wePickerTypeFilterWrap.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.wePickerTypeFilter = btn.dataset.type || 'all';
+      renderWePickerGrid();
+    };
+  });
 }
 
 if (btnRefreshWe) {

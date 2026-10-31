@@ -5,6 +5,7 @@ const os = require('os');
 const { startMediaServer, ensureMediaServer, isMediaServerRunning, DEFAULT_PORT } = require('./media_server');
 const {
   scanWorkshopWallpapers,
+  sortWallpapers,
   getWallpaperById,
   formatWallpaperTable,
   getAllSteamLibraries,
@@ -4729,14 +4730,16 @@ function listWallpaperEngineWallpapers(optionsOrSearch = '', limit = 50, refresh
   let search = '';
   let lim = limit;
   let ref = refresh;
+  let sortBy = 'default';
   if (typeof optionsOrSearch === 'object' && optionsOrSearch !== null) {
     search = optionsOrSearch.search || '';
     lim = optionsOrSearch.limit || 50;
     ref = Boolean(optionsOrSearch.refresh);
+    sortBy = optionsOrSearch.sort || optionsOrSearch.sortBy || 'default';
   } else {
     search = optionsOrSearch || '';
   }
-  const list = scanWorkshopWallpapers({ search, refresh: ref });
+  const list = scanWorkshopWallpapers({ search, refresh: ref, sortBy });
   console.log(formatWallpaperTable(list, lim));
   return list;
 }
@@ -5710,8 +5713,16 @@ if (require.main === module) {
       });
     }
   } else if (args[0] === '--list-we' || args[0] === '--we-list' || args[0] === '-we') {
-    const search = args.slice(1).join(' ');
-    listWallpaperEngineWallpapers(search);
+    let search = '';
+    let sortBy = 'default';
+    for (let i = 1; i < args.length; i++) {
+      if (args[i] === '--sort' || args[i] === '-s') {
+        sortBy = args[++i] || 'default';
+      } else {
+        search = (search ? search + ' ' : '') + args[i];
+      }
+    }
+    listWallpaperEngineWallpapers({ search, sortBy });
   } else if (
     args[0] === '--set-font-color' || args[0] === '--set-font' || args[0] === '--font-color' ||
     args[0] === '--font' || args[0] === '-font' || args[0] === '-f' ||

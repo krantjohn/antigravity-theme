@@ -339,10 +339,12 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && pathname === '/api/we/list') {
     try {
       const refresh = parsedUrl.searchParams.get('refresh') === 'true' || parsedUrl.searchParams.get('refresh') === '1';
+      const sortBy = parsedUrl.searchParams.get('sort') || parsedUrl.searchParams.get('sortBy') || 'default';
+      const search = parsedUrl.searchParams.get('search') || parsedUrl.searchParams.get('q') || '';
       const items = themeEngine.listWallpaperEngineWallpapers 
-        ? themeEngine.listWallpaperEngineWallpapers({ refresh }) 
+        ? themeEngine.listWallpaperEngineWallpapers({ refresh, sortBy, search }) 
         : [];
-      return sendJson(res, 200, { success: true, count: items.length, items, refreshed: refresh });
+      return sendJson(res, 200, { success: true, count: items.length, items, refreshed: refresh, sortBy });
     } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message, items: [] });
     }
@@ -351,10 +353,11 @@ const server = http.createServer(async (req, res) => {
   // 1.2. POST /api/we/refresh - Explicit rescan & detect Steam Wallpaper Engine items
   if (req.method === 'POST' && pathname === '/api/we/refresh') {
     try {
+      const sortBy = parsedUrl.searchParams.get('sort') || parsedUrl.searchParams.get('sortBy') || 'default';
       const items = themeEngine.listWallpaperEngineWallpapers 
-        ? themeEngine.listWallpaperEngineWallpapers({ refresh: true }) 
+        ? themeEngine.listWallpaperEngineWallpapers({ refresh: true, sortBy }) 
         : [];
-      return sendJson(res, 200, { success: true, count: items.length, items, refreshed: true });
+      return sendJson(res, 200, { success: true, count: items.length, items, refreshed: true, sortBy });
     } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message, items: [] });
     }

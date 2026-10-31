@@ -231,11 +231,11 @@ function scanWorkshopWallpapers(options = {}) {
   if (typeof opts === 'string') {
     opts = { search: opts };
   }
-  const { typeFilter = 'all', search = '', refresh = false } = opts || {};
+  const { typeFilter = 'all', search = '', refresh = false, sortBy = 'default' } = opts || {};
 
   const now = Date.now();
   if (!refresh && _cachedWallpapers && (now - _cacheTime < CACHE_TTL_MS)) {
-    return filterWallpapers(_cachedWallpapers, typeFilter, search);
+    return sortWallpapers(filterWallpapers(_cachedWallpapers, typeFilter, search), sortBy);
   }
 
   const workshopDirs = findWorkshopDirs();
@@ -335,9 +335,26 @@ function scanWorkshopWallpapers(options = {}) {
       if (!mediaPath) continue;
 
       let sizeBytes = 0;
+      let mtimeMs = 0;
+      let createdAtMs = 0;
       try {
-        sizeBytes = fs.statSync(mediaPath).size;
+        const fileStat = fs.statSync(mediaPath);
+        sizeBytes = fileStat.size || 0;
+        mtimeMs = fileStat.mtimeMs || 0;
+        createdAtMs = fileStat.birthtimeMs || fileStat.ctimeMs || mtimeMs;
       } catch (e) {}
+
+      try {
+        const folderStat = fs.statSync(itemFolder);
+        const folderTime = Math.max(folderStat.birthtimeMs || 0, folderStat.mtimeMs || 0);
+        if (folderTime > 0) {
+          createdAtMs = Math.max(createdAtMs, folderTime);
+        }
+      } catch (e) {}
+
+      const d = new Date(createdAtMs || Date.now());
+      const pad = n => String(n).padStart(2, '0');
+      const createdAtFormatted = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
       const item = {
         id: itemId,
@@ -349,7 +366,10 @@ function scanWorkshopWallpapers(options = {}) {
         previewPath: previewExists ? previewCandidate : mediaPath,
         file: path.basename(mediaPath),
         folder: itemFolder,
+        sizeBytes,
         sizeMb: (sizeBytes / (1024 * 1024)).toFixed(2),
+        createdAt: createdAtMs,
+        createdAtFormatted,
         description: (projectData.description || '').slice(0, 150),
         tags: Array.isArray(projectData.tags) ? projectData.tags : []
       };
@@ -373,9 +393,49 @@ function scanWorkshopWallpapers(options = {}) {
   _cachedWallpapers = results;
   _cacheTime = Date.now();
 
-  return filterWallpapers(results, typeFilter, search);
+  return sortWallpapers(filterWallpapers(results, typeFilter, search), sortBy);
 }
 
+
+/**
+ * Sorts wallpaper items according to a specified sorting criteria.
+ * @param {Array} list
+ * @param {'default'|'time-desc'|'time-asc'|'size-desc'|'size-asc'|'name-asc'|'name-desc'} [sortBy='default']
+ * @returns {Array} Sorted copy
+ */
+function sortWallpapers(list, sortBy = 'default') {
+  if (!Array.isArray(list)) return [];
+  const items = [...list];
+
+  switch (sortBy) {
+    case 'time-desc':
+    case 'time_desc':
+    case 'newest':
+      return items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    case 'time-asc':
+    case 'time_asc':
+    case 'oldest':
+      return items.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    case 'size-desc':
+    case 'size_desc':
+    case 'largest':
+      return items.sort((a, b) => (b.sizeBytes || 0) - (a.sizeBytes || 0));
+    case 'size-asc':
+    case 'size_asc':
+    case 'smallest':
+      return items.sort((a, b) => (a.sizeBytes || 0) - (b.sizeBytes || 0));
+    case 'name-asc':
+    case 'name_asc':
+    case 'title':
+      return items.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'zh-CN'));
+    case 'name-desc':
+    case 'name_desc':
+      return items.sort((a, b) => (b.title || '').localeCompare(a.title || '', 'zh-CN'));
+    case 'default':
+    default:
+      return items.sort((a, b) => (a.index || 0) - (b.index || 0));
+  }
+}
 function filterWallpapers(list, typeFilter, search) {
   let filtered = list;
   if (typeFilter === 'video') {
@@ -480,5 +540,6 @@ module.exports = {
   findDefaultProjectsDirs,
   scanWorkshopWallpapers,
   getWallpaperById,
-  formatWallpaperTable
+  formatWallpaperTable,
+  sortWallpapers
 };
