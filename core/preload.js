@@ -1289,6 +1289,22 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
     let debounceTimer = null;
     const scheduledApply = function(mutations) {
+      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
+        return;
+      }
+      if (window.__isDraggingSplit || window.__isResizing || window.__isNavigating) {
+        if (window.__isNavigating) {
+          if (typeof navThrottleTimer !== 'undefined' && navThrottleTimer) clearTimeout(navThrottleTimer);
+          if (typeof resumeVideosAfterNav === 'function') {
+            navThrottleTimer = setTimeout(function() {
+              navThrottleTimer = null;
+              resumeVideosAfterNav();
+            }, 120);
+          }
+        }
+        return;
+      }
+
       if (mutations && mutations.length > 0) {
         let isRelevant = false;
         for (let i = 0; i < mutations.length; i++) {
@@ -1297,9 +1313,16 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           if (!target || target.nodeType === 3) continue;
           // 深度性能过滤：彻底忽略用户打字、光标移动、代码块渲染与AI流式输出DOM扰动
           if (target.id === 'antigravity.agentSidePanelInputBox' || target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable) continue;
+
+          // 快速命中跳过：消息正文、代码块、markdown、聊天流元素直接跳过，消除昂贵的 closest 向上递归
+          const cls = target.className;
+          if (typeof cls === 'string' && (cls.includes('prose') || cls.includes('markdown') || cls.includes('message') || cls.includes('code-block') || cls.includes('monaco') || cls.includes('group/user-input-step'))) {
+            continue;
+          }
+
           if (target.closest && (
-              target.closest('input, textarea, [contenteditable="true"], [role="textbox"], form, .markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"]') ||
-              target.closest('#antigravity\\.agentSidePanelInputBox, [id="antigravity.agentSidePanelInputBox"]')
+              target.closest('input, textarea, [contenteditable="true"], [role="textbox"], form, .markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"], [role="article"]') ||
+              target.closest('#antigravity\.agentSidePanelInputBox, [id="antigravity.agentSidePanelInputBox"]')
           )) {
             continue;
           }
@@ -1321,8 +1344,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
                   break;
                 }
                 if (role === 'dialog' || ds === 'open' || 
-                  (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm') ||
-                   node.classList.contains('overflow-y-auto') || node.classList.contains('bg-background')))) {
+                  (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm')))) {
                   isRelevant = true;
                   break;
                 }
@@ -1332,7 +1354,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             for (let j = 0; j < m.removedNodes.length; j++) {
               const node = m.removedNodes[j];
               if (node.nodeType === 1) {
-                if (node.id === 'antigravity-video-left' || (node.classList && (node.classList.contains('antigravity-slot-video') || node.classList.contains('terminal') || node.classList.contains('xterm') || node.classList.contains('overflow-y-auto') || node.classList.contains('bg-card'))) || (node.getAttribute && node.getAttribute('role') === 'dialog')) {
+                if (node.id === 'antigravity-video-left' || (node.classList && (node.classList.contains('antigravity-slot-video') || node.classList.contains('terminal') || node.classList.contains('xterm'))) || (node.getAttribute && node.getAttribute('role') === 'dialog')) {
                   isRelevant = true;
                   break;
                 }
@@ -1342,13 +1364,6 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           }
         }
         if (!isRelevant) return;
-      }
-
-      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
-        return;
-      }
-      if (window.__isDraggingSplit || window.__isResizing) {
-        return;
       }
 
       if (debounceTimer) return;
@@ -1422,6 +1437,88 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       }
     };
 
+    
+    // 极致原生 60FPS/120FPS 性能：左侧会话切换导航协调器 (消除切会话卡顿与 GPU 解码竞争)
+    let navThrottleTimer = null;
+    let navMaxTimeoutTimer = null;
+    window.__isNavigating = false;
+
+    const pauseVideosForNav = function() {
+      if (window.__isNavigating) return;
+      window.__isNavigating = true;
+      if (document.body && !document.body.classList.contains('is-navigating')) {
+        document.body.classList.add('is-navigating');
+      }
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
+      for (let i = 0; i < allVids.length; i++) {
+        const v = allVids[i];
+        if (!v.paused) {
+          v._wasPlayingBeforeNav = true;
+          v.pause();
+        }
+      }
+      const iframes = document.querySelectorAll('iframe');
+      for (let i = 0; i < iframes.length; i++) {
+        iframes[i].style.pointerEvents = 'none';
+      }
+    };
+
+    const resumeVideosAfterNav = function() {
+      if (!window.__isNavigating) return;
+      if (navThrottleTimer) { clearTimeout(navThrottleTimer); navThrottleTimer = null; }
+      if (navMaxTimeoutTimer) { clearTimeout(navMaxTimeoutTimer); navMaxTimeoutTimer = null; }
+      window.__isNavigating = false;
+      if (document.body && document.body.classList.contains('is-navigating')) {
+        document.body.classList.remove('is-navigating');
+      }
+      const iframes = document.querySelectorAll('iframe');
+      for (let i = 0; i < iframes.length; i++) {
+        iframes[i].style.pointerEvents = '';
+      }
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
+      for (let i = 0; i < allVids.length; i++) {
+        const v = allVids[i];
+        if (v._wasPlayingBeforeNav || v.paused) {
+          v._wasPlayingBeforeNav = false;
+          syncVideoPlaybackState(v);
+        }
+      }
+      if (typeof applyVideos === 'function') {
+        applyVideos();
+      }
+    };
+
+    const onNavClick = function(e) {
+      const target = e.target;
+      if (!target) return;
+      const navItem = target.closest ? target.closest('a[href*="/c/"], a.absolute.inset-0, [data-testid*="conversation"], [class*="conversation-row"]') : null;
+      if (!navItem) return;
+      pauseVideosForNav();
+
+      if (navThrottleTimer) clearTimeout(navThrottleTimer);
+      navThrottleTimer = setTimeout(function() {
+        navThrottleTimer = null;
+        resumeVideosAfterNav();
+      }, 160);
+
+      if (navMaxTimeoutTimer) clearTimeout(navMaxTimeoutTimer);
+      navMaxTimeoutTimer = setTimeout(function() {
+        navMaxTimeoutTimer = null;
+        resumeVideosAfterNav();
+      }, 350);
+    };
+
+    const onNavKey = function(e) {
+      if (e.key === 'Enter' && e.target && e.target.closest && e.target.closest('a[href*="/c/"], a.absolute.inset-0, [data-testid*="conversation"]')) {
+        pauseVideosForNav();
+        if (navThrottleTimer) clearTimeout(navThrottleTimer);
+        navThrottleTimer = setTimeout(function() {
+          navThrottleTimer = null;
+          resumeVideosAfterNav();
+        }, 160);
+      }
+    };
+
     const onDragStart = function(e) {
       const target = e.target;
       if (!target) return;
@@ -1487,6 +1584,15 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       window.addEventListener('pointermove', onPointerMove, { passive: true });
       window.addEventListener('blur', onDragEnd);
       window.addEventListener('resize', onWindowResize, { passive: true });
+
+      if (window.__antigravityNavClickHandler) {
+        window.removeEventListener('click', window.__antigravityNavClickHandler, true);
+        window.removeEventListener('keydown', window.__antigravityNavKeyHandler, true);
+      }
+      window.__antigravityNavClickHandler = onNavClick;
+      window.__antigravityNavKeyHandler = onNavKey;
+      window.addEventListener('click', onNavClick, true);
+      window.addEventListener('keydown', onNavKey, true);
     } catch(e) {}
 
     // 定期与流媒体配置对齐同步 (从 2 秒降至 10 秒，仅对比 1KB JSON，零冗余开销)

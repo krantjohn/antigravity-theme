@@ -1095,7 +1095,7 @@ div[class*="sticky"],
 div.sticky,
 main div.sticky,
 [class*="group/user-input-step"],
-div:has(> div > [class*="group/user-input-step"]) {
+div.sticky > div > [class*="group/user-input-step"] {
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -1144,21 +1144,26 @@ div.bg-sidebar:not([data-testid="title-menu-bar"]), [data-panel="conversations"]
 }
 
 /* 5.1 强制保护侧边栏、对话历史列表与文件树所有文本元素：统一轻阴影纯净白字，严禁继承主对话区任何自定义暗黑字体或白辉光描边 */
-aside, aside *,
-nav, nav *,
-[role="navigation"], [role="navigation"] *,
-[class*="sidebar"], [class*="sidebar"] *,
-[class*="Sidebar"], [class*="Sidebar"] *,
-[class*="navigation"], [class*="navigation"] *,
-div.bg-sidebar, div.bg-sidebar *,
-[data-panel="conversations"], [data-panel="conversations"] *,
-[data-testid*="sidebar"], [data-testid*="sidebar"] *,
-[data-testid*="conversation-list"], [data-testid*="conversation-list"] *,
-[data-testid*="conversation-row"], [data-testid*="conversation-row"] *,
-[class*="file-tree"], [class*="file-tree"] *,
-[class*="explorer"], [class*="explorer"] *,
-[class*="tree-view"], [class*="tree-view"] * {
+aside span, aside p, aside a, aside button, aside label, aside time, aside input,
+nav span, nav p, nav a, nav button, nav label, nav time, nav input,
+[role="navigation"] span, [role="navigation"] p, [role="navigation"] a, [role="navigation"] button,
+[class*="sidebar"] span, [class*="sidebar"] p, [class*="sidebar"] a, [class*="sidebar"] button,
+[class*="Sidebar"] span, [class*="Sidebar"] p, [class*="Sidebar"] a, [class*="Sidebar"] button,
+div.bg-sidebar span, div.bg-sidebar p, div.bg-sidebar a, div.bg-sidebar button,
+[data-panel="conversations"] span, [data-panel="conversations"] p, [data-panel="conversations"] a, [data-panel="conversations"] button,
+[data-testid*="sidebar"] span, [data-testid*="sidebar"] p, [data-testid*="sidebar"] a, [data-testid*="sidebar"] button,
+[data-testid*="conversation-list"] span, [data-testid*="conversation-list"] p, [data-testid*="conversation-list"] a, [data-testid*="conversation-list"] button,
+[data-testid*="conversation-row"] span, [data-testid*="conversation-row"] p, [data-testid*="conversation-row"] a, [data-testid*="conversation-row"] button,
+[class*="file-tree"] span, [class*="file-tree"] p, [class*="file-tree"] a,
+[class*="explorer"] span, [class*="explorer"] p, [class*="explorer"] a,
+[class*="tree-view"] span, [class*="tree-view"] p, [class*="tree-view"] a {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* 导航与拖拽极速渲染加速态 */
+body.is-navigating iframe,
+body.is-resizing iframe {
+  pointer-events: none !important;
 }
 
 aside span, aside p, aside div, aside a, aside button,
@@ -1776,7 +1781,7 @@ pre {
 }
 
 pre > div.relative,
-div.relative:has(> .code-block) {
+pre > div.relative {
   background-color: rgba(15, 18, 30, 0.96) !important;
   border: 1px solid rgba(244, 114, 182, 0.35) !important;
   border-radius: 12px !important;
@@ -1788,7 +1793,7 @@ div.relative:has(> .code-block) {
 /* Header bar */
 pre > div.relative > div.min-h-7,
 pre [class*="min-h-7"],
-div.relative:has(> .code-block) > div.min-h-7 {
+pre > div.relative > div.min-h-7 {
   background-color: rgba(22, 26, 42, 0.92) !important;
   border-bottom: 1px solid rgba(244, 114, 182, 0.25) !important;
 }
@@ -1808,8 +1813,8 @@ pre [class*="min-h-7"],
 pre [class*="min-h-7"] *,
 pre div.min-h-7 div.font-sans,
 pre div.min-h-7 span,
-div.relative:has(> .code-block) > div.min-h-7 div,
-div.relative:has(> .code-block) > div.min-h-7 span {
+pre div.min-h-7 div,
+pre div.min-h-7 span {
   color: #cbd5e1 !important;
   text-shadow: none !important;
   font-weight: 600 !important;
@@ -3487,6 +3492,22 @@ function getClientVideoScript(config) {
 
     let debounceTimer = null;
     const scheduledApply = function(mutations) {
+      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
+        return;
+      }
+      if (window.__isDraggingSplit || window.__isResizing || window.__isNavigating) {
+        if (window.__isNavigating) {
+          if (typeof navThrottleTimer !== 'undefined' && navThrottleTimer) clearTimeout(navThrottleTimer);
+          if (typeof resumeVideosAfterNav === 'function') {
+            navThrottleTimer = setTimeout(function() {
+              navThrottleTimer = null;
+              resumeVideosAfterNav();
+            }, 120);
+          }
+        }
+        return;
+      }
+
       if (mutations && mutations.length > 0) {
         let isRelevant = false;
         for (let i = 0; i < mutations.length; i++) {
@@ -3495,9 +3516,16 @@ function getClientVideoScript(config) {
           if (!target || target.nodeType === 3) continue;
           // 深度性能过滤：彻底忽略用户打字、光标移动、代码块渲染与AI流式输出DOM扰动
           if (target.id === 'antigravity.agentSidePanelInputBox' || target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable) continue;
+
+          // 快速命中跳过：消息正文、代码块、markdown、聊天流元素直接跳过，消除昂贵的 closest 向上递归
+          const cls = target.className;
+          if (typeof cls === 'string' && (cls.includes('prose') || cls.includes('markdown') || cls.includes('message') || cls.includes('code-block') || cls.includes('monaco') || cls.includes('group/user-input-step'))) {
+            continue;
+          }
+
           if (target.closest && (
-              target.closest('input, textarea, [contenteditable="true"], [role="textbox"], form, .markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"]') ||
-              target.closest('#antigravity\\.agentSidePanelInputBox, [id="antigravity.agentSidePanelInputBox"]')
+              target.closest('input, textarea, [contenteditable="true"], [role="textbox"], form, .markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"], [role="article"]') ||
+              target.closest('#antigravity\.agentSidePanelInputBox, [id="antigravity.agentSidePanelInputBox"]')
           )) {
             continue;
           }
@@ -3519,11 +3547,7 @@ function getClientVideoScript(config) {
                   break;
                 }
                 if (role === 'dialog' || ds === 'open' || 
-                  (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm') ||
-                   node.classList.contains('overflow-y-auto') || node.classList.contains('bg-background') ||
-                   node.classList.contains('bg-card') || node.classList.contains('bg-card-border'))) ||
-                  (node.className && typeof node.className === 'string' && (node.className.includes('terminal') || node.className.includes('drawer') || node.className.includes('bg-card') || node.className.includes('agentSidePanelInputBox') || (node.className.includes('overflow-y-auto') && node.className.includes('bg-background')))) ||
-                  (node.querySelector && node.querySelector('.terminal, .xterm, [class*="terminal-drawer"], [id*="agentSidePanelInputBox"], div.bg-card, div.rounded-2xl.bg-card-border, div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background'))) {
+                  (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm')))) {
                   isRelevant = true;
                   break;
                 }
@@ -3533,7 +3557,7 @@ function getClientVideoScript(config) {
             for (let j = 0; j < m.removedNodes.length; j++) {
               const node = m.removedNodes[j];
               if (node.nodeType === 1) {
-                if (node.id === 'antigravity-video-left' || (node.classList && (node.classList.contains('antigravity-slot-video') || node.classList.contains('terminal') || node.classList.contains('xterm') || node.classList.contains('overflow-y-auto') || node.classList.contains('bg-card'))) || (node.getAttribute && node.getAttribute('role') === 'dialog')) {
+                if (node.id === 'antigravity-video-left' || (node.classList && (node.classList.contains('antigravity-slot-video') || node.classList.contains('terminal') || node.classList.contains('xterm'))) || (node.getAttribute && node.getAttribute('role') === 'dialog')) {
                   isRelevant = true;
                   break;
                 }
@@ -3545,12 +3569,6 @@ function getClientVideoScript(config) {
         if (!isRelevant) return;
       }
 
-      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
-        return;
-      }
-      if (window.__isDraggingSplit || window.__isResizing) {
-        return;
-      }
       if (debounceTimer) return;
       debounceTimer = setTimeout(function() {
         debounceTimer = null;
@@ -3615,6 +3633,90 @@ function getClientVideoScript(config) {
         window.__antigravityApplyVideos();
       } else if (typeof applyVideos === 'function') {
         applyVideos();
+      }
+    };
+
+    
+    // 极致原生 60FPS/120FPS 性能：左侧会话切换导航协调器 (消除切会话卡顿与 GPU 解码竞争)
+    let navThrottleTimer = null;
+    let navMaxTimeoutTimer = null;
+    window.__isNavigating = false;
+
+    const pauseVideosForNav = function() {
+      if (window.__isNavigating) return;
+      window.__isNavigating = true;
+      if (document.body && !document.body.classList.contains('is-navigating')) {
+        document.body.classList.add('is-navigating');
+      }
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
+      for (let i = 0; i < allVids.length; i++) {
+        const v = allVids[i];
+        if (!v.paused) {
+          v._wasPlayingBeforeNav = true;
+          v.pause();
+        }
+      }
+      const iframes = document.querySelectorAll('iframe');
+      for (let i = 0; i < iframes.length; i++) {
+        iframes[i].style.pointerEvents = 'none';
+      }
+    };
+
+    const resumeVideosAfterNav = function() {
+      if (!window.__isNavigating) return;
+      if (navThrottleTimer) { clearTimeout(navThrottleTimer); navThrottleTimer = null; }
+      if (navMaxTimeoutTimer) { clearTimeout(navMaxTimeoutTimer); navMaxTimeoutTimer = null; }
+      window.__isNavigating = false;
+      if (document.body && document.body.classList.contains('is-navigating')) {
+        document.body.classList.remove('is-navigating');
+      }
+      const iframes = document.querySelectorAll('iframe');
+      for (let i = 0; i < iframes.length; i++) {
+        iframes[i].style.pointerEvents = '';
+      }
+      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
+      for (let i = 0; i < allVids.length; i++) {
+        const v = allVids[i];
+        if (v._wasPlayingBeforeNav || v.paused) {
+          v._wasPlayingBeforeNav = false;
+          syncVideoPlaybackState(v);
+        }
+      }
+      if (window.__antigravityApplyVideos) {
+        window.__antigravityApplyVideos();
+      } else if (typeof applyVideos === 'function') {
+        applyVideos();
+      }
+    };
+
+    const onNavClick = function(e) {
+      const target = e.target;
+      if (!target) return;
+      const navItem = target.closest ? target.closest('a[href*="/c/"], a.absolute.inset-0, [data-testid*="conversation"], [class*="conversation-row"]') : null;
+      if (!navItem) return;
+      pauseVideosForNav();
+
+      if (navThrottleTimer) clearTimeout(navThrottleTimer);
+      navThrottleTimer = setTimeout(function() {
+        navThrottleTimer = null;
+        resumeVideosAfterNav();
+      }, 160);
+
+      if (navMaxTimeoutTimer) clearTimeout(navMaxTimeoutTimer);
+      navMaxTimeoutTimer = setTimeout(function() {
+        navMaxTimeoutTimer = null;
+        resumeVideosAfterNav();
+      }, 350);
+    };
+
+    const onNavKey = function(e) {
+      if (e.key === 'Enter' && e.target && e.target.closest && e.target.closest('a[href*="/c/"], a.absolute.inset-0, [data-testid*="conversation"]')) {
+        pauseVideosForNav();
+        if (navThrottleTimer) clearTimeout(navThrottleTimer);
+        navThrottleTimer = setTimeout(function() {
+          navThrottleTimer = null;
+          resumeVideosAfterNav();
+        }, 160);
       }
     };
 
@@ -3683,6 +3785,15 @@ function getClientVideoScript(config) {
       window.addEventListener('pointermove', onPointerMove, { passive: true });
       window.addEventListener('blur', onDragEnd);
       window.addEventListener('resize', onWindowResize, { passive: true });
+
+      if (window.__antigravityNavClickHandler) {
+        window.removeEventListener('click', window.__antigravityNavClickHandler, true);
+        window.removeEventListener('keydown', window.__antigravityNavKeyHandler, true);
+      }
+      window.__antigravityNavClickHandler = onNavClick;
+      window.__antigravityNavKeyHandler = onNavKey;
+      window.addEventListener('click', onNavClick, true);
+      window.addEventListener('keydown', onNavKey, true);
     } catch(e) {}
 
     if (window.__antigravitySyncInterval) {
