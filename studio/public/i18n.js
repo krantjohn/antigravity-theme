@@ -153,6 +153,13 @@ const I18N = {
     "we.no_match": "未找到符合搜索条件的创意工坊壁纸",
     "we.scanning": "正在深度扫描 Steam Wallpaper Engine 素材库...",
     "we.scan_failed": "扫描失败: {error}",
+    "we.connected": "已连接 Steam",
+    "we.refresh": "刷新检测",
+    "we.refresh_title": "重新扫描并检测 Steam Wallpaper Engine 素材库",
+    "we.refreshing": "正在检测...",
+    "we.empty_title": "未检测到 Wallpaper Engine 壁纸库",
+    "we.empty_desc": "请确认本地 Steam 已启动，且 Wallpaper Engine (AppID: 431960) 已下载或订阅壁纸。",
+    "we.empty_btn_refresh": "🔄 立即刷新检测",
 
     // Safety & Core View
     "safety.tag": "CORE ENGINE & SAFETY",
@@ -183,6 +190,8 @@ const I18N = {
     "modal.we_picker_title": "🎮 创意工坊素材快速装配",
     "modal.we_picker_search": "🔍 快速过滤壁纸标题或工坊ID...",
     "modal.we_picker_hint": "💡 点击任意壁纸即可直接装配到当前选中的槽位，并在视窗 0ms 实时预览",
+    "modal.we_refresh": "刷新检测",
+    "modal.we_refresh_title": "重新扫描检测素材库",
     "modal.close": "关闭",
 
     // Guide Modal
@@ -236,6 +245,8 @@ const I18N = {
     "toast.apply_preset_applying": "正在装配并应用预设【{name}】...",
     "toast.apply_preset_success": "✨ 预设【{name}】已成功应用并极速热重载生效！",
     "toast.we_equipped": "✨ 已装配壁纸【{title}】到【{slot}】并在视窗 0ms 实时预览！",
+    "toast.we_refresh_success": "✓ 刷新检测完成，共发现 {count} 项素材！",
+    "toast.we_refresh_empty": "⚠️ 未检测到 Wallpaper Engine 创意工坊壁纸，请确认 Steam 已安装并订阅壁纸",
     "toast.slot_vanilla_restored": "🛡️ 已将【{slot}】恢复为官方原版纯净样式（点击上方“应用生效”即可生效）",
     "toast.slot_reset_default": "槽位 [{slot}] 素材已重置为默认官方壁纸",
     "confirm.delete_preset": "确定要删除预设【{name}】吗？",
@@ -396,6 +407,13 @@ const I18N = {
     "we.no_match": "No workshop wallpapers matched your query",
     "we.scanning": "Deep scanning Steam Wallpaper Engine library...",
     "we.scan_failed": "Scan failed: {error}",
+    "we.connected": "Steam Connected",
+    "we.refresh": "Refresh & Scan",
+    "we.refresh_title": "Rescan and detect Steam Wallpaper Engine library",
+    "we.refreshing": "Scanning...",
+    "we.empty_title": "Wallpaper Engine Library Not Detected",
+    "we.empty_desc": "Please ensure Steam is running and Wallpaper Engine (AppID: 431960) has downloaded or subscribed wallpapers.",
+    "we.empty_btn_refresh": "🔄 Rescan & Detect Now",
 
     // Safety & Core View
     "safety.tag": "CORE ENGINE & SAFETY",
@@ -426,6 +444,8 @@ const I18N = {
     "modal.we_picker_title": "🎮 Workshop Asset Quick Equip",
     "modal.we_picker_search": "🔍 Filter wallpaper title or workshop ID...",
     "modal.we_picker_hint": "💡 Click any wallpaper to equip to current slot with 0ms live preview",
+    "modal.we_refresh": "Refresh",
+    "modal.we_refresh_title": "Rescan & detect wallpapers",
     "modal.close": "Close",
 
     // Guide Modal
@@ -479,6 +499,8 @@ const I18N = {
     "toast.apply_preset_applying": "Equipping and applying preset 【{name}】...",
     "toast.apply_preset_success": "✨ Preset 【{name}】 applied and live reloaded!",
     "toast.we_equipped": "✨ Equipped wallpaper 【{title}】 to 【{slot}】 with 0ms live preview!",
+    "toast.we_refresh_success": "✓ Scan complete, found {count} wallpapers!",
+    "toast.we_refresh_empty": "⚠️ No Wallpaper Engine wallpapers detected. Please ensure Steam is running with subscribed items",
     "toast.slot_vanilla_restored": "🛡️ Slot 【{slot}】 restored to official vanilla (click 'Apply Changes' above to take effect)",
     "toast.slot_reset_default": "Slot [{slot}] asset reset to official default",
     "confirm.delete_preset": "Are you sure you want to delete preset 【{name}】?",

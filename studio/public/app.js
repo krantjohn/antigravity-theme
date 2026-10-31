@@ -121,6 +121,8 @@ const newPresetNameInput = document.getElementById('new-preset-name');
 // Steam WE View & Picker Elements
 const weBadge = document.getElementById('we-badge');
 const weCountBadge = document.getElementById('we-count-badge');
+const btnRefreshWe = document.getElementById('btn-refresh-we');
+const btnRefreshWePicker = document.getElementById('btn-refresh-we-picker');
 const navWeCount = document.getElementById('nav-we-count');
 const weSearchInput = document.getElementById('we-search-input');
 const weGrid = document.getElementById('we-grid');
@@ -1766,44 +1768,93 @@ if (presetSearchInput) {
 // =========================================================================
 function renderWeStatus(count) {
   if (navWeCount) navWeCount.textContent = count || 0;
-  if (weCountBadge) weCountBadge.textContent = `${count || 0} 项素材`;
+  if (weCountBadge) weCountBadge.textContent = t('we.count_badge', { count: count || 0 });
   if (weBadge) {
     if (count > 0) {
-      weBadge.textContent = '已连接 Steam';
+      weBadge.textContent = t('we.connected') || '已连接 Steam';
       weBadge.className = 'badge badge-accent';
     } else {
-      weBadge.textContent = '未检测到 Steam WE';
+      weBadge.textContent = t('we.not_found') || '未检测到 Steam WE';
       weBadge.className = 'badge badge-subtle';
     }
   }
 }
 
-async function fetchWeList() {
-  if (weGrid) {
-    weGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">正在深度扫描 Steam Wallpaper Engine 素材库...</div>';
+async function fetchWeList(isManualRefresh = false) {
+  const refreshBtns = [
+    document.getElementById('btn-refresh-we'),
+    document.getElementById('btn-refresh-we-picker')
+  ].filter(Boolean);
+
+  refreshBtns.forEach(btn => {
+    btn.disabled = true;
+    const icon = btn.querySelector('.refresh-icon');
+    if (icon) icon.classList.add('spin');
+    const text = btn.querySelector('.btn-refresh-we-text');
+    if (text) {
+      btn._origText = text.textContent;
+      text.textContent = t('we.refreshing');
+    }
+  });
+
+  if (!isManualRefresh && weGrid && (!state.weList || state.weList.length === 0)) {
+    weGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">${t('we.scanning')}</div>`;
   }
 
   try {
-    const res = await fetch('/api/we/list');
+    const url = isManualRefresh ? '/api/we/list?refresh=true' : '/api/we/list';
+    const res = await fetch(url);
     const data = await res.json();
     if (data.success) {
       state.weList = data.items || [];
       renderWeStatus(state.weList.length);
       renderWeGallery();
       renderWePickerGrid();
+      if (isManualRefresh) {
+        if (state.weList.length > 0) {
+          showToast(t('toast.we_refresh_success', { count: state.weList.length }));
+        } else {
+          showToast(t('toast.we_refresh_empty'), 5000);
+        }
+      }
     } else if (weGrid) {
-      weGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--accent-rose);">扫描失败: ${data.error || '未知错误'}</div>`;
+      weGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--accent-rose);">${t('we.scan_failed', { error: data.error || '未知错误' })}</div>`;
     }
   } catch (e) {
     if (weGrid) {
-      weGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--accent-rose);">连接素材库失败: ${e.message}</div>`;
+      weGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--accent-rose);">${t('we.scan_failed', { error: e.message })}</div>`;
     }
+  } finally {
+    refreshBtns.forEach(btn => {
+      btn.disabled = false;
+      const icon = btn.querySelector('.refresh-icon');
+      if (icon) icon.classList.remove('spin');
+      const text = btn.querySelector('.btn-refresh-we-text');
+      if (text && btn._origText) {
+        text.textContent = btn._origText;
+      }
+    });
   }
 }
 
 function renderWeGallery() {
   if (!weGrid) return;
   weGrid.innerHTML = '';
+
+  if (!state.weList || state.weList.length === 0) {
+    weGrid.innerHTML = `
+      <div class="we-empty-card">
+        <div class="empty-icon">🎮</div>
+        <h3>${t('we.empty_title')}</h3>
+        <p>${t('we.empty_desc')}</p>
+        <button class="btn btn-primary btn-sm" id="btn-we-empty-refresh">${t('we.empty_btn_refresh')}</button>
+      </div>`;
+    const btnEmptyRefresh = document.getElementById('btn-we-empty-refresh');
+    if (btnEmptyRefresh) {
+      btnEmptyRefresh.onclick = () => fetchWeList(true);
+    }
+    return;
+  }
 
   const filterText = weSearchInput ? weSearchInput.value.trim().toLowerCase() : '';
   const filtered = state.weList.filter(item => {
@@ -1883,6 +1934,14 @@ function renderWeGallery() {
 
 if (weSearchInput) {
   weSearchInput.oninput = () => renderWeGallery();
+}
+
+if (btnRefreshWe) {
+  btnRefreshWe.onclick = () => fetchWeList(true);
+}
+
+if (btnRefreshWePicker) {
+  btnRefreshWePicker.onclick = () => fetchWeList(true);
 }
 
 // =========================================================================

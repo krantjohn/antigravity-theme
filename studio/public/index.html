@@ -704,6 +704,10 @@
           <p class="section-desc" data-i18n="we.desc">直接读取您本地 Steam 安装的 Wallpaper Engine 创意工坊壁纸，一键载入工作区预览或装配至指定槽位。</p>
         </div>
         <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm btn-refresh-we" id="btn-refresh-we" title="重新扫描并检测 Steam Wallpaper Engine 素材库" data-i18n-title="we.refresh_title">
+            <svg class="refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            <span class="btn-refresh-we-text" data-i18n="we.refresh">刷新检测</span>
+          </button>
           <span class="badge badge-accent" id="we-badge" data-i18n="we.detecting">检测中...</span>
           <span class="badge badge-subtle" id="we-count-badge">0 项素材</span>
         </div>
@@ -813,6 +817,10 @@
         <div class="modal-title-wrap">
           <h3 data-i18n="modal.we_picker_title">🎮 创意工坊素材快速装配</h3>
           <span class="badge badge-accent" id="we-picker-count">127 项</span>
+          <button class="btn btn-secondary btn-xs btn-modal-refresh" id="btn-refresh-we-picker" title="重新扫描检测素材库" data-i18n-title="modal.we_refresh_title">
+            <svg class="refresh-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            <span class="btn-refresh-we-text" data-i18n="modal.we_refresh">刷新检测</span>
+          </button>
         </div>
         <button class="modal-close" id="btn-close-we-picker">✕</button>
       </div>
