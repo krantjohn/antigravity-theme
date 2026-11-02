@@ -973,6 +973,24 @@ html, body {
   max-height: 100vh !important;
 }
 
+/* Built-in Browser & Webview Interactive Pass-through Layer */
+body > div:has(webview),
+body > div:has([style*="position-anchor"]),
+body > div:has([position-anchor]),
+div:has(> webview),
+[style*="position-anchor"],
+[position-anchor],
+webview {
+  z-index: 10 !important;
+  pointer-events: auto !important;
+}
+
+/* 保证右侧边栏内置浏览器定位锚点占位元素不会拦截用户鼠标交互 */
+[style*="anchor-name: --builtin-browser-anchor"],
+[style*="anchor-name:--builtin-browser-anchor"] {
+  pointer-events: none !important;
+}
+
 /* 隐藏全局最外层多余的拖动条，保持界面完整铺满 */
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
@@ -2630,7 +2648,30 @@ function getClientVideoScript(config) {
     function mountTickZeroBase() {
       try {
         const left = config.left;
-        if (!left || left.type !== 'video' || !left.file) return;
+        if (!left || left.type !== 'video' || !left.file) {
+          const oldLefts = document.querySelectorAll('#antigravity-video-left, .antigravity-slot-video[data-slot="left"]');
+          for (let i = 0; i < oldLefts.length; i++) {
+            try {
+              oldLefts[i].pause();
+              oldLefts[i].removeAttribute('src');
+              oldLefts[i].load();
+              oldLefts[i].remove();
+            } catch(e) {}
+          }
+          const bottom = config.bottom;
+          if (!bottom || bottom.type !== 'video' || !bottom.file) {
+            const oldBottomVids = document.querySelectorAll('.antigravity-slot-video[data-slot="bottom"]');
+            for (let i = 0; i < oldBottomVids.length; i++) {
+              try {
+                oldBottomVids[i].pause();
+                oldBottomVids[i].removeAttribute('src');
+                oldBottomVids[i].load();
+                oldBottomVids[i].remove();
+              } catch(e) {}
+            }
+          }
+          return;
+        }
         const vParam = (left && left.version) ? ('?v=' + left.version) : ('?v=' + Date.now());
         const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
         const posterSrc = slotPosters['left'] || ((left && left.poster) ? (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam) : '');
@@ -2686,6 +2727,14 @@ function getClientVideoScript(config) {
             '#root, #app {',
             '  position: relative !important;',
             '  z-index: 1 !important;',
+            '}',
+            '/* Built-in Browser & Webview Interactive Fix */',
+            'body > div:has(webview), body > div:has([style*="position-anchor"]), body > div:has([position-anchor]), div:has(> webview), [style*="position-anchor"], [position-anchor], webview {',
+            '  z-index: 10 !important;',
+            '  pointer-events: auto !important;',
+            '}',
+            '[style*="anchor-name: --builtin-browser-anchor"], [style*="anchor-name:--builtin-browser-anchor"] {',
+            '  pointer-events: none !important;',
             '}'
           );
           zeroLatencyStyle.textContent = rules.join('\\n');
@@ -3853,6 +3902,21 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         '#root, #app {',
                         '  position: relative !important;',
                         '  z-index: 1 !important;',
+                        '}',
+                        '/* 6.1 内置浏览器与 Webview 交互穿透层 (Built-in Browser Webview Interaction Fix) */',
+                        'body > div:has(webview),',
+                        'body > div:has([style*="position-anchor"]),',
+                        'body > div:has([position-anchor]),',
+                        'div:has(> webview),',
+                        '[style*="position-anchor"],',
+                        '[position-anchor],',
+                        'webview {',
+                        '  z-index: 10 !important;',
+                        '  pointer-events: auto !important;',
+                        '}',
+                        '[style*="anchor-name: --builtin-browser-anchor"],',
+                        '[style*="anchor-name:--builtin-browser-anchor"] {',
+                        '  pointer-events: none !important;',
                         '}',
                         '/* 6.3 顶部标题栏操作与控制按钮点击保证 (Titlebar Buttons Responsiveness) */',
                         'header button,',
