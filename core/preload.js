@@ -215,8 +215,9 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
         zeroLatencyStyle = document.createElement('style');
         zeroLatencyStyle.id = 'antigravity-zero-latency-style';
         const rules = [
-          'html {',
+          'html, body {',
           '  background-color: transparent !important;',
+          '  background: transparent !important;',
           '}',
           'html::before {',
           '  content: "" !important;',
@@ -245,6 +246,10 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           );
         }
         rules.push(
+          '#root, #app, .agy-shell, .agy-shell.bg-background, #root > div.agy-shell, .agy-sheet, .browser-hole-opaque {',
+          '  background-color: transparent !important;',
+          '  background: transparent !important;',
+          '}',
           '#root, #app {',
           '  position: relative !important;',
           '  z-index: 1 !important;',

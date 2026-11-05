@@ -558,14 +558,18 @@ function extractPosterFromVideo(videoPath, targetPosterPath) {
         `cap = cv2.VideoCapture(r"${vSafe}")`,
         'if not cap.isOpened(): sys.exit(1)',
         'ret, f = cap.read()',
-        'if not ret: cap.set(cv2.CAP_PROP_POS_MSEC, 500); ret, f = cap.read()',
+        'if not ret:',
+        '    cap.set(cv2.CAP_PROP_POS_MSEC, 500)',
+        '    ret, f = cap.read()',
         'if not ret: sys.exit(1)',
         'h, w = f.shape[:2]',
-        'if w > 3840 or h > 2160: scale = min(3840.0 / w, 2160.0 / h); f = cv2.resize(f, (max(1, int(w * scale)), max(1, int(h * scale))), interpolation=cv2.INTER_AREA)',
-        `cv2.imwrite(r"${pSafe}", f, [cv2.IMWRITE_JPEG_QUALITY, 92])`,
+        'if w > 3840 or h > 2160:',
+        '    scale = min(3840.0 / w, 2160.0 / h)',
+        '    f = cv2.resize(f, (max(1, int(w * scale)), max(1, int(h * scale))), interpolation=cv2.INTER_AREA)',
+        `cv2.imwrite(r"${pSafe}", f, [cv2.IMWRITE_JPEG_QUALITY, 95])`,
         'cap.release()'
-      ].join('; ');
-      cp.execFileSync(py, ['-c', script], { timeout: 8000, stdio: 'pipe', windowsHide: true });
+      ].join('\n');
+      cp.execFileSync(py, ['-c', script], { timeout: 15000, stdio: 'pipe', windowsHide: true });
       if (fs.existsSync(targetPosterPath) && fs.statSync(targetPosterPath).size > 1000) {
         return true;
       }
@@ -576,7 +580,7 @@ function extractPosterFromVideo(videoPath, targetPosterPath) {
     cp.execFileSync('ffmpeg', [
       '-y', '-ss', '00:00:00.000', '-i', videoPath,
       '-vframes', '1', '-q:v', '2', targetPosterPath
-    ], { timeout: 8000, stdio: 'pipe', windowsHide: true });
+    ], { timeout: 15000, stdio: 'pipe', windowsHide: true });
     if (fs.existsSync(targetPosterPath) && fs.statSync(targetPosterPath).size > 1000) {
       return true;
     }
@@ -705,6 +709,8 @@ html, body {
   height: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
 #root, #app {
@@ -713,6 +719,8 @@ html, body {
   overflow: hidden !important;
   width: 100% !important;
   height: 100% !important;
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
 body > div:has(webview),
@@ -776,7 +784,9 @@ body::before {
 ` : ''}
 
 /* 3. Main Conversation Area Transparency (Allows Base Wallpaper to Shine Through) */
-#root, #app, [data-theme], .h-screen, .w-screen, .flex-1 {
+#root, #app, [data-theme], .h-screen, .w-screen, .flex-1,
+.agy-shell, .agy-shell.bg-background, #root > div.agy-shell,
+.agy-sheet, .browser-hole-opaque {
   background-color: transparent !important;
   background: transparent !important;
 }
@@ -784,7 +794,9 @@ body::before {
 main .overflow-y-auto,
 div[role="region"] .overflow-y-auto,
 .relative.w-full.h-full.overflow-y-auto,
-div.flex-1.min-h-0.overflow-y-auto {
+div.flex-1.min-h-0.overflow-y-auto,
+div.overflow-y-auto.min-h-0.w-full,
+div.overflow-y-auto.isolate {
   background-color: transparent !important;
   background: transparent !important;
 }
@@ -1191,8 +1203,9 @@ function getClientVideoScript(config) {
           zeroLatencyStyle = document.createElement('style');
           zeroLatencyStyle.id = 'antigravity-zero-latency-style';
           const rules = [
-            'html {',
+            'html, body {',
             '  background-color: transparent !important;',
+            '  background: transparent !important;',
             '}',
             'html::before {',
             '  content: "" !important;',
@@ -1221,6 +1234,10 @@ function getClientVideoScript(config) {
             );
           }
           rules.push(
+            '#root, #app, .agy-shell, .agy-shell.bg-background, #root > div.agy-shell, .agy-sheet, .browser-hole-opaque {',
+            '  background-color: transparent !important;',
+            '  background: transparent !important;',
+            '}',
             '#root, #app {',
             '  position: relative !important;',
             '  z-index: 1 !important;',
