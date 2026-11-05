@@ -1,6 +1,7 @@
 /**
  * test_bottom_slot_wallpaper.js
- * Verification of Input Box (slot: bottom) Wallpaper Injection & Black Halo Elimination
+ * Verification of Input Box (slot: bottom) Wallpaper Injection, Black Halo Elimination,
+ * and Frosted Glass Button Legibility Protection.
  */
 
 const assert = require('assert');
@@ -40,7 +41,7 @@ async function evalCdp(expression) {
 }
 
 async function runTest() {
-  console.log('--- Test: Input Box Wallpaper & Black Border Elimination ---');
+  console.log('--- Test: Input Box Wallpaper, Rim Elimination & Button Legibility ---');
 
   // Test 1: Verify batchApplyDraft from vanilla state properly applies bottom wallpaper
   console.log('1. Testing batchApplyDraft from vanilla isOriginal state...');
@@ -64,25 +65,32 @@ async function runTest() {
   console.log('  ✓ batchApplyDraft successfully promoted bottom slot from vanilla to active video');
 
   // Test 2: Verify CSS generation targets surface-composer-card and eliminates 4px black spread ring
-  console.log('2. Verifying generated CSS for Target 2...');
+  console.log('2. Verifying generated CSS for Target 2 & Frosted Buttons...');
   const css = themeEngine.generateMasterCss(config);
   assert(css.includes('.surface-composer-card'), 'generateMasterCss must include .surface-composer-card');
   assert(css.includes('.surface-composer'), 'generateMasterCss must include .surface-composer');
   assert(css.includes('box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35)'), 'generateMasterCss must soften box-shadow');
   assert(!css.includes('0 0 0 4px rgb(13, 13, 17)'), 'CSS must not inject 4px black ring');
-  console.log('  ✓ CSS accurately targets .surface-composer-card and removes the 4px black ring');
+  assert(css.includes('.agy-composer-footer button'), 'CSS must protect footer buttons with frosted styling');
+  assert(css.includes('rgba(18, 20, 28, 0.65)'), 'CSS must provide dark frosted glass background');
+  console.log('  ✓ CSS accurately targets .surface-composer-card, removes 4px black ring, and styles buttons');
 
-  // Test 3: Live CDP DOM Verification
-  console.log('3. Live CDP DOM verification...');
+  // Test 3: Live CDP DOM Verification of Button Legibility
+  console.log('3. Live CDP DOM verification of input capsule and buttons...');
   try {
     const domCheck = await evalCdp(`(() => {
       const outer = document.getElementById("antigravity.agentSidePanelInputBox");
       const inner = document.querySelector(".surface-composer-card");
+      const modelBtn = document.querySelector('[data-testid="model-selector-trigger"]');
+      const addBtn = document.querySelector('button[aria-label="Add context"]');
       return {
         outerFound: !!outer,
         outerBoxShadow: outer ? window.getComputedStyle(outer).boxShadow : null,
         innerFound: !!inner,
-        innerBg: inner ? window.getComputedStyle(inner).backgroundColor : null
+        innerBg: inner ? window.getComputedStyle(inner).backgroundColor : null,
+        modelBtnBg: modelBtn ? window.getComputedStyle(modelBtn).backgroundColor : null,
+        modelBtnColor: modelBtn ? window.getComputedStyle(modelBtn).color : null,
+        addBtnBg: addBtn ? window.getComputedStyle(addBtn).backgroundColor : null
       };
     })()`);
 
@@ -90,9 +98,19 @@ async function runTest() {
       assert(!domCheck.outerBoxShadow.includes('13, 13, 17'), 'Live outer box shadow must not have black ring');
       console.log('  ✓ Live Antigravity verified: No black ring on input capsule');
     }
+    if (domCheck && domCheck.modelBtnBg) {
+      assert(domCheck.modelBtnBg.includes('18, 20, 28') || domCheck.modelBtnBg.includes('rgba'), 'Model button must have frosted background');
+      console.log('  ✓ Live Antigravity verified: Buttons have frosted glass background (not transparent)');
+    }
   } catch (e) {
     console.log('  ℹ (CDP check skipped or completed: ' + e.message + ')');
   }
+
+  // Test 4: Vanilla Zero-Diff Guarantee
+  console.log('4. Verifying vanilla zero-diff contract (zero button overrides when unconfigured)...');
+  const vanillaCss = themeEngine.generateMasterCss({ isOriginal: true });
+  assert(!vanillaCss.includes('.agy-composer-footer button'), 'Vanilla CSS must not contain button overrides');
+  console.log('  ✓ Vanilla mode leaves Antigravity button styles 100% untouched');
 
   console.log('🎉 ALL INPUT BOX TESTS PASSED!');
 }

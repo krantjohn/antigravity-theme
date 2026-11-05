@@ -931,6 +931,34 @@ ${isLeftActive ? `
 ` : ''}
 `}
 
+${(isBottomActive || isLeftActive) ? `
+/* Ensure input box footer buttons and text maintain clear frosted glass pill visibility over wallpapers */
+[id="antigravity.agentSidePanelInputBox"] .agy-composer-footer button:not([data-testid="voice-start-button"]):not([data-testid="input-cancel-button"]),
+.surface-composer .agy-composer-footer button:not([data-testid="voice-start-button"]):not([data-testid="input-cancel-button"]) {
+  background: rgba(18, 20, 28, 0.65) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+  color: rgb(235, 235, 240) !important;
+  transition: all 0.15s ease !important;
+}
+
+[id="antigravity.agentSidePanelInputBox"] .agy-composer-footer button:hover:not([data-testid="voice-start-button"]):not([data-testid="input-cancel-button"]),
+.surface-composer .agy-composer-footer button:hover:not([data-testid="voice-start-button"]):not([data-testid="input-cancel-button"]) {
+  background: rgba(30, 34, 50, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+[id="antigravity.agentSidePanelInputBox"] div[aria-label="Message input"],
+.surface-composer div[aria-label="Message input"],
+[id="antigravity.agentSidePanelInputBox"] p.pointer-events-none,
+.surface-composer p.pointer-events-none {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7) !important;
+}
+` : ''}
+
 /* 6. Target 3: Settings Dialog (slot: settings) */
 [data-radix-dialog-overlay] {
   background-color: rgba(5, 7, 16, 0.85) !important;
