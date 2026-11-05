@@ -181,215 +181,33 @@ const VIDEO_EXTS = new Set(['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v']);
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']);
 
 const SLOTS_META = {
-  'left': { key: 'left', defaultFile: 'left_wallpaper.jpg', desc: 'AI主对话界面 / 全局底图', defaultPosition: 'center center' },
-  'mid': { key: 'mid', defaultFile: 'mid_wallpaper.jpg', desc: '终端界面 (活跃终端壁纸)', defaultPosition: 'center 20%' },
-  'right': { key: 'right', defaultFile: 'right_wallpaper.jpg', desc: '最右侧界面 (独立终端/侧栏壁纸)', defaultPosition: 'center 20%' },
-  'bottom': { key: 'bottom', defaultFile: 'input_wallpaper.jpg', desc: '底部输入框', defaultPosition: 'center 6%' },
-  'settings': { key: 'settings', defaultFile: 'settings_wallpaper.png', desc: '设置界面', defaultPosition: 'center 65%' }
+  'left': { key: 'left', id: 'left', name: '左侧对话背景', desc: 'AI主对话界面 / 全局底图', defaultFile: 'left_wallpaper.jpg', defaultPosition: 'center center' },
+  'bottom': { key: 'bottom', id: 'bottom', name: '底部输入框', desc: '底部输入框', defaultFile: 'input_wallpaper.jpg', defaultPosition: 'center 6%' },
+  'settings': { key: 'settings', id: 'settings', name: '设置面板', desc: '设置界面', defaultFile: 'settings_wallpaper.png', defaultPosition: 'center 65%' }
 };
 
 const SLOT_ALIASES = {
-  '左': 'left', 'left': 'left', 'global': 'left', 'main': 'left',
-  '中': 'mid', 'mid': 'mid', 'terminal': 'mid',
-  '右': 'right', 'right': 'right', 'standalone': 'right',
+  '左': 'left', 'left': 'left', 'global': 'left', 'main': 'left', 'base': 'left',
   '下': 'bottom', 'bottom': 'bottom', 'input': 'bottom',
-  '设置': 'settings', 'settings': 'settings'
+  '设置': 'settings', 'settings': 'settings', '设': 'settings', 'config': 'settings'
 };
 
-const FONT_PRESETS = {
-  'pure-white': {
-    id: 'pure-white',
-    name: '纯白高对比 (Pure White)',
-    primary: '#ffffff',
-    secondary: '#f1f5f9',
-    muted: '#94a3b8',
-    terminal: '#ffffff',
-    shadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)',
-    terminalShadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)',
-    isDarkText: false,
-    desc: '适合绝大多数暗色、炫彩或复杂壁纸，纯白字体配深色轮廓，极致清晰',
-    aliases: ['1', 'white', 'pure-white', '纯白', '白', '高对比白']
-  },
-  'obsidian-black': {
-    id: 'obsidian-black',
-    name: '暗夜曜黑 (Obsidian Black)',
-    primary: '#0f172a',
-    secondary: '#1e293b',
-    muted: '#475569',
-    terminal: '#05070d',
-    shadow: '0 0 2px #ffffff, 0 1px 3px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.85)',
-    terminalShadow: '0 0 2px #ffffff, 0 1px 2px rgba(255, 255, 255, 0.98), 0 0 1px #ffffff, 0 0 5px rgba(255, 255, 255, 0.85)',
-    isDarkText: true,
-    desc: '适合纯白、超亮浅色动漫或明亮风景壁纸，曜黑字体搭配白辉光描边，不晃眼且字迹清晰',
-    aliases: ['2', 'black', 'obsidian-black', '暗黑', '黑', '曜黑', '暗夜曜黑']
-  },
-  'sakura-pink': {
-    id: 'sakura-pink',
-    name: '樱花粉 (Sakura Pink)',
-    primary: '#fdf2f8',
-    secondary: '#fbcfe8',
-    muted: '#f472b6',
-    terminal: '#fdf2f8',
-    shadow: '0 1px 3px rgba(0, 0, 0, 0.92), 0 0 4px rgba(244, 114, 182, 0.50)',
-    terminalShadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(244, 114, 182, 0.60)',
-    isDarkText: false,
-    desc: '粉系二次元主题、甜美唯美风格壁纸的最佳搭档',
-    aliases: ['3', 'pink', 'sakura-pink', '樱花粉', '粉', '粉色']
-  },
-  'cyber-cyan': {
-    id: 'cyber-cyan',
-    name: '赛博青 (Cyber Cyan)',
-    primary: '#e0f2fe',
-    secondary: '#7dd3fc',
-    muted: '#38bdf8',
-    terminal: '#e0f2fe',
-    shadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(56, 189, 248, 0.50)',
-    terminalShadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(56, 189, 248, 0.60)',
-    isDarkText: false,
-    desc: '赛博朋克、科幻机甲、极客科技风壁纸搭档',
-    aliases: ['4', 'cyan', 'cyber-cyan', '赛博青', '青', '青色', '蓝']
-  },
-  'golden-sand': {
-    id: 'golden-sand',
-    name: '暖金 (Golden Sand)',
-    primary: '#fef08a',
-    secondary: '#fde047',
-    muted: '#eab308',
-    terminal: '#fef08a',
-    shadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(234, 179, 8, 0.45)',
-    terminalShadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(234, 179, 8, 0.55)',
-    isDarkText: false,
-    desc: '落日余晖、暖色调动漫与高贵金色系壁纸搭档',
-    aliases: ['5', 'gold', 'golden-sand', '暖金', '金', '金色', '黄']
-  },
-  'emerald-green': {
-    id: 'emerald-green',
-    name: '翡翠绿 (Emerald Green)',
-    primary: '#ecfdf5',
-    secondary: '#a7f3d0',
-    muted: '#34d399',
-    terminal: '#ecfdf5',
-    shadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(52, 211, 153, 0.45)',
-    terminalShadow: '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 4px rgba(52, 211, 153, 0.55)',
-    isDarkText: false,
-    desc: '自然清新、护眼绿色系壁纸搭档',
-    aliases: ['6', 'green', 'emerald-green', '翡翠绿', '绿', '绿色']
-  }
-};
-
-function parseHexColor(input) {
-  if (!input || typeof input !== 'string') return null;
-  let s = input.trim();
-  if (s.startsWith('#')) s = s.slice(1);
-  if (s.length === 3) {
-    s = s.split('').map(c => c + c).join('');
-  } else if (s.length === 4) {
-    s = s.slice(0, 3).split('').map(c => c + c).join('');
-  } else if (s.length === 8) {
-    s = s.slice(0, 6);
-  }
-  if (!/^[0-9a-fA-F]{6}$/.test(s)) return null;
-  const num = parseInt(s, 16);
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  const hex = '#' + s.toLowerCase();
-  return { r, g, b, hex };
+function normalizeSlotInput(slotInput) {
+  if (typeof slotInput !== 'string') return null;
+  if (slotInput !== slotInput.trim()) return null;
+  if (/[\0\u200B]/.test(slotInput)) return null;
+  const normalized = slotInput.toLowerCase();
+  return SLOT_ALIASES[normalized] || (SLOTS_META[normalized] ? normalized : null);
 }
 
-function adjustBrightness(hex, percent) {
-  const parsed = parseHexColor(hex);
-  if (!parsed) return hex;
-  let { r, g, b } = parsed;
-  if (percent >= 0) {
-    const factor = percent / 100;
-    r = Math.min(255, Math.max(0, Math.round(r + (255 - r) * factor)));
-    g = Math.min(255, Math.max(0, Math.round(g + (255 - g) * factor)));
-    b = Math.min(255, Math.max(0, Math.round(b + (255 - b) * factor)));
-  } else {
-    const factor = Math.abs(percent) / 100;
-    r = Math.min(255, Math.max(0, Math.round(r - r * factor)));
-    g = Math.min(255, Math.max(0, Math.round(g - g * factor)));
-    b = Math.min(255, Math.max(0, Math.round(b - b * factor)));
+function formatSlotDisplay(slotInput) {
+  if (typeof slotInput === 'symbol') {
+    return slotInput.description ? 'Symbol(' + slotInput.description + ')' : 'Symbol()';
   }
-  const toHex = (n) => n.toString(16).padStart(2, '0');
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  return String(slotInput);
 }
 
-const COMMON_COLOR_NAMES = {
-  'white': 'pure-white',
-  'black': 'obsidian-black',
-  'pink': 'sakura-pink',
-  'cyan': 'cyber-cyan',
-  'gold': 'golden-sand',
-  'green': 'emerald-green',
-  'red': '#ef4444',
-  'blue': '#3b82f6',
-  'purple': '#a855f7',
-  'yellow': '#eab308',
-  'orange': '#f97316',
-  'gray': '#94a3b8',
-  'grey': '#94a3b8'
-};
 
-function resolveFontColor(input, fallbackToDefault = true) {
-  if (!input) {
-    return fallbackToDefault ? FONT_PRESETS['pure-white'] : null;
-  }
-  if (typeof input === 'object') {
-    if (input.id && FONT_PRESETS[input.id]) return FONT_PRESETS[input.id];
-    if (input.customHex) return resolveFontColor(input.customHex, fallbackToDefault);
-    if (input.hex) return resolveFontColor(input.hex, fallbackToDefault);
-    if (input.color) return resolveFontColor(input.color, fallbackToDefault);
-    if (input.primary && input.shadow) return input;
-    if (input.primary) return resolveFontColor(input.primary, fallbackToDefault);
-    if (input.preset && FONT_PRESETS[input.preset]) return FONT_PRESETS[input.preset];
-  }
-  const str = String(input).trim().toLowerCase();
-  
-  for (const [key, preset] of Object.entries(FONT_PRESETS)) {
-    if (key.toLowerCase() === str) return preset;
-    if (preset.aliases && preset.aliases.some(a => a.toLowerCase() === str)) {
-      return preset;
-    }
-  }
-
-  if (COMMON_COLOR_NAMES[str]) {
-    const mapped = COMMON_COLOR_NAMES[str];
-    if (FONT_PRESETS[mapped]) return FONT_PRESETS[mapped];
-    return resolveFontColor(mapped, fallbackToDefault);
-  }
-
-  const parsed = parseHexColor(str);
-  if (parsed) {
-    const { r, g, b, hex } = parsed;
-    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-    const isDarkText = lum < 128;
-    return {
-      id: 'custom-' + hex.slice(1),
-      name: `自定义颜色 (${hex.toUpperCase()})`,
-      primary: hex,
-      secondary: isDarkText 
-        ? adjustBrightness(hex, 30) 
-        : adjustBrightness(hex, -20),
-      muted: isDarkText 
-        ? adjustBrightness(hex, 60) 
-        : adjustBrightness(hex, -40),
-      terminal: hex,
-      shadow: isDarkText
-        ? '0 0 2px #ffffff, 0 1px 3px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.85)'
-        : '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.90)',
-      terminalShadow: isDarkText
-        ? '0 0 2px #ffffff, 0 1px 2px rgba(255, 255, 255, 0.98), 0 0 1px #ffffff, 0 0 5px rgba(255, 255, 255, 0.85)'
-        : '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.90)',
-      isDarkText,
-      desc: `用户自定义 Hex 颜色 ${hex.toUpperCase()} (${isDarkText ? '暗色系/白辉光轮廓' : '亮色系/深邃暗影轮廓'})`,
-      customHex: hex
-    };
-  }
-
-  return fallbackToDefault ? FONT_PRESETS['pure-white'] : null;
-}
 
 // Kept for backward compatibility
 const SLOTS = {
@@ -397,21 +215,16 @@ const SLOTS = {
   'left': { file: 'left_wallpaper.jpg', key: 'left', desc: 'AI主对话界面 / 全局底图' },
   'global': { file: 'left_wallpaper.jpg', key: 'left', desc: 'AI主对话界面 / 全局底图' },
   'main': { file: 'left_wallpaper.jpg', key: 'left', desc: 'AI主对话界面 / 全局底图' },
-  
-  '中': { file: 'mid_wallpaper.jpg', key: 'mid', desc: '终端界面 (活跃终端壁纸)' },
-  'mid': { file: 'mid_wallpaper.jpg', key: 'mid', desc: '终端界面 (活跃终端壁纸)' },
-  'terminal': { file: 'mid_wallpaper.jpg', key: 'mid', desc: '终端界面 (活跃终端壁纸)' },
-  
-  '右': { file: 'right_wallpaper.jpg', key: 'right', desc: '最右侧界面 (独立终端/侧栏壁纸)' },
-  'right': { file: 'right_wallpaper.jpg', key: 'right', desc: '最右侧界面 (独立终端/侧栏壁纸)' },
-  'standalone': { file: 'right_wallpaper.jpg', key: 'right', desc: '最右侧界面 (独立终端/侧栏壁纸)' },
+  'base': { file: 'left_wallpaper.jpg', key: 'left', desc: 'AI主对话界面 / 全局底图' },
   
   '下': { file: 'input_wallpaper.jpg', key: 'bottom', desc: '底部输入框' },
   'bottom': { file: 'input_wallpaper.jpg', key: 'bottom', desc: '底部输入框' },
   'input': { file: 'input_wallpaper.jpg', key: 'bottom', desc: '底部输入框' },
   
   '设置': { file: 'settings_wallpaper.png', key: 'settings', desc: '设置界面' },
-  'settings': { file: 'settings_wallpaper.png', key: 'settings', desc: '设置界面' }
+  'settings': { file: 'settings_wallpaper.png', key: 'settings', desc: '设置界面' },
+  '设': { file: 'settings_wallpaper.png', key: 'settings', desc: '设置界面' },
+  'config': { file: 'settings_wallpaper.png', key: 'settings', desc: '设置界面' }
 };
 
 const VERTICAL_KEYWORDS = new Set(['top', 'bottom', '上', '下']);
@@ -516,11 +329,8 @@ function loadSlotsConfig() {
     config = {
       isOriginal: true,
       left: { key: 'left', file: '', type: 'none', position: 'center center', desc: 'AI主对话界面 / 全局底图' },
-      mid: { key: 'mid', file: '', type: 'none', position: 'center 20%', desc: '终端界面 (活跃终端壁纸)' },
-      right: { key: 'right', file: '', type: 'none', position: 'center 20%', desc: '最右侧界面 (独立终端/侧栏壁纸)' },
       bottom: { key: 'bottom', file: '', type: 'none', position: 'center 6%', desc: '底部输入框' },
-      settings: { key: 'settings', file: '', type: 'none', position: 'center 65%', desc: '设置界面' },
-      fontColor: { primary: '#ffffff' }
+      settings: { key: 'settings', file: '', type: 'none', position: 'center 65%', desc: '设置界面' }
     };
     try {
       fs.writeFileSync(slotsConfigPath, JSON.stringify(config, null, 2), 'utf8');
@@ -528,26 +338,37 @@ function loadSlotsConfig() {
     return config;
   }
 
+  let modified = false;
+  if (config) {
+    if (config.mid !== undefined) { delete config.mid; modified = true; }
+    if (config.right !== undefined) { delete config.right; modified = true; }
+    if (config.fontColor !== undefined) { delete config.fontColor; modified = true; }
+  }
+
   if (config && config.isOriginal) {
+    if (modified) {
+      saveSlotsConfig(config);
+    }
     return config;
   }
 
-  let modified = false;
   const allFiles = fs.existsSync(wallpapersDir) ? fs.readdirSync(wallpapersDir) : [];
 
   for (const [key, meta] of Object.entries(SLOTS_META)) {
-    if (config[key] && config[key].type === 'none') {
-      config[key].file = config[key].file || '';
-      config[key].position = config[key].position || meta.defaultPosition || 'center center';
+    const existing = config[key];
+    const preservedPosition = (existing && existing.position) ? existing.position : (meta.defaultPosition || 'center center');
+    if (existing && existing.type === 'none') {
+      config[key].file = existing.file || '';
+      config[key].position = preservedPosition;
       config[key].desc = meta.desc;
       continue;
     }
-    if (!config[key] || !config[key].file) {
+    if (!existing || !existing.file) {
       config[key] = {
         key,
-        file: '',
-        type: 'none',
-        position: meta.defaultPosition || 'center center',
+        file: (existing && existing.file) || '',
+        type: (existing && existing.type) || 'none',
+        position: preservedPosition,
         desc: meta.desc
       };
       modified = true;
@@ -586,19 +407,9 @@ function loadSlotsConfig() {
           }
         }
       }
-      if (!config[key].position) {
-        config[key].position = meta.defaultPosition || 'center center';
-        modified = true;
-      }
+      config[key].position = preservedPosition;
       config[key].desc = meta.desc;
     }
-  }
-
-  if (!config.fontColor) {
-    config.fontColor = FONT_PRESETS['pure-white'];
-    modified = true;
-  } else {
-    config.fontColor = resolveFontColor(config.fontColor);
   }
 
   if (modified || !fs.existsSync(slotsConfigPath)) {
@@ -833,77 +644,18 @@ function generateMasterCss(slotsConfig) {
     slotsConfig = loadSlotsConfig();
   }
 
-  if (slotsConfig && slotsConfig.isOriginal) {
-    return `/* ==========================================================================
-   Antigravity Official Vanilla Theme (官方原版纯净样式)
-   恢复原版默认外观与性能，彻底清除所有二次元壁纸、贴图与视频硬件解码
-   ========================================================================== */
+  const isLeftActive = Boolean(slotsConfig?.left && slotsConfig.left.type !== 'none' && slotsConfig.left.file);
+  const isBottomActive = Boolean(slotsConfig?.bottom && slotsConfig.bottom.type !== 'none' && slotsConfig.bottom.file);
+  const isSettingsActive = Boolean(slotsConfig?.settings && slotsConfig.settings.type !== 'none' && slotsConfig.settings.file);
 
-/* 1. 主对话界面全局底图与视频彻底清除 */
-body::before,
-html::before {
-  display: none !important;
-  background: none !important;
-  background-image: none !important;
-  opacity: 0 !important;
-  content: "" !important;
-}
-
-.antigravity-slot-video,
-#antigravity-video-left,
-video.antigravity-slot-video {
-  display: none !important;
-}
-
-/* 2. 底部输入框强制恢复官方原生深色卡片样式，消除所有残留海报与壁纸渐变 */
-[id="antigravity.agentSidePanelInputBox"] > div.bg-card,
-[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"],
-div.rounded-2xl.bg-card-border > div.bg-card,
-div.rounded-2xl.bg-card-border > div[class*="bg-card"],
-div[data-ag-positioned],
-[data-ag-positioned] {
-  background-image: none !important;
-  background-color: var(--color-card, #131722) !important;
-  background: var(--color-card, #131722) !important;
-}
-
-/* 3. 活跃终端界面背景彻底还原 */
-.terminal-wrapper,
-[data-panel="terminal"],
-div.terminal,
-div.xterm {
-  background-image: none !important;
-}
-
-/* 4. 右侧抽屉背景彻底还原 */
-[aria-label="Auxiliary Pane"],
-div[role="region"][aria-label="Terminal"],
-[class*="terminal-drawer"] {
-  background-image: none !important;
-}
-
-/* 5. 设置弹窗背景彻底还原 */
-[role="dialog"],
-div[data-state="open"]:has(div.bg-sidebar),
-div.settings-modal-container {
-  background-image: none !important;
-}
-`;
+  // Requirement: Return empty CSS comment when unconfigured or default
+  if (!slotsConfig || slotsConfig.isOriginal || (!isLeftActive && !isBottomActive && !isSettingsActive)) {
+    return '/* Antigravity Wallpaper Engine: Vanilla Mode */\n';
   }
 
-  const font = resolveFontColor(slotsConfig.fontColor);
-
   const isLeftVideo = slotsConfig.left && slotsConfig.left.type === 'video';
-  const isMidVideo = slotsConfig.mid && slotsConfig.mid.type === 'video';
-  const isRightVideo = slotsConfig.right && slotsConfig.right.type === 'video';
   const isBottomVideo = slotsConfig.bottom && slotsConfig.bottom.type === 'video';
   const isSettingsVideo = slotsConfig.settings && slotsConfig.settings.type === 'video';
-
-  const isLeftNone = !slotsConfig.left || slotsConfig.left.type === 'none' || !slotsConfig.left.file;
-  const isMidNone = !slotsConfig.mid || slotsConfig.mid.type === 'none' || !slotsConfig.mid.file;
-  const isRightNone = !slotsConfig.right || slotsConfig.right.type === 'none' || !slotsConfig.right.file;
-  const isBottomNone = !slotsConfig.bottom || slotsConfig.bottom.type === 'none' || !slotsConfig.bottom.file;
-  const isSettingsNone = !slotsConfig.settings || slotsConfig.settings.type === 'none' || !slotsConfig.settings.file;
 
   function resolveSlotImg(key, slotConfig, defaultStatic) {
     if (!slotConfig || slotConfig.type === 'none' || !slotConfig.file) return '';
@@ -921,8 +673,6 @@ div.settings-modal-container {
   }
 
   const leftImg = resolveSlotImg('left', slotsConfig.left, 'left_wallpaper.jpg');
-  const midImg = resolveSlotImg('mid', slotsConfig.mid, 'mid_wallpaper.jpg');
-  const rightImg = resolveSlotImg('right', slotsConfig.right, 'right_wallpaper.jpg');
   const bottomImg = resolveSlotImg('bottom', slotsConfig.bottom, 'input_wallpaper.jpg');
   const settingsImg = resolveSlotImg('settings', slotsConfig.settings, 'settings_wallpaper.png');
 
@@ -935,27 +685,21 @@ div.settings-modal-container {
   }
 
   const b64Left = getInlineOrUrl(leftImg, slotsConfig.left && slotsConfig.left.version);
-  const b64Mid = getInlineOrUrl(midImg, slotsConfig.mid && slotsConfig.mid.version);
-  const b64Right = getInlineOrUrl(rightImg, slotsConfig.right && slotsConfig.right.version);
   const b64Bottom = getInlineOrUrl(bottomImg, slotsConfig.bottom && slotsConfig.bottom.version);
   const b64Settings = getInlineOrUrl(settingsImg, slotsConfig.settings && slotsConfig.settings.version);
 
   const posLeft = getSlotPosition(slotsConfig, 'left');
-  const posMid = getSlotPosition(slotsConfig, 'mid');
-  const posRight = getSlotPosition(slotsConfig, 'right');
   const posBottom = getSlotPosition(slotsConfig, 'bottom');
   const posSettings = getSlotPosition(slotsConfig, 'settings');
 
   return `/* ==========================================================================
-   Antigravity 2.0 Master Custom Theme - 5-Slot Dynamic Hybrid Edition
-   Slots: [左: 主对话区/全局底图] | [中: 活跃终端壁纸] | [右: 极简无杂线侧栏壁纸] | [下: 底部输入框] | [设置: 设置弹窗]
-   Supports: Static Images (JPG/PNG/GIF/WebP) & Dynamic Hardware-Accelerated Video (MP4/WebM)
+   Antigravity Wallpaper Engine - Pure 3-Target Edition
+   Targets: [Target 1: left (Base)] | [Target 2: bottom (Input Box)] | [Target 3: settings (Settings Modal)]
+   Pass-through Transparent: [terminal.xterm] | [Auxiliary Pane]
    ========================================================================== */
 
-/* 1. Global Base & 消灭外层全局拖动条 */
+/* 1. Global Base Layout */
 html, body {
-  background-color: #0b0c14 !important;
-  color: #e2e8f0 !important;
   overflow: hidden !important;
   width: 100% !important;
   height: 100% !important;
@@ -969,29 +713,20 @@ html, body {
   overflow: hidden !important;
   width: 100% !important;
   height: 100% !important;
-  max-width: 100vw !important;
-  max-height: 100vh !important;
 }
 
-/* Built-in Browser & Webview Interactive Pass-through Layer */
 body > div:has(webview),
-body > div:has([style*="position-anchor"]),
-body > div:has([position-anchor]),
 div:has(> webview),
-[style*="position-anchor"],
-[position-anchor],
 webview {
   z-index: 10 !important;
   pointer-events: auto !important;
 }
 
-/* 保证右侧边栏内置浏览器定位锚点占位元素不会拦截用户鼠标交互 */
 [style*="anchor-name: --builtin-browser-anchor"],
 [style*="anchor-name:--builtin-browser-anchor"] {
   pointer-events: none !important;
 }
 
-/* 隐藏全局最外层多余的拖动条，保持界面完整铺满 */
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
 #root::-webkit-scrollbar {
@@ -1000,8 +735,8 @@ body::-webkit-scrollbar,
   height: 0 !important;
 }
 
-/* 2. Fullscreen GPU-Accelerated Unified Base Wallpaper (左: 主对话区/全局底图) */
-${!isLeftNone ? `
+/* 2. Target 1: Base Wallpaper (slot: left) */
+${isLeftActive ? `
 body::before {
   content: "" !important;
   position: fixed !important;
@@ -1012,10 +747,7 @@ body::before {
   width: 100vw !important;
   height: 100vh !important;
   background-color: transparent !important;
-  background-image: linear-gradient(
-      rgba(11, 12, 20, 0.06), 
-      rgba(11, 12, 20, 0.10)
-    )${b64Left ? `,\n    url("${b64Left}")` : ''} !important;
+  background-image: ${b64Left ? `url("${b64Left}")` : 'none'} !important;
   background-size: cover !important;
   background-position: ${posLeft} !important;
   background-repeat: no-repeat !important;
@@ -1041,75 +773,34 @@ body::before {
   backface-visibility: hidden !important;
   contain: strict !important;
 }
-` : `
-/* 主对话区域已恢复官方原版纯净样式 */
-body::before, html::before {
-  display: none !important;
-  background: none !important;
-  background-image: none !important;
-  opacity: 0 !important;
-  content: "" !important;
-}
+` : ''}
 
-#antigravity-video-left,
-.antigravity-slot-video[data-slot="left"] {
-  display: none !important;
-}
-
-html, body {
-  background-color: var(--color-background, #131722) !important;
-}
-`}
-
-/* 3. Global Transparent Layout & GPU Compositing Isolation */
+/* 3. Main Conversation Area Transparency (Allows Base Wallpaper to Shine Through) */
 #root, #app, [data-theme], .h-screen, .w-screen, .flex-1 {
   background-color: transparent !important;
   background: transparent !important;
 }
 
-/* 硬件加速独立合成层：隔离主对话流式渲染与滚动，杜绝与底层 4K 动态壁纸图层重绘重排 */
 main .overflow-y-auto,
 div[role="region"] .overflow-y-auto,
 .relative.w-full.h-full.overflow-y-auto,
 div.flex-1.min-h-0.overflow-y-auto {
-  transform: translateZ(0) !important;
-  contain: content !important;
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
-/* 底部输入框独立渲染与图层隔离，防止打字微卡顿 */
-[id="antigravity.agentSidePanelInputBox"] > div.bg-card {
-  isolation: isolate !important;
-  contain: paint !important;
-}
-
-[id="antigravity.agentSidePanelInputBox"] textarea,
-[id="antigravity.agentSidePanelInputBox"] [contenteditable] {
-  transform: translateZ(0) !important;
-}
-
-/* 4. 主对话区彻底通透净化：消灭一切滚动黑带与渐变遮罩 */
 main [class*="bg-gradient-to-b"],
 main [class*="bg-gradient-to-t"],
-main [class*="from-neutral"],
-main [class*="from-zinc"],
-main [class*="from-stone"],
-main [class*="from-gray"],
-main [class*="from-black"],
-main [class*="from-background"],
 main [class*="scroll-fade"],
 main [class*="scroller-mask"],
-main [class*="turn-separator"],
-main hr {
+main [class*="turn-separator"] {
   background-image: none !important;
   background-color: transparent !important;
   background: transparent !important;
-  box-shadow: none !important;
-  border-color: transparent !important;
   mask-image: none !important;
   -webkit-mask-image: none !important;
 }
 
-/* 彻底消灭用户提问 Sticky 包装层的黑底与伪元素黑色渐变 */
 div[class*="sticky"],
 div.sticky,
 main div.sticky,
@@ -1127,617 +818,76 @@ div[class*="group/user-input-step"]::before,
 div[class*="group/user-input-step"]::after {
   content: none !important;
   display: none !important;
-  background: transparent !important;
-  background-image: none !important;
 }
 
-/* 仅清除输入框上方与聊天区边缘的黑色过渡渐变遮罩 (兼容旧版 inset-x-4 与新版 left-4 / right 动态位) */
 div.absolute.bottom-0.pointer-events-none.left-4,
 div.absolute.bottom-0.inset-x-4.pointer-events-none,
 div[class*="pointer-events-none"][class*="bottom-0"][class*="left-4"],
 div[class*="inset-x-4"][class*="pointer-events-none"][class*="bottom-0"],
-div.pointer-events-none[style*="linear-gradient"][style*="var(--background)"],
-div.pointer-events-none[style*="linear-gradient(to top"],
-div[class*="pointer-events-none"][style*="linear-gradient"],
+div.pointer-events-none[style*="linear-gradient"],
 div.absolute.top-0.pointer-events-none.left-4,
 div.absolute.top-0.inset-x-4.pointer-events-none,
-div[class*="pointer-events-none"][class*="top-0"][class*="left-4"],
-div.pointer-events-none[style*="linear-gradient(to bottom"] {
+div[class*="pointer-events-none"][class*="top-0"][class*="left-4"] {
   background: transparent !important;
   background-image: none !important;
   display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  height: 0 !important;
-  min-height: 0 !important;
 }
 
-/* 5. Left Sidebar & Navigation & Conversation History List (深色磨砂背景保护区：纯净浅白文本，彻底杜绝黑色字体与发虚白光晕) */
-aside, nav, [role="navigation"], [class*="sidebar"], [class*="Sidebar"], [class*="navigation"], [class*="Navigation"],
-div.bg-sidebar:not([data-testid="title-menu-bar"]), [data-panel="conversations"], [data-testid*="sidebar"], [data-testid*="conversation-list"] {
-  background-color: rgba(14, 15, 26, 0.78) !important;
-  border-right: 1px solid rgba(226, 232, 240, 0.12) !important;
-  box-shadow: none !important;
-  color: #f1f5f9 !important;
-  contain: paint !important;
-}
-
-/* 5.1 强制保护侧边栏、对话历史列表与文件树所有文本元素：统一轻阴影纯净白字，严禁继承主对话区任何自定义暗黑字体或白辉光描边 */
-aside span, aside p, aside a, aside button, aside label, aside time, aside input,
-nav span, nav p, nav a, nav button, nav label, nav time, nav input,
-[role="navigation"] span, [role="navigation"] p, [role="navigation"] a, [role="navigation"] button,
-[class*="sidebar"] span, [class*="sidebar"] p, [class*="sidebar"] a, [class*="sidebar"] button,
-[class*="Sidebar"] span, [class*="Sidebar"] p, [class*="Sidebar"] a, [class*="Sidebar"] button,
-div.bg-sidebar span, div.bg-sidebar p, div.bg-sidebar a, div.bg-sidebar button,
-[data-panel="conversations"] span, [data-panel="conversations"] p, [data-panel="conversations"] a, [data-panel="conversations"] button,
-[data-testid*="sidebar"] span, [data-testid*="sidebar"] p, [data-testid*="sidebar"] a, [data-testid*="sidebar"] button,
-[data-testid*="conversation-list"] span, [data-testid*="conversation-list"] p, [data-testid*="conversation-list"] a, [data-testid*="conversation-list"] button,
-[data-testid*="conversation-row"] span, [data-testid*="conversation-row"] p, [data-testid*="conversation-row"] a, [data-testid*="conversation-row"] button,
-[class*="file-tree"] span, [class*="file-tree"] p, [class*="file-tree"] a,
-[class*="explorer"] span, [class*="explorer"] p, [class*="explorer"] a,
-[class*="tree-view"] span, [class*="tree-view"] p, [class*="tree-view"] a {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-/* 导航与拖拽极速渲染加速态 */
-body.is-navigating iframe,
-body.is-resizing iframe {
-  pointer-events: none !important;
-}
-
-aside span, aside p, aside div, aside a, aside button,
-nav span, nav p, nav div, nav a, nav button,
-[role="navigation"] span, [role="navigation"] p, [role="navigation"] div, [role="navigation"] a, [role="navigation"] button,
-[class*="sidebar"] span, [class*="sidebar"] p, [class*="sidebar"] div, [class*="sidebar"] a, [class*="sidebar"] button,
-[class*="Sidebar"] span, [class*="Sidebar"] p, [class*="Sidebar"] div, [class*="Sidebar"] a, [class*="Sidebar"] button,
-div.bg-sidebar span, div.bg-sidebar p, div.bg-sidebar div, div.bg-sidebar a, div.bg-sidebar button,
-[data-panel="conversations"] span, [data-panel="conversations"] p, [data-panel="conversations"] div, [data-panel="conversations"] a,
-[data-testid*="sidebar"] span, [data-testid*="sidebar"] p, [data-testid*="sidebar"] div,
-[data-testid*="conversation-list"] span, [data-testid*="conversation-list"] p, [data-testid*="conversation-list"] div,
-[data-testid*="conversation-row"] span, [data-testid*="conversation-row"] p, [data-testid*="conversation-row"] div,
-[data-testid*="conversation-row"] span.truncate,
-[data-testid*="conversation-list"] span.truncate,
-div.bg-sidebar span.truncate,
-[role="navigation"] span.truncate,
-[class*="file-tree"] span, [class*="file-tree"] div,
-[class*="explorer"] span, [class*="explorer"] div,
-[class*="tree-view"] span, [class*="tree-view"] div {
-  color: #f1f5f9 !important;
-}
-
-aside [class*="text-muted"], nav [class*="text-muted"], [role="navigation"] [class*="text-muted"],
-[class*="sidebar"] [class*="text-muted"], [class*="sidebar"] [class*="text-secondary"],
-div.bg-sidebar [class*="text-muted"], div.bg-sidebar [class*="text-secondary"],
-[data-testid*="sidebar"] [class*="text-muted"], [data-testid*="sidebar"] [class*="text-secondary"],
-[data-testid*="conversation-list"] [class*="text-muted"], [data-testid*="conversation-list"] [class*="text-secondary"],
-[data-testid*="conversation-row"] [class*="text-muted"], [data-testid*="conversation-row"] [class*="text-secondary"],
-[data-testid*="conversation-row"] time,
-[data-testid*="conversation-list"] time {
-  color: rgba(226, 232, 240, 0.75) !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-/* 6. Top Header & Title Bar & Navigation Buttons */
-header, [class*="header"], [class*="Header"], [class*="titlebar"], [class*="menubar"] {
-  background-color: rgba(14, 15, 26, 0.78) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: none !important;
-  color: #f1f5f9 !important;
-  contain: paint !important;
-}
-
-header span, header p, header div,
-[class*="header"] span, [class*="titlebar"] span {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-button[aria-label="Go Back"],
-button[aria-label="Toggle Sidebar"],
-button[aria-label="Go Forward"],
-button[aria-label*="Undo"],
-button[aria-label*="Back"],
-button[aria-label*="返回"],
-button[aria-label*="撤销"] {
-  opacity: 1 !important;
-  color: #ffffff !important;
-  visibility: visible !important;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
-  transition: all 0.2s ease !important;
-}
-
-button[aria-label="Go Back"]:hover,
-button[aria-label="Toggle Sidebar"]:hover,
-button[aria-label*="Undo"]:hover {
-  color: #38bdf8 !important;
-  background-color: rgba(56, 189, 248, 0.22) !important;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.45) !important;
-}
-
-
-/* 6.3 顶部标题栏操作与控制按钮点击保证 (Titlebar Buttons Responsiveness) */
-header button,
-header [role="button"],
-header a,
-[class*="titlebar"] button,
-[class*="titlebar"] [role="button"],
-[class*="titlebar"] a,
-div.absolute.top-0 button,
-div.absolute.top-0 [role="button"],
-.titlebar-button,
-[data-testid="title-menu-bar"] button,
-[data-testid="title-menu-bar"] [data-testid="title-menu-bar-item"],
-[data-testid="title-menu-bar"] [role="button"],
-[data-testid="title-menu-bar"] div.relative,
-[data-testid="title-menu-bar"] div.relative *,
-[data-testid="title-menu-bar-option"] {
-  -webkit-app-region: no-drag !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  user-select: none !important;
-}
-
-.agy-shell > div.shrink-0:first-child,
-div.shrink-0:has([data-testid="title-menu-bar"]),
-[data-testid="title-menu-bar"],
-[data-testid="title-menu-bar"] * {
-  contain: none !important;
-}
-
-.agy-shell > div.shrink-0:first-child,
-div.shrink-0:has([data-testid="title-menu-bar"]),
-[data-testid="title-menu-bar"] {
-  position: relative !important;
-  z-index: 9000 !important;
-  overflow: visible !important;
-}
-
-[data-testid="title-menu-bar"] div.absolute.top-full,
-div.absolute.top-full:has([data-testid="title-menu-bar-option"]),
-div.absolute.top-full:has(button),
-div.absolute.top-full.border.shadow-lg {
-  position: absolute !important;
-  z-index: 10000 !important;
-  -webkit-app-region: no-drag !important;
-  pointer-events: auto !important;
-  contain: none !important;
-  background: rgba(22, 24, 34, 0.98) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
-  overflow: hidden !important;
-}
-
-[data-testid="title-menu-bar-option"],
-div.absolute.top-full:has(button) button {
-  -webkit-app-region: no-drag !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  padding: 6px 12px !important;
-  color: #f1f5f9 !important;
-  font-weight: 500 !important;
-  transition: all 0.15s ease !important;
-}
-
-[data-testid="title-menu-bar-option"]:hover,
-div.absolute.top-full:has(button) button:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: #ffffff !important;
-}
-
-
-/* ==========================================================================
-   7. 主对话区文字排版与专属落樱微光气泡 (Mika Blossom Mist Glass)
-   ========================================================================== */
-div.relative.p-px.rounded-xl.bg-card-border:has([class*="user-input"]),
-div.relative.p-px.rounded-xl.bg-card-border:has([class*="user"]),
-div.group\\/user-input-step div.relative.p-px.rounded-xl {
-  background: linear-gradient(
-    135deg, 
-    rgba(244, 114, 182, 0.14) 0%, 
-    rgba(251, 207, 232, 0.08) 50%,
-    rgba(147, 197, 253, 0.10) 100%
-  ) !important;
-  background-color: rgba(22, 24, 38, 0.72) !important;
-  border: 1px solid rgba(244, 114, 182, 0.38) !important;
-  border-radius: 14px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
-  contain: layout paint !important;
-}
-
-div.group\\/user-input-step {
-  content-visibility: auto !important;
-  contain-intrinsic-size: 0 80px !important;
-}
-
-div.relative.flex.flex-row.items-end.gap-2.p-1\\.5.bg-card:has([class*="user"]),
-div.group\\/user-input-step div.bg-card {
-  background-color: transparent !important;
+/* 4. Terminal & Auxiliary Drawer Seamless Transparency (Pure 3-Target Contract) */
+.terminal.xterm,
+[data-panel="terminal"],
+.xterm-dom-renderer-owner-1,
+div.terminal-wrapper,
+div:has(> .xterm-screen),
+.terminal.xterm .xterm-viewport,
+.terminal.xterm .xterm-screen,
+[aria-label="Auxiliary Pane"],
+div.bg-background:has([aria-label="Auxiliary Pane"]),
+aside[aria-label*="drawer"],
+[data-panel="auxiliary"],
+div[role="region"][aria-label="Terminal"],
+[class*="terminal-drawer"],
+div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background {
   background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border-left: none !important;
+  box-shadow: none !important;
 }
 
-div.group\\/user-input-step .whitespace-pre-wrap,
-div.group\\/user-input-step p,
-[class*="user-message"],
-[class*="user-message"] p,
-[class*="user-message"] span,
-[class*="user-message"] div,
-div[class*="user-input-step"] p,
-div[class*="user-input-step"] span,
-div[class*="user-input-step"] div {
-  color: ${font.primary} !important;
-  font-weight: 500 !important;
-  text-shadow: ${font.shadow} !important;
+.antigravity-slot-video[data-slot="mid"],
+.antigravity-slot-video[data-slot="right"] {
+  display: none !important;
 }
 
-/* 7.1 主对话区 AI 回复正文 Markdown 渲染与文本深度高对比度增强 (严格约束至纯文本正文，不污染带背景的小部件与代码块) */
-div[role="article"] div.leading-relaxed p:not(pre *),
-div[role="article"] div.leading-relaxed li:not(pre *),
-div[role="article"] div.leading-relaxed td:not(pre *),
-div[role="article"] div.leading-relaxed th:not(pre *),
-div[role="article"] div.leading-relaxed blockquote:not(pre *),
-div.leading-relaxed p:not(pre *),
-div.leading-relaxed li:not(pre *),
-div.leading-relaxed td:not(pre *),
-div.leading-relaxed th:not(pre *),
-div.leading-relaxed blockquote:not(pre *),
-div.leading-relaxed > span:not([class*="syntax"]):not([class*="token"]):not([class*="hljs"]):not([class*="code"]):not(.line-content *):not([class*="codicon"]):not(pre *):not([class*="code-block"] *),
-main p:not(pre *):not([class*="code-block"] *),
-main li:not(pre *):not([class*="code-block"] *),
-main td:not(pre *):not([class*="code-block"] *),
-main th:not(pre *):not([class*="code-block"] *) {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
-}
-
-div[role="article"] div.leading-relaxed [class*="text-muted"]:not(pre *):not([class*="code-block"] *),
-div.leading-relaxed [class*="text-muted"]:not(pre *):not([class*="code-block"] *),
-main [class*="text-muted"]:not(pre *):not([class*="code-block"] *),
-main [class*="text-secondary"]:not(pre *):not([class*="code-block"] *),
-main time:not(pre *):not([class*="code-block"] *),
-main .text-xs:not(pre *):not([class*="code-block"] *),
-main .text-sm:not(pre *):not([class*="code-block"] *) {
-  color: ${font.secondary} !important;
-  text-shadow: ${font.shadow} !important;
-}
-
-div[role="article"] div.leading-relaxed h1:not(pre *), div[role="article"] div.leading-relaxed h2:not(pre *), div[role="article"] div.leading-relaxed h3:not(pre *),
-div[role="article"] div.leading-relaxed h4:not(pre *), div[role="article"] div.leading-relaxed h5:not(pre *), div[role="article"] div.leading-relaxed h6:not(pre *),
-div.leading-relaxed h1:not(pre *), div.leading-relaxed h2:not(pre *), div.leading-relaxed h3:not(pre *),
-div.leading-relaxed h4:not(pre *), div.leading-relaxed h5:not(pre *), div.leading-relaxed h6:not(pre *),
-main h1:not(pre *), main h2:not(pre *), main h3:not(pre *), main h4:not(pre *), main h5:not(pre *), main h6:not(pre *) {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
-  font-weight: 700 !important;
-}
-
-div[role="article"] div.leading-relaxed a:not(pre *),
-div.leading-relaxed a:not(pre *),
-main a:not(pre *) {
-  color: ${font.muted} !important;
-  text-shadow: ${font.shadow} !important;
-  text-decoration: underline !important;
-}
-
-div[role="article"] div.leading-relaxed strong:not(pre *), div[role="article"] div.leading-relaxed b:not(pre *),
-div.leading-relaxed strong:not(pre *), div.leading-relaxed b:not(pre *),
-main strong:not(pre *), main b:not(pre *) {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
-  font-weight: 700 !important;
-}
-
-div[role="article"] div.leading-relaxed em:not(pre *), div[role="article"] div.leading-relaxed i:not(pre *),
-div.leading-relaxed em:not(pre *), div.leading-relaxed i:not(pre *) {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
-}
-
-div[role="article"] div.leading-relaxed blockquote:not(pre *),
-div.leading-relaxed blockquote:not(pre *),
-main blockquote:not(pre *) {
-  border-left: 3px solid ${font.muted} !important;
-  color: ${font.secondary} !important;
-  text-shadow: ${font.shadow} !important;
-}
-
-/* 保护自带背景的小部件：思考折叠条、工具调用进度条、运行状态徽章保持原版清爽白字 */
-[data-testid="conversation-view"] button,
-[data-testid="conversation-view"] button span,
-[data-testid="conversation-view"] [class*="tabular-nums"],
-[data-testid="conversation-view"] [class*="text-secondary-foreground"],
-[data-testid="conversation-view"] [class*="badge"],
-div.user-input-buttons-container button,
-[class*="user-input-buttons-container"] button {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-/* 对话顶栏与面板标题 (严格限制在主对话面板与Pane内，绝不污染侧栏) */
-div[data-pane-id] div.flex.w-full.min-w-0 span.truncate,
-div[data-pane-id] span.cursor-pointer,
-div[data-pane-id] span.truncate.inline-block,
-[data-testid="conversation-view"] span.truncate.inline-block {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
-}
-
-/* 行内代码样式 (Inline Code)：半透明胶囊卡片，拒绝突兀死黑/纯白 */
-[data-testid="conversation-view"] code:not(pre code):not([class*="code-block"] *),
-div[role="article"] code:not(pre code):not([class*="code-block"] *),
-div.leading-relaxed code:not(pre code):not([class*="code-block"] *),
-main code:not(pre code),
-p > code,
-li > code,
-td > code {
-  color: ${font.primary} !important;
-  background-color: ${font.isDarkText ? 'rgba(255, 255, 255, 0.88)' : 'rgba(10, 11, 20, 0.75)'} !important;
-  border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.12)'} !important;
-  text-shadow: ${font.shadow} !important;
-  border-radius: 4px !important;
-  padding: 1px 5px !important;
-  font-family: var(--editor-font-family, monospace) !important;
-}
-
-div.group\\/user-input-step [class*="thumbnail"],
-div.group\\/user-input-step img {
-  border: 1px solid rgba(244, 114, 182, 0.45) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
-}
-
-/* 用户消息气泡右下角的返回/回滚 (Undo) 与复制工具栏 */
-div.user-input-buttons-container,
-[class*="user-input-buttons-container"],
-div.group\\/user-input-step div.user-input-buttons-container {
-  display: flex !important;
-  background-color: rgba(14, 16, 28, 0.92) !important;
-  border: 1px solid rgba(244, 114, 182, 0.50) !important;
-  border-radius: 9999px !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.60), 0 0 10px rgba(244, 114, 182, 0.30) !important;
-  z-index: 50 !important;
-  transition: opacity 0.2s ease, transform 0.2s ease !important;
-}
-
-div.group\\/user-input-step:hover div.user-input-buttons-container,
-div.user-input-buttons-container:hover,
-div.group\\/user-input-step:focus-within div.user-input-buttons-container {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-div.user-input-buttons-container button,
-[class*="user-input-buttons-container"] button {
-  color: ${font.primary} !important;
-  opacity: 0.90 !important;
-  transition: all 0.18s ease !important;
-  border-radius: 9999px !important;
-  padding: 4px !important;
-}
-
-div.user-input-buttons-container button:hover,
-[class*="user-input-buttons-container"] button:hover {
-  color: #ffffff !important;
-  background-color: rgba(244, 114, 182, 0.35) !important;
-  transform: scale(1.1) !important;
-}
-
-/* 7.15 侧栏历史对话最终隔离保护：即便主对话区启用暗黑曜黑模式，侧边栏也绝不继承发虚白渐变光晕 */
-[role="navigation"] [class*="truncate"],
-div.bg-sidebar [class*="truncate"],
-[data-testid*="conversation-row"] [class*="truncate"],
-[data-testid*="conversation-list"] [class*="truncate"],
-[data-testid*="conversation-row"] span,
-[data-testid*="conversation-list"] span {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-/* 8. 底部输入框整体琉璃质感与输入卡片 */
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer,
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border [role="option"] {
-  border-radius: 10px !important;
-  margin: 2px 0 !important;
-  padding: 6px 10px !important;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  border: 1px solid transparent !important;
-}
-
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer span,
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer div {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer svg {
-  color: #f472b6 !important;
-  filter: drop-shadow(0 0 4px rgba(244, 114, 182, 0.5)) !important;
-}
-
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border button.cursor-pointer:hover,
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border [role="option"][aria-selected="true"],
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border [role="option"]:hover,
-div.relative.flex.flex-col.p-px.rounded-2xl.bg-card-border [class*="hover\\:bg"]:hover {
-  background: linear-gradient(
-    90deg, 
-    rgba(244, 114, 182, 0.28) 0%, 
-    rgba(56, 189, 248, 0.20) 100%
-  ) !important;
-  border: 1px solid rgba(244, 114, 182, 0.50) !important;
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.35),
-    inset 0 1px 1px rgba(255, 255, 255, 0.40),
-    0 0 10px rgba(244, 114, 182, 0.25) !important;
-  transform: translateX(3px) !important;
-}
-
-/* 8.1 底部输入卡片外层容器与展开面板彻底通透化，彻底消灭一切实心黑块与黑底 */
+/* 5. Target 2: Input Box (slot: bottom) */
 [id="antigravity.agentSidePanelInputBox"],
 div[data-testid="agent-input-box"],
 div.rounded-2xl.bg-card-border:has(> div.bg-card),
 div:has(> [id="antigravity.agentSidePanelInputBox"]) {
   background-color: transparent !important;
   background: transparent !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
 }
 
-[data-testid="running-items-panel"],
-[data-testid="running-items-panel"][class*="grid-rows-[0fr]"] {
-  background-color: transparent !important;
-  background: transparent !important;
-  border: none !important;
-  border-top: none !important;
-  border-bottom: none !important;
-  box-shadow: none !important;
-  margin-bottom: 0 !important;
-  padding: 0 !important;
-}
-
-[data-testid="running-items-panel"] > div > div,
-[data-testid="running-items-panel"] div[class*="rounded-t-2xl"] {
-  background-color: rgba(14, 16, 28, 0.60) !important;
-  background-color: rgba(18, 20, 32, 0.85) !important;
-  border: 1px solid rgba(244, 114, 182, 0.35) !important;
-  border-bottom: none !important;
-  border-radius: 14px 14px 0 0 !important;
-  margin-bottom: 2px !important;
-  contain: paint !important;
-}
-
-${!isBottomNone ? `
-/* 8.2 底部输入卡片（仅对真正的输入容器挂载壁纸，严格排除指令菜单、下拉列表、弹窗与浮层） */
+${isBottomActive ? `
 [id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
 [id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
 div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]) {
   position: relative !important;
-  contain: paint !important;
-  will-change: transform !important;
   background-color: transparent !important;
-  background-image: 
-    linear-gradient(
-      rgba(12, 14, 24, 0.15), 
-      rgba(12, 14, 24, 0.28)
-    )${b64Bottom ? `,\n    url("${b64Bottom}")` : ''} !important;
+  background-image: ${b64Bottom ? `url("${b64Bottom}")` : 'none'} !important;
   background-size: cover !important;
   background-position: ${posBottom} !important;
   background-repeat: no-repeat !important;
-  border-radius: 15px !important;
   overflow: hidden !important;
 }
 
-/* 强制输入卡片内部所有子元素（文本输入行、工具栏、附件预览栏）背景透明且无多余贴图 */
 [id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img),
 div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img) {
   background-image: none !important;
   background-color: transparent !important;
 }
-` : `
-/* 底部输入框强制恢复官方原生深色卡片样式 */
-[id="antigravity.agentSidePanelInputBox"] > div.bg-card,
-[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"],
-div.rounded-2xl.bg-card-border > div.bg-card,
-div.rounded-2xl.bg-card-border > div[class*="bg-card"],
-div[data-ag-positioned],
-[data-ag-positioned] {
-  background-image: none !important;
-  background-color: var(--color-card, #131722) !important;
-  background: var(--color-card, #131722) !important;
-}
-.antigravity-slot-video[data-slot="bottom"] {
-  display: none !important;
-}
-`}
 
-/* 8.3 Actions / Slash Command Popup Menu 磨砂琉璃质感（彻底杜绝输入框壁纸渗漏或重复切片） */
-div[role="listbox"],
-div[role="menu"],
-div[data-mention-menu],
-[data-mention-menu],
-[role="listbox"][data-mention-menu],
-[data-radix-popper-content-wrapper] div,
-[id="antigravity.agentSidePanelInputBox"] [role="listbox"],
-[id="antigravity.agentSidePanelInputBox"] [data-mention-menu],
-[id="antigravity.agentSidePanelInputBox"] div.absolute,
-[id="antigravity.agentSidePanelInputBox"] div[class*="bottom-full"] {
-  background-image: none !important;
-}
-
-div[role="listbox"][data-mention-menu],
-div[role="listbox"][aria-label="Mentions"],
-div[data-mention-menu],
-[id="antigravity.agentSidePanelInputBox"] div[role="listbox"],
-[id="antigravity.agentSidePanelInputBox"] div.absolute.bottom-full.bg-card,
-[id="antigravity.agentSidePanelInputBox"] div[class*="bottom-full"] {
-  background-color: ${font.isDarkText ? 'rgba(255, 255, 255, 0.95)' : 'rgba(16, 18, 32, 0.90)'} !important;
-  background-color: rgba(18, 20, 34, 0.95) !important;
-  border: 1px solid ${font.isDarkText ? 'rgba(15, 23, 42, 0.20)' : 'rgba(244, 114, 182, 0.40)'} !important;
-  border-radius: 16px !important;
-  box-shadow: ${font.isDarkText ? '0 8px 24px rgba(0, 0, 0, 0.25)' : '0 8px 24px rgba(0, 0, 0, 0.65)'} !important;
-  background-image: none !important;
-  overflow: hidden !important;
-  z-index: 50 !important;
-}
-
-div[role="listbox"][data-mention-menu] div[class*="overflow-y-auto"],
-[data-mention-menu] div[class*="overflow-y-auto"],
-[id="antigravity.agentSidePanelInputBox"] div[role="listbox"] div[class*="overflow-y-auto"] {
-  background-color: transparent !important;
-  background-image: none !important;
-}
-
-div[role="listbox"][data-mention-menu] [role="option"],
-div[role="listbox"][data-mention-menu] div[id^="typeahead-item"],
-div[role="listbox"][data-mention-menu] div.cursor-pointer,
-[data-mention-menu] [role="option"],
-[data-mention-menu] div[id^="typeahead-item"],
-[data-mention-menu] div.cursor-pointer,
-[id="antigravity.agentSidePanelInputBox"] [role="listbox"] [role="option"],
-[id="antigravity.agentSidePanelInputBox"] [role="listbox"] div.cursor-pointer {
-  border-radius: 10px !important;
-  margin: 2px 4px !important;
-  padding: 6px 10px !important;
-  transition: all 0.16s ease !important;
-  background-image: none !important;
-  border: 1px solid transparent !important;
-}
-
-div[role="listbox"][data-mention-menu] [role="option"]:hover,
-div[role="listbox"][data-mention-menu] [role="option"][aria-selected="true"],
-div[role="listbox"][data-mention-menu] div.cursor-pointer:hover,
-[data-mention-menu] [role="option"]:hover,
-[data-mention-menu] [role="option"][aria-selected="true"],
-[data-mention-menu] div.cursor-pointer:hover,
-[id="antigravity.agentSidePanelInputBox"] [role="listbox"] [role="option"]:hover,
-[id="antigravity.agentSidePanelInputBox"] [role="listbox"] [role="option"][aria-selected="true"],
-[id="antigravity.agentSidePanelInputBox"] [role="listbox"] div.cursor-pointer:hover {
-  background: linear-gradient(
-    90deg, 
-    rgba(244, 114, 182, 0.28) 0%, 
-    rgba(56, 189, 248, 0.20) 100%
-  ) !important;
-  border: 1px solid rgba(244, 114, 182, 0.50) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 10px rgba(244, 114, 182, 0.25) !important;
-}
-
-div[role="listbox"][data-mention-menu] span,
-div[role="listbox"][data-mention-menu] div,
-[data-mention-menu] span,
-[data-mention-menu] div,
-[id="antigravity.agentSidePanelInputBox"] [role="listbox"] span,
-[id="antigravity.agentSidePanelInputBox"] [role="listbox"] div {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
-}
-
-div[role="listbox"][data-mention-menu] svg,
-[data-mention-menu] svg,
-[id="antigravity.agentSidePanelInputBox"] [role="listbox"] svg {
-  color: #f472b6 !important;
-  filter: drop-shadow(0 0 4px rgba(244, 114, 182, 0.6)) !important;
-}
-
-${!isBottomNone ? `
 .antigravity-slot-video[data-slot="bottom"] {
   position: absolute !important;
   top: 0 !important;
@@ -1748,530 +898,27 @@ ${!isBottomNone ? `
   object-position: ${posBottom} !important;
   pointer-events: none !important;
   z-index: 0 !important;
-  border-radius: 15px !important;
   transform: translateZ(0) !important;
   backface-visibility: hidden !important;
 }
 ` : ''}
 
-[contenteditable="true"],
-textarea,
-div.max-h-\[300px\] {
-  color: ${font.primary} !important;
-  text-shadow: ${font.shadow} !important;
-  font-weight: 500 !important;
-  position: relative !important;
-  z-index: 1 !important;
-}
-
-input::placeholder,
-textarea::placeholder,
-[contenteditable="true"]::before,
-[data-placeholder]::before,
-[placeholder] {
-  color: ${font.secondary} !important;
-  opacity: 0.85 !important;
-  text-shadow: ${font.shadow} !important;
-}
-
-div.relative.flex.flex-col.gap-0.p-1 button,
-div.relative.flex.flex-col.gap-0.p-1 [role="button"] {
-  background: rgba(14, 16, 28, 0.55) !important;
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-  position: relative !important;
-  z-index: 1 !important;
-}
-
-/* ==========================================================================
-   9. 代码块与多行代码容器 (Sleek Frosted Glass Code Blocks)
-   杜绝生硬突兀的死白底色，全主题统一优雅暗色半透明磨砂玻璃卡片与精致微光描边，杜绝字迹发虚/重影/白雾光晕
-   ========================================================================== */
-pre {
-  background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  color: #e2e8f0 !important;
-  text-shadow: none !important;
-}
-
-pre > div.relative,
-pre > div.relative {
-  background-color: rgba(15, 18, 30, 0.96) !important;
-  border: 1px solid rgba(244, 114, 182, 0.35) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
-  contain: paint !important;
-  overflow: hidden !important;
-}
-
-/* Header bar */
-pre > div.relative > div.min-h-7,
-pre [class*="min-h-7"],
-pre > div.relative > div.min-h-7 {
-  background-color: rgba(22, 26, 42, 0.92) !important;
-  border-bottom: 1px solid rgba(244, 114, 182, 0.25) !important;
-}
-
-/* Header text & language indicator */
-div[role="article"] div.leading-relaxed pre div.min-h-7,
-div[role="article"] div.leading-relaxed pre div.min-h-7 *,
-div[role="article"] div.leading-relaxed pre [class*="text-muted"],
-div[role="article"] div.leading-relaxed pre .text-sm,
-div.leading-relaxed pre div.min-h-7,
-div.leading-relaxed pre div.min-h-7 *,
-main pre div.min-h-7,
-main pre div.min-h-7 *,
-pre div.min-h-7,
-pre div.min-h-7 *,
-pre [class*="min-h-7"],
-pre [class*="min-h-7"] *,
-pre div.min-h-7 div.font-sans,
-pre div.min-h-7 span,
-pre div.min-h-7 div,
-pre div.min-h-7 span {
-  color: #cbd5e1 !important;
-  text-shadow: none !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.03em !important;
-}
-
-/* Header action buttons & icons */
-pre div.min-h-7 button,
-pre div.min-h-7 button svg,
-pre [class*="min-h-7"] button,
-pre [class*="min-h-7"] button svg {
-  color: #94a3b8 !important;
-  text-shadow: none !important;
-  transition: all 0.15s ease !important;
-}
-
-pre div.min-h-7 button:hover,
-pre [class*="min-h-7"] button:hover {
-  color: #f472b6 !important;
-  transform: scale(1.08) !important;
-}
-
-pre div.min-h-7 button svg,
-pre [class*="min-h-7"] button svg {
-  color: inherit !important;
-  filter: none !important;
-}
-
-/* Code text and content: 彻底杜绝文字阴影发虚/重影/黑白雾气光晕 */
-pre,
-.code-block,
-.line-content,
-pre code,
-pre span,
-.code-line,
-.code-line span {
-  text-shadow: none !important;
-}
-
-.code-block,
-[class*="code-block"],
-pre code {
-  background: transparent !important;
-  background-color: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.code-block .line-content,
-.code-block .line-content span,
-.code-block span:not([class*="token"]):not([class*="hljs"]):not([class*="syntax"]),
-pre code span:not([class*="token"]):not([class*="hljs"]):not([class*="syntax"]),
-pre .line-content span:not([class*="token"]):not([class*="hljs"]):not([class*="syntax"]) {
-  color: #e2e8f0 !important;
-  text-shadow: none !important;
-}
-
-/* 10. Popovers & Dialogs 通用 */
-[data-radix-popper-content],
-[data-radix-menu-content],
-[data-radix-dropdown-menu-content],
-[data-radix-popover-content],
-[data-radix-select-content],
-[role="menu"],
-[role="listbox"]:not([data-mention-menu]),
-[cmdk-root] {
-  background-color: #121322 !important;
-  background-image: none !important;
-  border: 1px solid rgba(226, 232, 240, 0.35) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85) !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  z-index: 99999 !important;
-}
-
-[data-radix-popper-content] span,
-[data-radix-menu-content] span,
-[data-radix-dropdown-menu-content] span,
-[data-radix-popover-content] span,
-[role="menu"] span,
-[role="menu"] div,
-[role="menuitem"],
-[cmdk-root] span,
-[cmdk-root] div {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-/* ==========================================================================
-   11. 【中】活跃终端专属壁纸与现代黑客风黑色极清文字 (Active Terminals)
-   ========================================================================== */
-${!isMidNone ? `
-.terminal.xterm,
-[data-panel="terminal"] {
-  border-left: 1.5px solid rgba(249, 168, 212, 0.85) !important;
-  box-shadow: -2px 0 10px rgba(249, 168, 212, 0.40) !important;
-  background-color: transparent !important;
-  position: relative !important;
-  z-index: 10 !important;
-  contain: paint !important;
-}
-
-.terminal.xterm,
-.xterm-dom-renderer-owner-1,
-div.terminal-wrapper,
-div:has(> .xterm-screen) {
-  position: relative !important;
-  background-color: transparent !important;
-  background-image: 
-    linear-gradient(
-      rgba(11, 12, 20, 0.12), 
-      rgba(11, 12, 20, 0.18)
-    )${b64Mid ? `,\n    url("${b64Mid}")` : ''} !important;
-  background-size: cover !important;
-  background-position: ${posMid} !important;
-  background-repeat: no-repeat !important;
-  overflow: hidden !important;
-}
-
-.antigravity-slot-video[data-slot="mid"] {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  object-position: ${posMid} !important;
-  pointer-events: none !important;
-  z-index: 0 !important;
-  contain: strict !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
-}
-
-.terminal.xterm .xterm-viewport,
-.terminal.xterm .xterm-screen,
-.terminal.xterm .xterm-scrollable-element,
-.terminal.xterm canvas,
-.xterm,
-.xterm .xterm-screen canvas {
-  background-color: transparent !important;
-  background: transparent !important;
-  position: relative !important;
-  z-index: 1 !important;
-}
-` : `
-/* 活跃终端界面背景彻底还原 */
-.terminal-wrapper,
-[data-panel="terminal"],
-div.terminal,
-div.xterm,
-.terminal.xterm {
-  background-image: none !important;
-  background: transparent !important;
-  border-left: none !important;
-  box-shadow: none !important;
-}
-.antigravity-slot-video[data-slot="mid"] {
-  display: none !important;
-}
-`}
-
-/* 终端字体：升级为圆润可爱带中文等宽的 Maple Mono NF CN 现代编程字体 */
-.xterm-char-measure-element {
-  font-family: 'Maple Mono NF CN', 'Maple Mono CN', 'Maple Mono', monospace !important;
-  font-weight: 500 !important;
-  font-size: 13px !important;
-  letter-spacing: 0px !important;
-}
-
-.terminal.xterm,
-.terminal.xterm .xterm-rows,
-.terminal.xterm .xterm-rows span,
-.terminal.xterm .xterm-rows div,
-.terminal.xterm span,
-.terminal.xterm div {
-  font-family: 'Maple Mono NF CN', 'Maple Mono CN', 'Maple Mono', 'Sarasa Term SC', 'LXGW WenKai Mono', 'Microsoft YaHei UI', monospace !important;
-  font-feature-settings: 'liga' 1, 'calt' 1 !important;
-  color: ${font.terminal} !important;
-  font-weight: 600 !important;
-  letter-spacing: 0px !important;
-  text-shadow: ${font.terminalShadow} !important;
-}
-
-/* 终端彩色语法项 (根据文字明暗自适应对比度与阴影轮廓) */
-${font.isDarkText ? `
-.terminal.xterm [class*="xterm-color-0"] { color: #334155 !important; }
-.terminal.xterm [class*="xterm-color-1"], .terminal.xterm [class*="xterm-fg-1"] { color: #b91c1c !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
-.terminal.xterm [class*="xterm-color-2"], .terminal.xterm [class*="xterm-fg-2"] { color: #047857 !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
-.terminal.xterm [class*="xterm-color-3"], .terminal.xterm [class*="xterm-fg-3"] { color: #b45309 !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
-.terminal.xterm [class*="xterm-color-4"], .terminal.xterm [class*="xterm-fg-4"] { color: #1d4ed8 !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
-.terminal.xterm [class*="xterm-color-5"], .terminal.xterm [class*="xterm-fg-5"] { color: #be185d !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
-.terminal.xterm [class*="xterm-color-6"], .terminal.xterm [class*="xterm-fg-6"] { color: #0f766e !important; text-shadow: 0 0 2px #ffffff, 0 1px 2px #ffffff !important; }
-.terminal.xterm [class*="xterm-color-7"], .terminal.xterm [class*="xterm-fg-7"] { color: ${font.terminal} !important; text-shadow: ${font.terminalShadow} !important; }
-` : `
-.terminal.xterm [class*="xterm-color-0"] { color: #94a3b8 !important; text-shadow: ${font.terminalShadow} !important; }
-.terminal.xterm [class*="xterm-color-1"], .terminal.xterm [class*="xterm-fg-1"] { color: #f87171 !important; text-shadow: ${font.terminalShadow} !important; }
-.terminal.xterm [class*="xterm-color-2"], .terminal.xterm [class*="xterm-fg-2"] { color: #4ade80 !important; text-shadow: ${font.terminalShadow} !important; }
-.terminal.xterm [class*="xterm-color-3"], .terminal.xterm [class*="xterm-fg-3"] { color: #facc15 !important; text-shadow: ${font.terminalShadow} !important; }
-.terminal.xterm [class*="xterm-color-4"], .terminal.xterm [class*="xterm-fg-4"] { color: #60a5fa !important; text-shadow: ${font.terminalShadow} !important; }
-.terminal.xterm [class*="xterm-color-5"], .terminal.xterm [class*="xterm-fg-5"] { color: #f472b6 !important; text-shadow: ${font.terminalShadow} !important; }
-.terminal.xterm [class*="xterm-color-6"], .terminal.xterm [class*="xterm-fg-6"] { color: #38bdf8 !important; text-shadow: ${font.terminalShadow} !important; }
-.terminal.xterm [class*="xterm-color-7"], .terminal.xterm [class*="xterm-fg-7"] { color: ${font.terminal} !important; text-shadow: ${font.terminalShadow} !important; }
-`}
-
-/* 终端光标：深曜黑搭配霓虹绯红外发光边框 */
-.xterm .xterm-cursor-block, 
-.xterm .xterm-cursor,
-.xterm-cursor-layer .xterm-cursor {
-  background-color: #090d16 !important;
-  border: 1.5px solid #f472b6 !important;
-  box-shadow: 0 0 10px #f472b6, 0 0 16px rgba(244, 114, 182, 0.7) !important;
-}
-
-/* 顶部两层顶栏彻底透明化与琉璃化 */
-div.shrink-0.flex.items-center.gap-0.5.border-b.pl-1.5.pr-9,
-header div.shrink-0.flex.items-center.gap-0.5.border-b {
-  background-color: rgba(14, 16, 28, 0.75) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
-}
-
-div.flex.items-center.justify-between.pl-3.pr-2.py-1 {
-  background-color: rgba(11, 12, 20, 0.78) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-div.group\/file-row:has([class*="font-medium"]),
-div.group\/file-row {
-  background-color: rgba(11, 12, 20, 0.35) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
-  transition: all 0.18s ease !important;
-}
-
-div.shrink-0.flex.items-center.gap-0.5.border-b button,
-div.flex.items-center.justify-between.pl-3.pr-2.py-1 button,
-div.group\/file-row button {
-  background-color: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  border-radius: 6px !important;
-  color: #f1f5f9 !important;
-  transition: all 0.18s ease !important;
-}
-
-div.shrink-0.flex.items-center.gap-0.5.border-b button:hover,
-div.flex.items-center.justify-between.pl-3.pr-2.py-1 button:hover,
-div.group\/file-row button:hover {
-  background-color: rgba(244, 63, 94, 0.30) !important;
-  border-color: rgba(244, 63, 94, 0.65) !important;
-  box-shadow: 0 0 10px rgba(244, 63, 94, 0.40) !important;
-}
-
-div.flex.items-center.justify-between.pl-3.pr-2.py-1 span,
-div.group\/file-row span {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-  font-weight: 600 !important;
-}
-
-.xterm .xterm-viewport::-webkit-scrollbar {
-  width: 5px !important;
-  background-color: transparent !important;
-  border-radius: 4px !important;
-}
-.xterm .xterm-viewport::-webkit-scrollbar-thumb {
-  background-color: rgba(244, 63, 94, 0.40) !important;
-  border-radius: 4px !important;
-}
-.xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(244, 63, 94, 0.70) !important;
-}
-
-/* ==========================================================================
-   12. 【右】独立侧栏壁纸 + 极简纯净无杂线琉璃质感 (Right Drawer)
-   ========================================================================== */
-/* 12.1 整个右侧辅助大容器（包含中侧终端、Review面板与右侧抽屉）：背景必须完全透明，以左侧全局底图为背景！ */
-div[data-aux-pane-open],
-[aria-label="Auxiliary Pane"],
-div[role="region"][aria-label="Terminal"],
-div:has(> [aria-label="Auxiliary Pane"]),
-[aria-label="Auxiliary Pane"] > div:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]),
-[aria-label="Auxiliary Pane"] .shrink-0,
-[aria-label="Auxiliary Pane"] .flex-grow,
-[aria-label="Auxiliary Pane"] .border-b,
-[aria-label="Auxiliary Pane"] .border-border,
-[aria-label="Auxiliary Pane"] .bg-background:not(.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full):not([class*="terminal-drawer"]) {
-  background-color: transparent !important;
-  background-image: none !important;
-  background: transparent !important;
-}
-
-${!isRightNone ? `
-/* 12.2 【右】右侧独立会话抽屉（Conversations Drawer）：无论辅助面板标记状态均生效，彻底消除黑屏 */
-[aria-label="Auxiliary Pane"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full,
-div[role="region"][aria-label="Terminal"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full,
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background,
-[class*="terminal-drawer"] {
-  position: relative !important;
-  background-color: transparent !important;
-  background-image: 
-    linear-gradient(
-      rgba(11, 12, 20, 0.12), 
-      rgba(11, 12, 20, 0.20)
-    )${b64Right ? `,\n    url("${b64Right}")` : ''} !important;
-  background-size: cover !important;
-  background-position: ${posRight} !important;
-  background-repeat: no-repeat !important;
-  border-left: 1px solid rgba(249, 168, 212, 0.35) !important;
-  box-shadow: none !important;
-  contain: paint !important;
-}
-
-.antigravity-slot-video[data-slot="right"] {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-  object-position: ${posRight} !important;
-  pointer-events: none !important;
-  z-index: 0 !important;
-  contain: strict !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
-}
-` : `
-/* 右侧抽屉背景彻底还原 */
-[aria-label="Auxiliary Pane"],
-div[role="region"][aria-label="Terminal"],
-[class*="terminal-drawer"],
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background {
-  background-image: none !important;
-  background: transparent !important;
-  border-left: none !important;
-}
-.antigravity-slot-video[data-slot="right"] {
-  display: none !important;
-}
-`}
-
-/* 极致原生性能：动态视频硬件加速独立合成层隔离与图层约束 */
-.antigravity-slot-video {
-  pointer-events: none !important;
-  contain: strict !important;
-  transform: translateZ(0) !important;
-  backface-visibility: hidden !important;
-  will-change: transform !important;
-}
-
-.is-resizing iframe {
-  pointer-events: none !important;
-}
-
-div:has([id="antigravity.agentSidePanelInputBox"]) > div,
-div:has([id="antigravity.agentSidePanelInputBox"]) .overflow-y-auto {
-  background-color: transparent !important;
-  background: transparent !important;
-}
-
-/* 侧边栏“对话”顶栏 */
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.select-none.pl-4.pr-3,
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.gap-1\\.5.select-none {
-  background-color: transparent !important;
-  border: none !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: none !important;
-  padding-top: 6px !important;
-  padding-bottom: 6px !important;
-  margin-bottom: 4px !important;
-}
-
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.select-none.pl-4.pr-3 span,
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.gap-1\\.5.select-none span {
-  color: #f1f5f9 !important;
-  font-weight: 600 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.gap-1\\.5.px-2.py-1.text-sm.rounded-md,
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background [class*="item"],
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.relative.flex.items-center,
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background button {
-  background-color: rgba(14, 16, 30, 0.58) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 8px !important;
-  color: #f1f5f9 !important;
-  font-weight: 500 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
-  transition: all 0.2s ease !important;
-}
-
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div.flex.w-full.items-center.justify-between.gap-1\\.5.px-2.py-1.text-sm.rounded-md:hover,
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background button:hover {
-  background: linear-gradient(
-    90deg, 
-    rgba(244, 114, 182, 0.28) 0%, 
-    rgba(56, 189, 248, 0.20) 100%
-  ) !important;
-  border-color: rgba(244, 114, 182, 0.60) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
-  transform: translateY(-1px) !important;
-}
-
-div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background div:not([class*="user-input-step"]):not([class*="bg-card-border"]) {
-  border-color: transparent !important;
-}
-
-/* ==========================================================================
-   16. 【设置】设置对话框专属插画壁纸与水晶磨砂视效
-   ========================================================================== */
+/* 6. Target 3: Settings Dialog (slot: settings) */
 [data-radix-dialog-overlay] {
   background-color: rgba(5, 7, 16, 0.85) !important;
   z-index: 998 !important;
 }
 
-${!isSettingsNone ? `
+${isSettingsActive ? `
 [role="dialog"],
 div[data-state="open"]:has(div.bg-sidebar),
 div.settings-modal-container {
   position: relative !important;
   background-color: transparent !important;
-  background-image: 
-    linear-gradient(
-      rgba(8, 10, 20, 0.20), 
-      rgba(8, 10, 20, 0.35)
-    )${b64Settings ? `,\n    url("${b64Settings}")` : ''} !important;
+  background-image: ${b64Settings ? `url("${b64Settings}")` : 'none'} !important;
   background-size: cover !important;
   background-position: ${posSettings} !important;
   background-repeat: no-repeat !important;
-  border: 1.5px solid rgba(151, 213, 255, 0.45) !important;
-  border-radius: 20px !important;
-  box-shadow: 
-    0 24px 70px rgba(0, 0, 0, 0.85),
-    0 0 35px rgba(151, 213, 255, 0.22) !important;
   overflow: hidden !important;
   z-index: 1000 !important;
 }
@@ -2286,20 +933,7 @@ div.settings-modal-container {
   object-position: ${posSettings} !important;
   pointer-events: none !important;
   z-index: 0 !important;
-  border-radius: 20px !important;
 }
-` : `
-/* 设置弹窗背景彻底还原 */
-[role="dialog"],
-div[data-state="open"]:has(div.bg-sidebar),
-div.settings-modal-container {
-  background-image: none !important;
-  background-color: var(--color-popover, #131722) !important;
-}
-.antigravity-slot-video[data-slot="settings"] {
-  display: none !important;
-}
-`}
 
 [role="dialog"] .bg-background,
 [role="dialog"] [class*="bg-background"],
@@ -2314,142 +948,9 @@ div.settings-modal-container {
   background-color: transparent !important;
   background: transparent !important;
 }
+` : ''}
 
-[role="dialog"] div.bg-sidebar,
-[role="dialog"] [class*="bg-sidebar"],
-[role="dialog"] div.flex:has(> div.h-full.w-full.flex.flex-col.bg-sidebar) {
-  background-color: rgba(9, 12, 24, 0.60) !important;
-  background-color: rgba(18, 20, 34, 0.95) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.30) !important;
-  contain: paint !important;
-}
-
-[role="dialog"] div.bg-sidebar button {
-  background-color: transparent !important;
-  border-radius: 10px !important;
-  border: 1px solid transparent !important;
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-  margin-top: 2px !important;
-  margin-bottom: 2px !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-[role="dialog"] div.bg-sidebar button span,
-[role="dialog"] div.bg-sidebar button svg {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-[role="dialog"] div.bg-sidebar button:hover,
-[role="dialog"] div.bg-sidebar button[data-state="active"],
-[role="dialog"] div.bg-sidebar button[aria-selected="true"],
-[role="dialog"] div.bg-sidebar button.bg-sidebar-muted,
-[role="dialog"] div.bg-sidebar button[class*="hover\:bg"] {
-  background: linear-gradient(
-    90deg, 
-    rgba(56, 189, 248, 0.32) 0%, 
-    rgba(147, 197, 253, 0.20) 100%
-  ) !important;
-  border: 1px solid rgba(151, 213, 255, 0.55) !important;
-  box-shadow: 
-    0 4px 14px rgba(0, 0, 0, 0.35),
-    inset 0 1px 1px rgba(255, 255, 255, 0.35),
-    0 0 12px rgba(56, 189, 248, 0.25) !important;
-  transform: translateX(3px) !important;
-}
-
-[role="dialog"] div.bg-sidebar div.border-t,
-[role="dialog"] div.bg-sidebar [class*="border-t"] {
-  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background-color: transparent !important;
-}
-
-[role="dialog"] div.rounded-xl.border,
-[role="dialog"] div[class*="rounded-xl"][class*="border"],
-[role="dialog"] div[class*="divide-y"] {
-  background-color: rgba(12, 16, 32, 0.88) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  border-radius: 14px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
-  contain: paint !important;
-}
-
-[role="dialog"] div.divide-y > *,
-[role="dialog"] div.divide-border > * {
-  border-color: rgba(255, 255, 255, 0.10) !important;
-}
-
-[role="dialog"] h1, [role="dialog"] h2, [role="dialog"] h3,
-[role="dialog"] [class*="font-semibold"], [role="dialog"] [class*="font-medium"] {
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-[role="dialog"] p, [role="dialog"] [class*="text-muted-foreground"],
-[role="dialog"] [class*="text-secondary-foreground"], [role="dialog"] span {
-  color: rgba(226, 232, 240, 0.85) !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-}
-
-[role="dialog"] [role="combobox"], [role="dialog"] select, [role="dialog"] [role="group"],
-[role="dialog"] div.inline-flex.items-center.rounded-lg.border {
-  background-color: rgba(18, 22, 44, 0.88) !important;
-  border: 1px solid rgba(151, 213, 255, 0.40) !important;
-  color: #f1f5f9 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-}
-
-[role="dialog"] button.inline-flex,
-[role="dialog"] a.select-none.rounded,
-[role="dialog"] [class*="grow"] button {
-  background-color: rgba(26, 32, 60, 0.88) !important;
-  border: 1px solid rgba(151, 213, 255, 0.35) !important;
-  color: #f1f5f9 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
-  border-radius: 8px !important;
-  transition: all 0.2s ease !important;
-}
-
-[role="dialog"] button.inline-flex:hover,
-[role="dialog"] a.select-none.rounded:hover,
-[role="dialog"] [class*="grow"] button:hover {
-  background-color: rgba(56, 189, 248, 0.40) !important;
-  border-color: rgba(151, 213, 255, 0.85) !important;
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;
-  color: #ffffff !important;
-}
-
-[role="dialog"] [role="group"] button {
-  border-radius: 6px !important;
-  margin: 1px !important;
-}
-
-[role="dialog"] button[role="switch"][aria-checked="true"],
-[role="dialog"] button[role="switch"][data-state="checked"] {
-  background-color: #38bdf8 !important;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.65) !important;
-}
-
-[role="dialog"] > button:first-child,
-[role="dialog"] button:has(> svg.text-main-foreground) {
-  background-color: rgba(255, 255, 255, 0.12) !important;
-  border-radius: 50% !important;
-  transition: all 0.2s ease !important;
-}
-
-[role="dialog"] > button:first-child:hover,
-[role="dialog"] button:has(> svg.text-main-foreground):hover {
-  background-color: rgba(244, 114, 182, 0.40) !important;
-  box-shadow: 0 0 14px rgba(244, 114, 182, 0.6) !important;
-  transform: rotate(90deg) !important;
-}
-
-/* ==========================================================================
-   Antigravity Dynamic Wallpaper Video Elements
-   ========================================================================== */
+/* 7. Common Video Element Containment */
 .antigravity-slot-video {
   pointer-events: none !important;
   user-select: none !important;
@@ -2533,14 +1034,12 @@ function getClientVideoScript(config) {
 
   const configJson = JSON.stringify(config || {});
   const posLeft = getSlotPosition(config, 'left');
-  const posMid = getSlotPosition(config, 'mid');
-  const posRight = getSlotPosition(config, 'right');
   const posBottom = getSlotPosition(config, 'bottom');
   const posSettings = getSlotPosition(config, 'settings');
 
   const serverBase = `http://127.0.0.1:${DEFAULT_PORT}`;
   const slotPosters = {};
-  ['left', 'mid', 'right', 'bottom', 'settings'].forEach(slotKey => {
+  ['left', 'bottom', 'settings'].forEach(slotKey => {
     const slotData = config && config[slotKey];
     if (slotData && slotData.poster) {
       const v = slotData.version ? `?v=${slotData.version}` : `?v=${Date.now()}`;
@@ -2557,8 +1056,6 @@ function getClientVideoScript(config) {
     window.__antigravityConfig = config;
     const slotPositions = {
       'left': '${posLeft}',
-      'mid': '${posMid}',
-      'right': '${posRight}',
       'bottom': '${posBottom}',
       'settings': '${posSettings}'
     };
@@ -3158,19 +1655,8 @@ function getClientVideoScript(config) {
         }
       }
 
-      // 2. Container slots: mid, right, bottom, settings
+      // 2. Container slots: bottom, settings
       const slotSelectors = {
-        'mid': [
-          '.terminal.xterm',
-          'div.terminal-wrapper',
-          '[data-panel="terminal"]'
-        ],
-        'right': [
-          '[aria-label="Auxiliary Pane"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full',
-          'div[role="region"][aria-label="Terminal"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full',
-          'div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background',
-          '[class*="terminal-drawer"]'
-        ],
         'bottom': [
           '[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
           '[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
@@ -3206,36 +1692,6 @@ function getClientVideoScript(config) {
             try {
               const el = document.querySelector(selectors[i]);
               if (el && el !== document.body && el !== document.documentElement) {
-                if (slotKey === 'mid') {
-                  if (!el.classList.contains('terminal') && !el.classList.contains('xterm') && !el.querySelector('.terminal, .xterm')) {
-                    continue;
-                  }
-                  if (el.closest('[class*="terminal-drawer"]') || 
-                      (el.classList.contains('overflow-y-auto') && el.classList.contains('bg-background')) ||
-                      el.closest('div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background')) {
-                    continue;
-                  }
-                }
-                if (slotKey === 'right') {
-                  if (el.classList.contains('terminal') || el.classList.contains('xterm') || el.querySelector('.terminal, .xterm')) {
-                    continue;
-                  }
-                  if (el.offsetWidth < 50) {
-                    continue;
-                  }
-                  if (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\.agentSidePanelInputBox')) {
-                    continue;
-                  }
-                  if (el.getAttribute('aria-label') === 'Auxiliary Pane' || 
-                      el.getAttribute('aria-label') === 'Overview' ||
-                      el.getAttribute('aria-label') === 'Review' ||
-                      el.closest('[aria-label="Overview"]') ||
-                      el.closest('[aria-label="Review"]') ||
-                      el.querySelector('[aria-label="Overview"]') ||
-                      el.querySelector('[aria-label="Review"]')) {
-                    continue;
-                  }
-                }
                 targetContainer = el;
                 break;
               }
@@ -3540,101 +1996,26 @@ function getClientVideoScript(config) {
       window.__antigravityVideoObserver = null;
     }
 
-    let debounceTimer = null;
-    const scheduledApply = function(mutations) {
-      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
-        return;
-      }
-      if (window.__isDraggingSplit || window.__isResizing || window.__isNavigating) {
-        if (window.__isNavigating) {
-          if (typeof navThrottleTimer !== 'undefined' && navThrottleTimer) clearTimeout(navThrottleTimer);
-          if (typeof resumeVideosAfterNav === 'function') {
-            navThrottleTimer = setTimeout(function() {
-              navThrottleTimer = null;
-              resumeVideosAfterNav();
-            }, 120);
+    const onShallowMutation = function(mutations) {
+      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) return;
+      for (let i = 0; i < mutations.length; i++) {
+        const added = mutations[i].addedNodes;
+        for (let j = 0; j < added.length; j++) {
+          const el = added[j];
+          if (el.nodeType === 1 && (el.getAttribute('role') === 'dialog' || (el.querySelector && el.querySelector('[role="dialog"]')))) {
+            if (window.__antigravityApplyVideos) {
+              window.__antigravityApplyVideos();
+            }
+            return;
           }
         }
-        return;
       }
-
-      if (mutations && mutations.length > 0) {
-        let isRelevant = false;
-        for (let i = 0; i < mutations.length; i++) {
-          const m = mutations[i];
-          const target = m.target;
-          if (!target || target.nodeType === 3) continue;
-          // 深度性能过滤：彻底忽略用户打字、光标移动、代码块渲染与AI流式输出DOM扰动
-          if (target.id === 'antigravity.agentSidePanelInputBox' || target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable) continue;
-
-          // 快速命中跳过：消息正文、代码块、markdown、聊天流元素直接跳过，消除昂贵的 closest 向上递归
-          const cls = target.className;
-          if (typeof cls === 'string' && (cls.includes('prose') || cls.includes('markdown') || cls.includes('message') || cls.includes('code-block') || cls.includes('monaco') || cls.includes('group/user-input-step'))) {
-            continue;
-          }
-
-          if (target.closest && (
-              target.closest('input, textarea, [contenteditable="true"], [role="textbox"], form, .markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"], [role="article"]') ||
-              target.closest('#antigravity\.agentSidePanelInputBox, [id="antigravity.agentSidePanelInputBox"]')
-          )) {
-            continue;
-          }
-          if (m.type === 'attributes') {
-            const attr = m.attributeName;
-            if (attr === 'data-aux-pane-open' || attr === 'data-state' || attr === 'aria-expanded' || attr === 'hidden') {
-              isRelevant = true;
-              break;
-            }
-          } else if (m.type === 'childList') {
-            for (let j = 0; j < m.addedNodes.length; j++) {
-              const node = m.addedNodes[j];
-              if (node.nodeType === 1) {
-                const role = node.getAttribute ? node.getAttribute('role') : null;
-                const ds = node.getAttribute ? node.getAttribute('data-state') : null;
-                if (node.id === 'antigravity.agentSidePanelInputBox' || 
-                    (node.id && node.id.includes('agentSidePanelInputBox'))) {
-                  isRelevant = true;
-                  break;
-                }
-                if (role === 'dialog' || ds === 'open' || 
-                  (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm')))) {
-                  isRelevant = true;
-                  break;
-                }
-              }
-            }
-            if (isRelevant) break;
-            for (let j = 0; j < m.removedNodes.length; j++) {
-              const node = m.removedNodes[j];
-              if (node.nodeType === 1) {
-                if (node.id === 'antigravity-video-left' || (node.classList && (node.classList.contains('antigravity-slot-video') || node.classList.contains('terminal') || node.classList.contains('xterm'))) || (node.getAttribute && node.getAttribute('role') === 'dialog')) {
-                  isRelevant = true;
-                  break;
-                }
-              }
-            }
-            if (isRelevant) break;
-          }
-        }
-        if (!isRelevant) return;
-      }
-
-      if (debounceTimer) return;
-      debounceTimer = setTimeout(function() {
-        debounceTimer = null;
-        if (window.__antigravityApplyVideos) {
-          window.__antigravityApplyVideos();
-        }
-      }, 120);
     };
 
-    window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
-    window.__antigravityVideoObserver.observe(document.body || document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
-    });
+    window.__antigravityVideoObserver = new MutationObserver(onShallowMutation);
+    if (document.body) {
+      window.__antigravityVideoObserver.observe(document.body, { childList: true, subtree: false });
+    }
 
     // 极致原生 60FPS/120FPS 性能：原生窗口拖拽缩放与分栏调整协调器 (零阻塞、零重绘重排雪崩)
     let resizeThrottleTimer = null;
@@ -3855,11 +2236,6 @@ function getClientVideoScript(config) {
     if (window.__antigravityInterval) {
       clearInterval(window.__antigravityInterval);
     }
-    window.__antigravitySyncInterval = setInterval(function() {
-      if (window.__antigravityApplyVideos) {
-        window.__antigravityApplyVideos();
-      }
-    }, 10000);
   })();
   `;
 }
@@ -4081,7 +2457,7 @@ async function batchApplyDraft(draftConfig, fontColor) {
   let hasChanges = false;
   const now = Date.now();
 
-  for (const slotKey of ['left', 'mid', 'right', 'bottom', 'settings']) {
+  for (const slotKey of ['left', 'bottom', 'settings']) {
     const slotData = draftConfig[slotKey];
     if (!slotData) continue;
     const slotMeta = SLOTS_META[slotKey];
@@ -4218,16 +2594,6 @@ async function batchApplyDraft(draftConfig, fontColor) {
     }
   }
 
-  // Handle fontColor
-  if (fontColor) {
-    const fKey = typeof fontColor === 'string' ? fontColor : (fontColor.id || fontColor.primary);
-    const resolved = resolveFontColor(fKey);
-    if (JSON.stringify(slotsConfig.fontColor) !== JSON.stringify(resolved)) {
-      slotsConfig.fontColor = resolved;
-      hasChanges = true;
-    }
-  }
-
   slotsConfig.isOriginal = false;
   saveSlotsConfig(slotsConfig);
 
@@ -4245,13 +2611,14 @@ async function batchApplyDraft(draftConfig, fontColor) {
 }
 
 async function swapWallpaper(slotInput, srcPath, customPosterPath) {
-  if (!slotInput) {
-    console.error('❌ 请提供槽位名称: 左, 中, 右, 下, 设置');
+  const _normInput = normalizeSlotInput(slotInput);
+  if (!_normInput) {
+    console.error('❌ 请提供槽位名称: 左, 下, 设置');
     return false;
   }
-  const slotKey = SLOT_ALIASES[slotInput.toLowerCase()];
+  const slotKey = SLOT_ALIASES[normalizeSlotInput(slotInput)];
   if (!slotKey || !SLOTS_META[slotKey]) {
-    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置`);
+    console.error(`❌ 未知槽位: "${formatSlotDisplay(slotInput)}"。支持的槽位为: 左, 下, 设置`);
     return false;
   }
 
@@ -4281,7 +2648,7 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
   const targetFileName = `${slotKey === 'bottom' ? 'input' : slotKey}_wallpaper${ext}`;
   const targetPath = path.join(wallpapersDir, targetFileName);
 
-  console.log(`[1/4] 正在更新【${slotInput} (${slotMeta.desc})】的壁纸素材...`);
+  console.log(`[1/4] 正在更新【${formatSlotDisplay(slotInput)} (${slotMeta.desc})】的壁纸素材...`);
   console.log(`      素材类型: ${isVideo ? '🎬 动态视频 (' + ext + ')' : '🖼️ 静态图像 (' + ext + ')'}`);
 
   // 视频编码检测与静态海报兜底提取
@@ -4388,7 +2755,7 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
   console.log(`[4/4] 触发界面热重载与实时生效...`);
   const reloadPromise = await triggerLiveHotReload(css, slotsConfig);
 
-  console.log(`✨ 【${slotInput}】壁纸更换完成！已实时生效。`);
+  console.log(`✨ 【${formatSlotDisplay(slotInput)}】壁纸更换完成！已实时生效。`);
   return reloadPromise;
 }
 
@@ -4398,18 +2765,19 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
  * @returns {Promise<boolean>}
  */
 async function restoreSlotVanilla(slotInput) {
-  if (!slotInput) {
-    console.error('❌ 请提供槽位名称: 左, 中, 右, 下, 设置');
+  const _normInput = normalizeSlotInput(slotInput);
+  if (!_normInput) {
+    console.error('❌ 请提供槽位名称: 左, 下, 设置');
     return false;
   }
-  const slotKey = SLOT_ALIASES[slotInput.toLowerCase()];
+  const slotKey = SLOT_ALIASES[normalizeSlotInput(slotInput)];
   if (!slotKey || !SLOTS_META[slotKey]) {
-    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置`);
+    console.error(`❌ 未知槽位: "${formatSlotDisplay(slotInput)}"。支持的槽位为: 左, 下, 设置`);
     return false;
   }
 
   const slotMeta = SLOTS_META[slotKey];
-  console.log(`[1/3] 正在将槽位【${slotInput} (${slotMeta.desc})】恢复为官方原版纯净模样...`);
+  console.log(`[1/3] 正在将槽位【${formatSlotDisplay(slotInput)} (${slotMeta.desc})】恢复为官方原版纯净模样...`);
 
   const slotsConfig = loadSlotsConfig();
   slotsConfig[slotKey] = {
@@ -4436,7 +2804,7 @@ async function restoreSlotVanilla(slotInput) {
   console.log(`[3/3] 触发界面热重载与实时生效...`);
   const reloadPromise = await triggerLiveHotReload(css, slotsConfig);
 
-  console.log(`✨ 【${slotInput}】已成功恢复为官方原版纯净模样！已实时生效。`);
+  console.log(`✨ 【${formatSlotDisplay(slotInput)}】已成功恢复为官方原版纯净模样！已实时生效。`);
   return reloadPromise;
 }
 
@@ -4481,7 +2849,6 @@ async function revertToBaseline() {
       desc: meta.desc
     };
   }
-  baselineConfig.fontColor = FONT_PRESETS['pure-white'];
   baselineConfig.isOriginal = false;
   saveSlotsConfig(baselineConfig);
 
@@ -4502,13 +2869,14 @@ async function revertToBaseline() {
 }
 
 async function setPosition(slotInput, posX, posY) {
-  if (!slotInput) {
-    console.error('❌ 请提供槽位名称: 左, 中, 右, 下, 设置');
+  const _normInput = normalizeSlotInput(slotInput);
+  if (!_normInput) {
+    console.error('❌ 请提供槽位名称: 左, 下, 设置');
     return false;
   }
-  const slotKey = SLOT_ALIASES[slotInput.toLowerCase()];
+  const slotKey = SLOT_ALIASES[normalizeSlotInput(slotInput)];
   if (!slotKey || !SLOTS_META[slotKey]) {
-    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置`);
+    console.error(`❌ 未知槽位: "${formatSlotDisplay(slotInput)}"。支持的槽位为: 左, 下, 设置`);
     return false;
   }
 
@@ -4535,7 +2903,7 @@ async function setPosition(slotInput, posX, posY) {
   slotsConfig[slotKey].position = posStr;
   saveSlotsConfig(slotsConfig);
 
-  console.log(`[1/3] 已设置槽位【${slotInput} (${SLOTS_META[slotKey].desc})】壁纸显示位置: ${posStr}`);
+  console.log(`[1/3] 已设置槽位【${formatSlotDisplay(slotInput)} (${SLOTS_META[slotKey].desc})】壁纸显示位置: ${posStr}`);
 
   console.log(`[2/3] 重新编译并输出 custom_theme.css...`);
   const css = generateMasterCss(slotsConfig);
@@ -4545,18 +2913,19 @@ async function setPosition(slotInput, posX, posY) {
 
   console.log(`[3/3] 触发界面热重载与实时生效...`);
   const reloadPromise = await triggerLiveHotReload(css, slotsConfig);
-  console.log(`✨ 【${slotInput}】壁纸位置已调整为 ${posStr}！已实时生效。`);
+  console.log(`✨ 【${formatSlotDisplay(slotInput)}】壁纸位置已调整为 ${posStr}！已实时生效。`);
   return { ok: true, slot: slotKey, position: posStr };
 }
 
 async function adjustPosition(slotInput, direction, delta = 5) {
-  if (!slotInput) {
-    console.error('❌ 请提供槽位名称: 左, 中, 右, 下, 设置');
+  const _normInput = normalizeSlotInput(slotInput);
+  if (!_normInput) {
+    console.error('❌ 请提供槽位名称: 左, 下, 设置');
     return false;
   }
-  const slotKey = SLOT_ALIASES[slotInput.toLowerCase()];
+  const slotKey = SLOT_ALIASES[normalizeSlotInput(slotInput)];
   if (!slotKey || !SLOTS_META[slotKey]) {
-    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置`);
+    console.error(`❌ 未知槽位: "${formatSlotDisplay(slotInput)}"。支持的槽位为: 左, 下, 设置`);
     return false;
   }
 
@@ -4590,7 +2959,7 @@ async function adjustPosition(slotInput, direction, delta = 5) {
 }
 
 async function resetPosition(slotInput) {
-  const norm = String(slotInput || 'all').toLowerCase().trim();
+  const norm = normalizeSlotInput(slotInput) || 'all';
   if (!slotInput || norm === 'all' || norm === '全部' || norm === 'reset' || norm === '重置' || norm === '*') {
     const slotsConfig = loadSlotsConfig();
     for (const [key, meta] of Object.entries(SLOTS_META)) {
@@ -4616,7 +2985,7 @@ async function resetPosition(slotInput) {
 
   const slotKey = SLOT_ALIASES[norm];
   if (!slotKey || !SLOTS_META[slotKey]) {
-    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置, 或 all (全部)`);
+    console.error(`❌ 未知槽位: "${formatSlotDisplay(slotInput)}"。支持的槽位为: 左, 下, 设置, 或 all (全部)`);
     return false;
   }
 
@@ -4629,7 +2998,7 @@ async function resetPosition(slotInput) {
  * 若 slotInput 为 'all'，则执行 revertToBaseline() 恢复全套基线。
  */
 async function resetSlotWallpaper(slotInput) {
-  const norm = String(slotInput || 'all').toLowerCase().trim();
+  const norm = normalizeSlotInput(slotInput) || 'all';
   if (norm === 'all' || norm === '全部' || norm === 'baseline' || norm === '基线' || norm === '*') {
     const ok = await revertToBaseline();
     return { ok: Boolean(ok), slot: 'all' };
@@ -4637,7 +3006,7 @@ async function resetSlotWallpaper(slotInput) {
 
   const slotKey = SLOT_ALIASES[norm];
   if (!slotKey || !SLOTS_META[slotKey]) {
-    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置, 或 all (全部)`);
+    console.error(`❌ 未知槽位: "${formatSlotDisplay(slotInput)}"。支持的槽位为: 左, 下, 设置, 或 all (全部)`);
     return false;
   }
 
@@ -4666,64 +3035,6 @@ async function resetSlotWallpaper(slotInput) {
   return { ok: Boolean(ok), slot: slotKey, file: meta.defaultFile };
 }
 
-async function setFontColor(colorOrPreset) {
-  if (!colorOrPreset) {
-    console.error('❌ 请输入有效的预设名称或 Hex 颜色值 (例如: pure-white, obsidian-black, #ffffff, #1a1a2e)');
-    return false;
-  }
-  const resolved = resolveFontColor(colorOrPreset, false);
-  if (!resolved) {
-    console.error(`❌ 未识别的字体预设或无效 Hex 颜色: "${colorOrPreset}"`);
-    console.error(`   支持的预设序号: 1 - ${Object.keys(FONT_PRESETS).length}`);
-    console.error(`   支持的预设名称: ${Object.keys(FONT_PRESETS).join(', ')}`);
-    console.error(`   支持的Hex代码: 例如 #ffffff, #1a1a2e, #ff69b4, #00e5ff (或不带#如 1a1a2e)`);
-    console.error(`   提示: 可使用 node core/theme_engine.js --list-font-colors 查看所有预设详情。`);
-    return false;
-  }
-  const slotsConfig = loadSlotsConfig();
-  slotsConfig.fontColor = resolved;
-  saveSlotsConfig(slotsConfig);
-
-  console.log(`[1/3] 已选定字体颜色: 【${resolved.name}】 (${resolved.primary})`);
-  console.log(`      ${resolved.desc}`);
-
-  console.log(`[2/3] 重新编译并输出 custom_theme.css...`);
-  const css = generateMasterCss(slotsConfig);
-  fs.writeFileSync(customCssPath, css, 'utf-8');
-  try { fs.writeFileSync(path.join(wallpapersDir, 'custom_theme.css'), css, 'utf-8'); } catch(e) {}
-  console.log(`✓ custom_theme.css 已更新 (${(css.length / 1024 / 1024).toFixed(2)} MB)`);
-
-  console.log(`[3/3] 触发界面热重载与实时生效...`);
-  const reloadPromise = await triggerLiveHotReload(css, slotsConfig);
-  console.log(`✨ 字体颜色切换完成！已在应用内实时生效。`);
-  return reloadPromise;
-}
-
-function listFontPresets() {
-  const config = loadSlotsConfig();
-  const current = resolveFontColor(config.fontColor);
-  console.log('====================================================================');
-  console.log('   🎨 Antigravity 字体颜色与高对比预设列表');
-  console.log('====================================================================\n');
-  console.log(`当前激活字体颜色: 【${current.name}】 (${current.primary})\n`);
-  
-  console.log('序号 | 预设名称                 | 主色调   | 轮廓发光       | 适用壁纸场景');
-  console.log('-----+--------------------------+----------+----------------+------------------------------------');
-  let idx = 1;
-  for (const [key, preset] of Object.entries(FONT_PRESETS)) {
-    const isCurrent = (current.id === preset.id) ? ' 👉 [当前]' : '';
-    const nameStr = (preset.name + isCurrent).padEnd(24);
-    const colorStr = preset.primary.padEnd(8);
-    const outlineStr = preset.isDarkText ? '高亮白光轮廓' : '深邃暗影轮廓';
-    console.log(`  ${idx}  | ${nameStr} | ${colorStr} | ${outlineStr} | ${preset.desc}`);
-    idx++;
-  }
-  console.log('\n💡 支持自定义颜色: 可直接输入任意 Hex 颜色值 (例如: #ffffff, #1a1a2e, #ff69b4, #00e5ff)');
-  console.log('   CLI 用法: node core/theme_engine.js --set-font-color <预设名/序号/Hex>');
-  console.log('   批处理用法: dev\\bin\\swap_wallpaper.bat --font <预设名/序号/Hex>\n');
-  return FONT_PRESETS;
-}
-
 function listSlotsStatus() {
   const config = loadSlotsConfig();
   if (config && config.isOriginal) {
@@ -4741,23 +3052,26 @@ function listSlotsStatus() {
     console.log('=======================================================');
     return;
   }
-  const font = resolveFontColor(config.fontColor);
   console.log('=======================================================');
   console.log('   🌸 Antigravity 壁纸槽位状态一览');
   console.log('=======================================================');
   console.log('');
-  console.log(`🎨 当前字体颜色: 【${font.name}】 (${font.primary}) [${font.desc}]`);
-  console.log('');
-  for (const [key, item] of Object.entries(config)) {
-    if (key === 'fontColor' || !item || typeof item !== 'object' || !item.file) continue;
+  for (const [key, meta] of Object.entries(SLOTS_META)) {
+    const item = config[key];
+    if (!item || item.type === 'none' || !item.file) {
+      console.log(`槽位 [${key.padEnd(8)}] (${meta.desc}):`);
+      console.log(`   类型: 🛡️ [官方原版默认]`);
+      console.log(`   🎯 位置: ${getSlotPosition(config, key)}`);
+      console.log('');
+      continue;
+    }
     const isVid = item.type === 'video';
     const typeLabel = isVid ? '🎬 [动态视频]' : '🖼️ [静态壁纸]';
     const filePath = path.join(wallpapersDir, item.file);
     const exists = fs.existsSync(filePath);
     const size = exists ? (fs.statSync(filePath).size / 1024 / 1024).toFixed(2) + ' MB' : '未找到文件';
     const pos = getSlotPosition(config, key);
-    const desc = item.desc || (SLOTS_META[key] ? SLOTS_META[key].desc : key);
-    console.log(`槽位 [${key.padEnd(8)}] (${desc}):`);
+    console.log(`槽位 [${key.padEnd(8)}] (${meta.desc}):`);
     console.log(`   类型: ${typeLabel}`);
     console.log(`   🎯 位置: ${pos}`);
     console.log(`   文件: ${item.file} (${size})`);
@@ -4776,9 +3090,9 @@ async function swapWallpaperFromWE(idOrIndex, slotInput) {
     return false;
   }
 
-  const slotKey = SLOT_ALIASES[slotInput ? slotInput.toLowerCase() : ''];
-  if (!slotKey) {
-    console.error(`❌ 未知槽位: "${slotInput}"。支持的槽位为: 左, 中, 右, 下, 设置`);
+  const slotKey = SLOT_ALIASES[normalizeSlotInput(slotInput)];
+  if (!slotKey || !SLOTS_META[slotKey]) {
+    console.error(`❌ 未知槽位: "${formatSlotDisplay(slotInput)}"。支持的槽位为: 左, 下, 设置 (left, bottom, settings)`);
     return false;
   }
 
@@ -5049,13 +3363,13 @@ function savePreset(presetName, description, options = {}) {
     totalSizeFormatted: (totalBytes / 1024 / 1024).toFixed(2) + ' MB'
   };
 
+  delete archivedConfig.fontColor;
   fs.writeFileSync(path.join(targetDir, 'preset.json'), JSON.stringify(presetMeta, null, 2), 'utf8');
   fs.writeFileSync(path.join(targetDir, 'slots_config.json'), JSON.stringify(archivedConfig, null, 2), 'utf8');
 
   console.log(`✓ 预设【${cleanName}】已安全归档并保存成功！`);
   console.log(`   📁 存放目录: ${targetDir}`);
   console.log(`   📦 归档素材: ${archivedManifest.length} 个文件 (共 ${presetMeta.totalSizeFormatted})`);
-  console.log(`   🎨 字体配色: ${archivedConfig.fontColor?.name || archivedConfig.fontColor?.id || '默认'}`);
   console.log('   🎯 槽位布局:');
   for (const [key, slot] of Object.entries(archivedConfig)) {
     if (key === 'fontColor' || !slot || typeof slot !== 'object') continue;
@@ -5147,7 +3461,7 @@ function formatPresetTable(presets) {
     '========================================================================================================================',
     `  📦 Antigravity 已保存壁纸预设列表 (共 ${presets.length} 个预设)`,
     '========================================================================================================================',
-    '序号  预设名称             保存时间             素材大小   字体配色            各槽位配置摘要',
+    '序号  预设名称             保存时间             素材大小   各槽位配置摘要',
     '------------------------------------------------------------------------------------------------------------------------'
   ];
 
@@ -5156,7 +3470,6 @@ function formatPresetTable(presets) {
     const name = padEndVisual(truncateVisual(p.name, 18), 20);
     const time = padEndVisual(p.createdAtFormatted || '未知时间', 21);
     const size = padEndVisual(p.totalSizeFormatted || (p.totalSize ? (p.totalSize / 1024 / 1024).toFixed(1) + ' MB' : '-'), 11);
-    const font = padEndVisual(truncateVisual(p.slotsConfig?.fontColor?.name || p.slotsConfig?.fontColor?.id || '默认', 18), 20);
 
     const slotSummaries = [];
     for (const [key, slot] of Object.entries(p.slotsConfig || {})) {
@@ -5167,7 +3480,7 @@ function formatPresetTable(presets) {
     }
     const summaryStr = slotSummaries.join(', ');
 
-    lines.push(`${num} ${name} ${time} ${size} ${font} ${summaryStr}`);
+    lines.push(`${num} ${name} ${time} ${size} ${summaryStr}`);
   });
 
   lines.push('------------------------------------------------------------------------------------------------------------------------');
@@ -5268,10 +3581,6 @@ function showPreset(nameOrIndex) {
   console.log(`   描述: ${preset.description || '(无)'}`);
   console.log(`   素材总大小: ${preset.totalSizeFormatted || '未知'}`);
   console.log(`   目录路径: ${presetDir}`);
-  console.log('');
-  const font = preset.slotsConfig?.fontColor;
-  console.log(`   🎨 字体配色: ${font?.name || font?.id || '默认'}`);
-  if (font?.primary) console.log(`      主字色: ${font.primary} | 终端字色: ${font.terminal || font.primary}`);
   console.log('');
   console.log('   🎯 各槽位配置:');
   for (const [key, slot] of Object.entries(preset.slotsConfig || {})) {
@@ -5393,12 +3702,7 @@ async function applyPreset(nameOrIndex) {
       }
     }
   }
-  if (!targetConfig.fontColor) {
-    const current = loadSlotsConfig();
-    if (current && current.fontColor) {
-      targetConfig.fontColor = current.fontColor;
-    }
-  }
+  delete targetConfig.fontColor;
   targetConfig.isOriginal = false;
   saveSlotsConfig(targetConfig);
   console.log(`✓ slots_config.json 已更新为预设配置`);
@@ -5482,11 +3786,8 @@ async function restoreOriginal() {
     isOriginal: true,
     version: Date.now(),
     left: { key: 'left', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-    mid: { key: 'mid', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-    right: { key: 'right', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
     bottom: { key: 'bottom', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-    settings: { key: 'settings', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-    fontColor: FONT_PRESETS['pure-white']
+    settings: { key: 'settings', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' }
   };
   saveSlotsConfig(vanillaConfig);
   console.log('✓ slots_config.json 已重置为官方原版');
@@ -5599,11 +3900,8 @@ async function uninstallCompletely() {
       isOriginal: true,
       version: Date.now(),
       left: { key: 'left', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-      mid: { key: 'mid', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-      right: { key: 'right', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
       bottom: { key: 'bottom', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-      settings: { key: 'settings', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-      fontColor: FONT_PRESETS['pure-white']
+      settings: { key: 'settings', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' }
     };
     saveSlotsConfig(vanillaConfig);
     fs.writeFileSync(customCssPath, '/* Vanilla Mode - No Custom CSS */\n', 'utf8');
@@ -5637,7 +3935,7 @@ function printHelp() {
 
 【壁纸预设管理 (Wallpaper Presets)】:
   node core/theme_engine.js --save-preset <预设名称> [描述]
-      保存当前壁纸全套配置(包括视频/图片素材、槽位坐标及字体配色)为独立预设
+      保存当前壁纸全套配置(包括视频/图片素材及槽位坐标)为独立预设
   node core/theme_engine.js --apply-preset <预设名称或序号>
       一键切换并激活指定预设 (素材自动恢复，并通过 CDP 端口 8314 触发 0.3s 无缝热重载)
   node core/theme_engine.js --list-presets
@@ -5649,17 +3947,16 @@ function printHelp() {
 
 【槽位壁纸更换 (Wallpaper Slots)】:
   node core/theme_engine.js --swap <槽位> <文件路径>
-      更换指定槽位壁纸 (槽位: 左/中/右/下/设置)
+      更换指定槽位壁纸 (槽位: 左/下/设置)
   node core/theme_engine.js --swap-we <壁纸序号/创意工坊ID> <槽位>
       从 Steam Wallpaper Engine 创意工坊选择壁纸应用至指定槽位
   node core/theme_engine.js --list-we [搜索词]
       列出已安装的 Steam Wallpaper Engine 创意工坊壁纸
 
-【位置微调与字体颜色 (Position & Font)】:
+【位置微调与状态 (Position & Status)】:
   node core/theme_engine.js --set-pos <槽位> <X坐标> [Y坐标]
   node core/theme_engine.js --adj-pos <槽位> <方向(up/down/left/right)> [步长%]
-  node core/theme_engine.js --set-font <预设名/序号/Hex>
-  node core/theme_engine.js --list-fonts
+  node core/theme_engine.js --reset-pos [槽位]
   node core/theme_engine.js --status
 ================================================================================
 `);
@@ -5766,7 +4063,7 @@ if (require.main === module) {
       targetSlot = tmp;
     }
     if (!targetId || !targetSlot) {
-      console.error('❌ 参数错误。用法: node core/theme_engine.js --swap-we <壁纸序号/创意工坊ID> <槽位(左/中/右/下/设置)>');
+      console.error('❌ 参数错误。用法: node core/theme_engine.js --swap-we <壁纸序号/创意工坊ID> <槽位(左/下/设置)>');
       process.exit(1);
     } else {
       swapWallpaperFromWE(targetId, targetSlot).then(ok => {
@@ -5787,37 +4084,16 @@ if (require.main === module) {
       }
     }
     listWallpaperEngineWallpapers({ search, sortBy });
-  } else if (
-    args[0] === '--set-font-color' || args[0] === '--set-font' || args[0] === '--font-color' ||
-    args[0] === '--font' || args[0] === '-font' || args[0] === '-f' ||
-    args[0] === 'set-font' || (args[0] === 'font' && args[1])
-  ) {
-    if (!args[1]) {
-      console.error('❌ 请输入字体预设名称、序号或 Hex 颜色代码 (例如: pure-white, obsidian-black, #ffffff, #1a1a2e)');
-      console.error('   提示: 可使用 node core/theme_engine.js --list-font-colors 查看所有可用预设。');
-      process.exit(1);
-    }
-    setFontColor(args[1]).then(ok => {
-      if (!ok) process.exit(1);
-    }).catch(err => {
-      console.error(err);
-      process.exit(1);
-    });
-  } else if (
-    args[0] === '--list-font-colors' || args[0] === '--list-fonts' || args[0] === '--font-colors' ||
-    args[0] === '--fonts' || args[0] === '-fonts' || args[0] === '-list-fonts' ||
-    args[0] === 'list-fonts' || args[0] === 'fonts' || (args[0] === 'font' && !args[1])
-  ) {
-    listFontPresets();
+
   } else if (
     args[0] === '--set-position' || args[0] === '--set-pos' || args[0] === '--pos' ||
     args[0] === 'set-pos' || args[0] === 'set-position' || args[0] === 'pos' ||
     args[0] === 'position' || (args[0] === '--position' && args[1])
   ) {
     if (!args[1] || !args[2]) {
-      console.error('❌ 参数错误。用法: node core/theme_engine.js --set-pos <槽位(左/中/右/下/设置)> <X坐标> [Y坐标]');
+      console.error('❌ 参数错误。用法: node core/theme_engine.js --set-pos <槽位(左/下/设置)> <X坐标> [Y坐标]');
       console.error('   示例: node core/theme_engine.js --set-pos 左 50% 30%');
-      console.error('   示例: node core/theme_engine.js --set-pos 中 "center 20%"');
+      console.error('   示例: node core/theme_engine.js --set-pos 底部 "center 6%"');
       process.exit(1);
     }
     setPosition(args[1], args[2], args[3]).then(res => {
@@ -5866,10 +4142,6 @@ if (require.main === module) {
     });
   } else if (args[0] === '--set-left' && args[1]) {
     swapWallpaper('左', args[1]);
-  } else if (args[0] === '--set-mid' && args[1]) {
-    swapWallpaper('中', args[1]);
-  } else if (args[0] === '--set-right' && args[1]) {
-    swapWallpaper('右', args[1]);
   } else if (args[0] === '--set-bottom' && args[1]) {
     swapWallpaper('下', args[1]);
   } else if (args[0] === '--set-settings' && args[1]) {
@@ -6057,11 +4329,7 @@ module.exports = {
   extractPosterFromVideo,
   getClientVideoScript,
   listSlotsStatus,
-  setFontColor,
-  listFontPresets,
-  resolveFontColor,
-  parseHexColor,
-  adjustBrightness,
+  normalizeSlotInput,
   setPosition,
   adjustPosition,
   resetPosition,
@@ -6082,7 +4350,6 @@ module.exports = {
   padEndVisual,
   truncateVisual,
   printHelp,
-  FONT_PRESETS,
   SLOTS,
   SLOTS_META,
   SLOT_ALIASES,

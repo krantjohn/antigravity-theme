@@ -11,7 +11,15 @@ async function runTests() {
 
   // Test 1: Verify versioned query strings in generated CSS
   console.log('[Test 1] Verifying versioned URLs in generateMasterCss...');
-  const testConfig = themeEngine.loadSlotsConfig();
+  let testConfig = themeEngine.loadSlotsConfig();
+  if (!testConfig || testConfig.isOriginal || !testConfig.left || testConfig.left.type === 'none') {
+    testConfig = {
+      isOriginal: false,
+      left: { key: 'left', file: 'left_wallpaper.jpg', type: 'image', version: Date.now() },
+      bottom: { key: 'bottom', file: 'input_wallpaper.jpg', type: 'image', version: Date.now() },
+      settings: { key: 'settings', file: 'settings_wallpaper.png', type: 'image', version: Date.now() }
+    };
+  }
   const css = themeEngine.generateMasterCss(testConfig);
   assert(css.includes('custom_theme.css') || css.includes('http://127.0.0.1:8315/'), 'CSS must reference media server');
   
@@ -28,7 +36,7 @@ async function runTests() {
   const t0 = Date.now();
   const draftConfig = {
     left: { position: '50% 50%' },
-    mid: { position: '50% 20%' }
+    bottom: { position: '50% 10%' }
   };
   const activeCfg = await themeEngine.batchApplyDraft(draftConfig);
   const elapsed = Date.now() - t0;
@@ -69,6 +77,7 @@ async function runTests() {
   console.log('=======================================================');
   console.log('🎉 ALL SEAMLESS HOT-SWAP & ANTI-GHOSTING TESTS PASSED!');
   console.log('=======================================================');
+  process.exit(0);
 }
 
 runTests().catch(err => {

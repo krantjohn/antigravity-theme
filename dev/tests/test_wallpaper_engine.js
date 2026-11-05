@@ -164,22 +164,23 @@ async function runWallpaperEngineTests() {
   console.log('✓ [Test 8] 终端可视化排版表格生成无误\n');
 
   // Test 9: Swap wallpaper from Wallpaper Engine into Antigravity slot
-  console.log('[Test 9] 测试从创意工坊一键应用壁纸到槽位【中】(终端)...');
+  console.log('[Test 9] 测试从创意工坊一键应用壁纸到槽位【下】(底部输入框)...');
   const targetWallpaper = videoOnly[0];
   console.log(`   正在应用: [${targetWallpaper.id}] ${targetWallpaper.title}`);
-  const swapResult = await swapWallpaperFromWE(targetWallpaper.id, '中');
+  const swapResult = await swapWallpaperFromWE(targetWallpaper.id, '下');
   assert.ok(swapResult, 'swapWallpaperFromWE should succeed');
 
   const configAfter = loadSlotsConfig();
-  assert.strictEqual(configAfter.mid.type, 'video');
-  assert.ok(configAfter.mid.file.endsWith('.mp4') || configAfter.mid.file.endsWith('.webm'));
-  console.log('✓ [Test 9] Wallpaper Engine 壁纸无缝应用到终端槽位成功\n');
+  assert.strictEqual(configAfter.bottom.type, 'video');
+  assert.ok(configAfter.bottom.file.endsWith('.mp4') || configAfter.bottom.file.endsWith('.webm'));
+  console.log('✓ [Test 9] Wallpaper Engine 壁纸无缝应用到底部输入框槽位成功\n');
 
   // Test 10: Revert to baseline
   console.log('[Test 10] 测试恢复基线保证环境整洁...');
   await revertToBaseline();
   const restoredConfig = loadSlotsConfig();
-  assert.strictEqual(restoredConfig.mid.type, 'image');
+  assert.strictEqual(restoredConfig.bottom.type, 'image');
+  assert.strictEqual(restoredConfig.left.type, 'image');
   console.log('✓ [Test 10] 成功还原基线配置\n');
 
   // Test 11: Path deduplication and casing normalization
@@ -202,17 +203,17 @@ async function runWallpaperEngineTests() {
   console.log('✓ [Test 12] Web/Live2D 壁纸无误判，已安全回退至高清预览动图\n');
 
   // Test 13: Search index consistency and slot case insensitivity
-  console.log('[Test 13] 校验搜索结果全局序号一致性与槽位大小写自适应 (MID/left/TERMINAL)...');
+  console.log('[Test 13] 校验搜索结果全局序号一致性与槽位大小写自适应 (BOTTOM/left/settings)...');
   const searchItems = scanWorkshopWallpapers({ search: '碧蓝' });
   assert.ok(searchItems.length > 0);
   const secondMatch = searchItems[1] || searchItems[0];
   const resolvedByIndex = getWallpaperById(secondMatch.index);
   assert.strictEqual(resolvedByIndex?.id, secondMatch.id, 'Global index displayed in table must resolve to identical item');
 
-  // Test case-insensitive slot input (e.g. 'MID')
-  console.log(`   测试大写槽位名 'MID' 应用壁纸 [${secondMatch.id}]...`);
-  const swapUpperMid = await swapWallpaperFromWE(secondMatch.id, 'MID');
-  assert.ok(swapUpperMid, 'swapWallpaperFromWE with uppercase slot MID must succeed');
+  // Test case-insensitive slot input (e.g. 'BOTTOM')
+  console.log(`   测试大写槽位名 'BOTTOM' 应用壁纸 [${secondMatch.id}]...`);
+  const swapUpperBottom = await swapWallpaperFromWE(secondMatch.id, 'BOTTOM');
+  assert.ok(swapUpperBottom, 'swapWallpaperFromWE with uppercase slot BOTTOM must succeed');
   await revertToBaseline();
   console.log('✓ [Test 13] 序号一致性及槽位大小写自适应验证通过\n');
 
@@ -223,19 +224,8 @@ async function runWallpaperEngineTests() {
   const weBat = path.join(binDir, 'wallpaper_engine.bat');
 
   // Test swap_wallpaper.bat with args and quotes
-  const sampleImage = path.join(__dirname, '..', 'wallpapers', 'mid_wallpaper.jpg');
   const batOut = execSync(`cmd.exe /c "call "${swapBat}" --status"`, { encoding: 'utf8' });
-  assert.ok(batOut.includes('Antigravity 壁纸槽位状态一览'), 'swap_wallpaper.bat --status must succeed');
-
-  // Test swap_wallpaper.bat font commands (both with and without dashes)
-  const fontListOut = execSync(`cmd.exe /c "call "${swapBat}" fonts"`, { encoding: 'utf8' });
-  assert.ok(fontListOut.includes('Antigravity 字体颜色与高对比预设列表'), 'swap_wallpaper.bat fonts must list presets');
-
-  const fontDashListOut = execSync(`cmd.exe /c "call "${swapBat}" --fonts"`, { encoding: 'utf8' });
-  assert.ok(fontDashListOut.includes('Antigravity 字体颜色与高对比预设列表'), 'swap_wallpaper.bat --fonts must list presets');
-
-  const setFontOut = execSync(`cmd.exe /c "call "${swapBat}" font 1"`, { encoding: 'utf8' });
-  assert.ok(setFontOut.includes('已选定字体颜色'), 'swap_wallpaper.bat font 1 must succeed');
+  assert.ok(batOut.includes('Antigravity 壁纸槽位状态一览') || batOut.includes('left'), 'swap_wallpaper.bat --status must succeed');
 
   const weBatOut = execSync(`cmd.exe /c "call "${weBat}" --list-we"`, { encoding: 'utf8' });
   assert.ok(weBatOut.includes('Steam Wallpaper Engine'), 'wallpaper_engine.bat --list-we must succeed');

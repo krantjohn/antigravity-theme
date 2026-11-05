@@ -4,22 +4,6 @@ cd /d "%~dp0..\.."
 
 if "%~1"=="" goto MENU
 set "arg1=%~1"
-if /i "%arg1%"=="font" (
-    if "%~2"=="" (
-        goto FONT_MENU
-    ) else (
-        node "%~dp0..\..\core\theme_engine.js" --set-font-color %2 %3 %4
-        exit /b %ERRORLEVEL%
-    )
-)
-if /i "%arg1%"=="fonts" (
-    node "%~dp0..\..\core\theme_engine.js" --list-font-colors
-    exit /b %ERRORLEVEL%
-)
-if /i "%arg1%"=="set-font" (
-    node "%~dp0..\..\core\theme_engine.js" --set-font-color %2 %3 %4
-    exit /b %ERRORLEVEL%
-)
 if /i "%arg1%"=="pos" (
     if "%~2"=="" (
         goto POS_MENU
@@ -133,24 +117,22 @@ echo   [1] 更换本地壁纸 (输入路径或直接拖入视频/图片)
 echo   [2] 浏览 Steam Wallpaper Engine 创意工坊壁纸并选择 
 echo   [3] 搜索 Steam Wallpaper Engine 创意工坊壁纸 
 echo   [4] 调节各个位置壁纸的位置 (上下/左右微调与居中复位)
-echo   [5] 自定义字体颜色与预设 (解决亮/暗壁纸字体不清问题)
-echo   [6] 预设管理中心 (保存当前壁纸全套配置 / 一键切换预设)
-echo   [7] 查看当前各个槽位与字体状态 
-echo   [8] 一键恢复官方原版 (纯净无壁纸，极致流畅，自动备份当前配置)
-echo   [9] 退出 
+echo   [5] 预设管理中心 (保存当前壁纸全套配置 / 一键切换预设)
+echo   [6] 查看当前各个槽位状态 
+echo   [7] 一键恢复官方原版 (纯净无壁纸，极致流畅，自动备份当前配置)
+echo   [8] 退出 
 echo.
 set "choice="
-set /p "choice=请选择操作 (1-9) [默认 1]: "
+set /p "choice=请选择操作 (1-8) [默认 1]: "
 if not defined choice set "choice=1"
 if "%choice%"=="1" goto LOCAL_SWAP
 if "%choice%"=="2" goto WE_LIST
 if "%choice%"=="3" goto WE_SEARCH
 if "%choice%"=="4" goto POS_MENU
-if "%choice%"=="5" goto FONT_MENU
-if "%choice%"=="6" goto PRESET_MENU
-if "%choice%"=="7" goto VIEW_STATUS
-if "%choice%"=="8" goto RESTORE_ORIGINAL_PROMPT
-if "%choice%"=="9" goto EXIT
+if "%choice%"=="5" goto PRESET_MENU
+if "%choice%"=="6" goto VIEW_STATUS
+if "%choice%"=="7" goto RESTORE_ORIGINAL_PROMPT
+if "%choice%"=="8" goto EXIT
 goto MENU
 
 :LOCAL_SWAP
@@ -158,11 +140,11 @@ echo.
 echo -------------------------------------------------------
 echo   [1] 更换本地壁纸 
 echo -------------------------------------------------------
-echo 可用槽位：左 (主对话底图) / 中 (活跃终端) / 右 (独立抽屉) / 下 (底部输入框) / 设置 
+echo 可用槽位：左 (主对话底图) / 下 (底部输入框) / 设置 
 echo 支持格式：.mp4, .webm, .ogg, .jpg, .png, .gif, .webp
 echo.
 set "slot="
-set /p "slot=请输入要更换的槽位 (左/中/右/下/设置) [默认 左]: "
+set /p "slot=请输入要更换的槽位 (左/下/设置) [默认 左]: "
 if not defined slot set "slot=左"
 set "slot=%slot:"=%"
 set "imgpath="
@@ -194,7 +176,7 @@ if not defined we_id goto MENU
 set "we_id=%we_id:"=%"
 if "%we_id%"=="0" goto MENU
 set "slot="
-set /p "slot=请输入要更换的槽位 (左/中/右/下/设置) [默认 左]: "
+set /p "slot=请输入要更换的槽位 (左/下/设置) [默认 左]: "
 if not defined slot set "slot=左"
 set "slot=%slot:"=%"
 echo.
@@ -221,7 +203,7 @@ if not defined we_id goto MENU
 set "we_id=%we_id:"=%"
 if "%we_id%"=="0" goto MENU
 set "slot="
-set /p "slot=请输入要更换的槽位 (左/中/右/下/设置) [默认 左]: "
+set /p "slot=请输入要更换的槽位 (左/下/设置) [默认 左]: "
 if not defined slot set "slot=左"
 set "slot=%slot:"=%"
 echo.
@@ -236,12 +218,12 @@ echo =======================================================
 echo    🎯 [4] 调节各个位置壁纸的位置 (上下/左右微调与居中复位)
 echo =======================================================
 echo.
-echo 可用槽位：左 (主对话底图) / 中 (活跃终端) / 右 (独立抽屉) / 下 (底部输入框) / 设置
+echo 可用槽位：左 (主对话底图) / 下 (底部输入框) / 设置
 echo.
 node "%~dp0..\..\core\theme_engine.js" --status
 echo.
 set "pslot="
-set /p "pslot=请输入要调节位置的槽位 (左/中/右/下/设置，输入 0 返回菜单) [默认 左]: "
+set /p "pslot=请输入要调节位置的槽位 (左/下/设置，输入 0 返回菜单) [默认 左]: "
 if not defined pslot set "pslot=左"
 set "pslot=%pslot:"=%"
 if "%pslot%"=="0" goto MENU
@@ -309,25 +291,6 @@ goto POS_LOOP
 :POS_RESET
 node "%~dp0..\..\core\theme_engine.js" --reset-pos "%pslot%"
 goto POS_LOOP
-
-:FONT_MENU
-echo.
-echo -------------------------------------------------------
-echo   [5] 自定义字体颜色 (适配亮/暗/二次元壁纸，字迹极清)
-echo -------------------------------------------------------
-echo.
-node "%~dp0..\..\core\theme_engine.js" --list-font-colors
-echo.
-set "fchoice="
-set /p "fchoice=请输入预设序号(1-6)、预设名或自定义Hex代码 (例如 #ffffff / #1a1a2e，输入 0 返回): "
-if not defined fchoice goto MENU
-set "fchoice=%fchoice:"=%"
-if "%fchoice%"=="0" goto MENU
-echo.
-node "%~dp0..\..\core\theme_engine.js" --set-font-color "%fchoice%"
-echo.
-pause
-goto MENU
 
 :PRESET_MENU
 call "%~dp0preset_manager.bat"

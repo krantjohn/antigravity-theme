@@ -324,8 +324,7 @@ async function fetchStatus() {
 
       renderHeaderStatus(data);
       renderSlotInspector();
-      renderFontPresets();
-      renderMockupPreview();
+            renderMockupPreview();
       renderPresetsList();
       renderQuickPresetSelect();
       renderWeStatus(data.weCount);
@@ -476,7 +475,7 @@ function parseCoord(val, defaultVal) {
 function renderMockupPreview() {
   if (!agMockup) return;
 
-  const slotsToRender = ['left', 'mid', 'right', 'bottom', 'settings'];
+  const slotsToRender = ['left', 'bottom', 'settings'];
 
   slotsToRender.forEach(slotKey => {
     const videoEl = document.getElementById(`mock-video-${slotKey}`);
@@ -574,29 +573,7 @@ function renderMockupPreview() {
     }
   });
 
-  // Apply typography contrast & Rec. 601 dynamic shadows to the mockup
-  let fontConf = (state.draftConfig && state.draftConfig.fontColor) || (state.slotsConfig && state.slotsConfig.fontColor) || { primary: '#ffffff' };
-  let primaryHex = typeof fontConf === 'string' ? fontConf : (fontConf.primary || '#ffffff');
-  
-  const lum = calculateLuminance(primaryHex);
-  let textShadow = '';
-  let terminalColor = primaryHex;
-  let terminalShadow = '';
-
-  if (lum < 128) {
-    textShadow = '0 0 2px #fff, 0 1px 3px rgba(255, 255, 255, 0.95)';
-    terminalColor = '#0f172a';
-    terminalShadow = '0 0 2px #fff, 0 1px 2px rgba(255, 255, 255, 0.98)';
-  } else {
-    textShadow = '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)';
-    terminalColor = '#ffffff';
-    terminalShadow = '0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)';
-  }
-
-  agMockup.style.setProperty('--mock-font-primary', primaryHex);
-  agMockup.style.setProperty('--mock-font-shadow', textShadow);
-  agMockup.style.setProperty('--mock-font-terminal', terminalColor);
-  agMockup.style.setProperty('--mock-font-terminal-shadow', terminalShadow);
+  // Typography overrides completely purged for 100% stock vanilla appearance
 
   // Apply Glassmorphism & Darkness CSS variables
   const currentBlur = state.draftConfig.glassBlur || state.glassBlur || 16;
@@ -606,7 +583,7 @@ function renderMockupPreview() {
 
   // Update view mode classes on agMockup
   agMockup.classList.toggle('mode-compact', state.viewMode === 'compact');
-  ['left', 'mid', 'right', 'bottom', 'settings'].forEach(slot => {
+  ['left', 'bottom', 'settings'].forEach(slot => {
     agMockup.classList.toggle(`mode-focus-${slot}`, state.viewMode === 'focus' && state.activeSlot === slot);
   });
   agMockup.classList.toggle('mode-split', state.rightPaneMode === 'split');
@@ -651,8 +628,6 @@ let dragMoved = false;
 function initMockupInteractions() {
   const slotChineseMap = {
     left: '主对话 (左)',
-    mid: '活跃终端 (中)',
-    right: '独立侧栏 (右)',
     bottom: '提问输入框 (底)',
     settings: '设置弹窗'
   };
@@ -2640,8 +2615,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initPreviewToolbar();
   initResponsiveAutoFit();
   initPositionControls();
-  initFontControls();
-  initWeQuickPicker();
+    initWeQuickPicker();
   setupEventListeners();
 
   fetchStatus();

@@ -110,9 +110,8 @@ async function runTests() {
     const draftPayload = {
       draftConfig: {
         left: { position: 'center center' },
-        mid: { position: 'center 20%' }
-      },
-      fontColor: 'pure-white'
+        bottom: { position: 'center 10%' }
+      }
     };
     const draftRes = await post('/api/theme/apply-draft', draftPayload);
     if (draftRes.status === 200 && draftRes.body.success) {

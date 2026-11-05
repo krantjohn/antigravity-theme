@@ -241,12 +241,15 @@ if (fs.existsSync(repoPreloadPath)) {
   }
 }
 
-// Clean previous version if exists
-if (preloadContent.includes('// ================= Antigravity Master Theme Auto-Loader =================')) {
-  preloadContent = preloadContent.replace(/\/\/ ================= Antigravity Master Theme Auto-Loader =================[\s\S]*?\/\/ =========================================================================\n?/g, '');
+// Clean previous version if exists (safe deterministic index truncation)
+const marker1 = "// ================= Antigravity Master Theme Auto-Loader =================";
+const marker2 = "// ================= Antigravity Master Theme & Dynamic Video Auto-Loader =================";
+let oldIdx = preloadContent.indexOf(marker1);
+if (oldIdx === -1) {
+  oldIdx = preloadContent.indexOf(marker2);
 }
-if (preloadContent.includes('// ================= Antigravity Master Theme & Dynamic Video Auto-Loader =================')) {
-  preloadContent = preloadContent.replace(/\/\/ ================= Antigravity Master Theme & Dynamic Video Auto-Loader =================[\s\S]*?\/\/ =========================================================================\n?/g, '');
+if (oldIdx !== -1) {
+  preloadContent = preloadContent.substring(0, oldIdx).trimEnd() + '\n';
 }
 
 preloadContent += '\n' + themeInjectionCode;

@@ -116,7 +116,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 // ================= Antigravity Master Theme & Dynamic Video Auto-Loader =================
 (function() {
   const SERVER_URL = 'http://127.0.0.1:8315';
-  let cachedConfig = {"left":{"key":"left","file":"left_wallpaper.mp4","type":"video","version":1790842917156,"position":"center center","desc":"AI主对话界面 / 全局底图","poster":"left_poster.jpg"},"mid":{"key":"mid","file":"mid_wallpaper.jpg","type":"image","position":"center 20%","desc":"终端界面 (活跃终端壁纸)","version":1790842917156},"right":{"key":"right","file":"right_wallpaper.jpg","type":"image","position":"center 20%","desc":"最右侧界面 (独立终端/侧栏壁纸)","version":1790842917156},"bottom":{"key":"bottom","file":"input_wallpaper.mp4","type":"video","version":1790842917156,"position":"50% 36%","desc":"底部输入框","poster":"input_poster.jpg"},"settings":{"key":"settings","file":"settings_wallpaper.png","type":"image","position":"center 65%","desc":"设置界面","version":1790842917156},"fontColor":{"id":"pure-white","name":"纯白高对比 (Pure White)","primary":"#ffffff","secondary":"#f1f5f9","muted":"#94a3b8","terminal":"#ffffff","shadow":"0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)","terminalShadow":"0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.95)","isDarkText":false,"desc":"适合绝大多数暗色、炫彩或复杂壁纸，纯白字体配深色轮廓，极致清晰","aliases":["1","white","pure-white","纯白","白","高对比白"]},"isOriginal":false};
+  let cachedConfig = {"left":{"key":"left","file":"left_wallpaper.mp4","type":"video","version":1790842917156,"position":"center center","desc":"AI主对话界面 / 全局底图","poster":"left_poster.jpg"},"bottom":{"key":"bottom","file":"input_wallpaper.mp4","type":"video","version":1790842917156,"position":"50% 36%","desc":"底部输入框","poster":"input_poster.jpg"},"settings":{"key":"settings","file":"settings_wallpaper.png","type":"image","position":"center 65%","desc":"设置界面","version":1790842917156},"isOriginal":false};
   let _fs, _path, _os, _antigravityDir, _wallpapersDir;
   try {
     _fs = require('fs');
@@ -871,19 +871,8 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       }
     }
 
-    // [中/右/下/设置] 容器槽位
+    // [下/设置] 容器槽位
     const slotSelectors = {
-      'mid': [
-        '.terminal.xterm',
-        'div.terminal-wrapper',
-        '[data-panel="terminal"]'
-      ],
-      'right': [
-        '[aria-label="Auxiliary Pane"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full',
-        'div[role="region"][aria-label="Terminal"] div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full',
-        'div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background',
-        '[class*="terminal-drawer"]'
-      ],
       'bottom': [
         '[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
         '[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
@@ -899,9 +888,6 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     };
 
     const slotPositions = {
-      left: (config.left && config.left.position) || (config.positions && config.positions.left) || '0% 45%',
-      mid: (config.mid && config.mid.position) || (config.positions && config.positions.mid) || 'center center',
-      right: (config.right && config.right.position) || (config.positions && config.positions.right) || 'center center',
       bottom: (config.bottom && config.bottom.position) || (config.positions && config.positions.bottom) || 'center center',
       settings: (config.settings && config.settings.position) || (config.positions && config.positions.settings) || 'center center'
     };
@@ -948,40 +934,6 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           try {
             const el = document.querySelector(selectors[i]);
             if (el && el !== document.body && el !== document.documentElement) {
-              if (slotKey === 'mid') {
-                // 严格限定只挂载在终端（.terminal.xterm），绝不挂载到会话抽屉
-                if (!el.classList.contains('terminal') && !el.classList.contains('xterm') && !el.querySelector('.terminal, .xterm')) {
-                  continue;
-                }
-                if (el.closest('[class*="terminal-drawer"]') || 
-                    (el.classList.contains('overflow-y-auto') && el.classList.contains('bg-background')) ||
-                    el.closest('div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background')) {
-                  continue;
-                }
-              }
-              if (slotKey === 'right') {
-                // 严格判定排除终端容器
-                if (el.classList.contains('terminal') || el.classList.contains('xterm') || el.querySelector('.terminal, .xterm')) {
-                  continue;
-                }
-                // 要求抽屉已展开可见，避免在抽屉收起时无效挂载
-                if (el.style.display === 'none' || el.style.visibility === 'hidden' || el.hasAttribute('hidden') || (el.closest && el.closest('[data-aux-pane-open="false"], [data-state="closed"]'))) {
-                  continue;
-                }
-                if (el.querySelector('[id="antigravity.agentSidePanelInputBox"]') || el.querySelector('#antigravity\\.agentSidePanelInputBox')) {
-                  continue;
-                }
-                // 防右壁纸污染：整个辅助大容器（Overview总览/时间线/工件预览/代码审查等）必须完全透明，绝不可被右壁纸覆盖！
-                if (el.getAttribute('aria-label') === 'Auxiliary Pane' || 
-                    el.getAttribute('aria-label') === 'Overview' ||
-                    el.getAttribute('aria-label') === 'Review' ||
-                    el.closest('[aria-label="Overview"]') ||
-                    el.closest('[aria-label="Review"]') ||
-                    el.querySelector('[aria-label="Overview"]') ||
-                    el.querySelector('[aria-label="Review"]')) {
-                  continue;
-                }
-              }
               targetContainer = el;
               break;
             }
@@ -1310,107 +1262,24 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       window.__antigravityVideoObserver = null;
     }
 
-    let debounceTimer = null;
-    const scheduledApply = function(mutations) {
-      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) {
-        return;
-      }
-      if (window.__isDraggingSplit || window.__isResizing || window.__isNavigating) {
-        if (window.__isNavigating) {
-          if (typeof navThrottleTimer !== 'undefined' && navThrottleTimer) clearTimeout(navThrottleTimer);
-          if (typeof resumeVideosAfterNav === 'function') {
-            navThrottleTimer = setTimeout(function() {
-              navThrottleTimer = null;
-              resumeVideosAfterNav();
-            }, 120);
+    const onShallowMutation = function(mutations) {
+      if (window.__antigravityConfig && window.__antigravityConfig.isOriginal) return;
+      for (let i = 0; i < mutations.length; i++) {
+        const added = mutations[i].addedNodes;
+        for (let j = 0; j < added.length; j++) {
+          const el = added[j];
+          if (el.nodeType === 1 && (el.getAttribute('role') === 'dialog' || (el.querySelector && el.querySelector('[role="dialog"]')))) {
+            applyVideos();
+            return;
           }
         }
-        return;
       }
-
-      if (mutations && mutations.length > 0) {
-        let isRelevant = false;
-        for (let i = 0; i < mutations.length; i++) {
-          const m = mutations[i];
-          const target = m.target;
-          if (!target || target.nodeType === 3) continue;
-          // 深度性能过滤：彻底忽略用户打字、光标移动、代码块渲染与AI流式输出DOM扰动
-          if (target.id === 'antigravity.agentSidePanelInputBox' || target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable) continue;
-
-          // 快速命中跳过：消息正文、代码块、markdown、聊天流元素直接跳过，消除昂贵的 closest 向上递归
-          const cls = target.className;
-          if (typeof cls === 'string' && (cls.includes('prose') || cls.includes('markdown') || cls.includes('message') || cls.includes('code-block') || cls.includes('monaco') || cls.includes('group/user-input-step'))) {
-            continue;
-          }
-
-          if (target.closest && (
-              target.closest('input, textarea, [contenteditable="true"], [role="textbox"], form, .markdown, [data-testid*="message"], [data-role="assistant"], pre, code, .prose, .monaco-editor, .xterm, [class*="message"], [role="article"]') ||
-              target.closest('#antigravity\.agentSidePanelInputBox, [id="antigravity.agentSidePanelInputBox"]')
-          )) {
-            continue;
-          }
-          if (m.type === 'attributes') {
-            const attr = m.attributeName;
-            if (attr === 'data-aux-pane-open' || attr === 'data-state' || attr === 'aria-expanded' || attr === 'hidden') {
-              isRelevant = true;
-              break;
-            }
-          } else if (m.type === 'childList') {
-            for (let j = 0; j < m.addedNodes.length; j++) {
-              const node = m.addedNodes[j];
-              if (node.nodeType === 1) {
-                const role = node.getAttribute ? node.getAttribute('role') : null;
-                const ds = node.getAttribute ? node.getAttribute('data-state') : null;
-                if (node.id === 'antigravity.agentSidePanelInputBox' || 
-                    (node.id && node.id.includes('agentSidePanelInputBox'))) {
-                  isRelevant = true;
-                  break;
-                }
-                if (role === 'dialog' || ds === 'open' || 
-                  (node.classList && (node.classList.contains('terminal') || node.classList.contains('xterm')))) {
-                  isRelevant = true;
-                  break;
-                }
-              }
-            }
-            if (isRelevant) break;
-            for (let j = 0; j < m.removedNodes.length; j++) {
-              const node = m.removedNodes[j];
-              if (node.nodeType === 1) {
-                if (node.id === 'antigravity-video-left' || (node.classList && (node.classList.contains('antigravity-slot-video') || node.classList.contains('terminal') || node.classList.contains('xterm'))) || (node.getAttribute && node.getAttribute('role') === 'dialog')) {
-                  isRelevant = true;
-                  break;
-                }
-              }
-            }
-            if (isRelevant) break;
-          }
-        }
-        if (!isRelevant) return;
-      }
-
-      if (debounceTimer) return;
-      debounceTimer = setTimeout(function() {
-        debounceTimer = null;
-        const hasDialog = !!document.querySelector('[role="dialog"], .settings-modal-container');
-        if (hasDialog) {
-          const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
-          for (let i = 0; i < allVids.length; i++) {
-            if (!allVids[i].paused) allVids[i].pause();
-          }
-          return;
-        }
-        applyVideos();
-      }, 60);
     };
 
-    window.__antigravityVideoObserver = new MutationObserver(scheduledApply);
-    window.__antigravityVideoObserver.observe(document.body || document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['data-aux-pane-open', 'data-state', 'aria-expanded', 'hidden']
-    });
+    window.__antigravityVideoObserver = new MutationObserver(onShallowMutation);
+    if (document.body) {
+      window.__antigravityVideoObserver.observe(document.body, { childList: true, subtree: false });
+    }
 
     // 极致原生 60FPS/120FPS 性能：原生窗口拖拽缩放与分栏调整协调器 (零阻塞、零重绘重排雪崩)
     let resizeThrottleTimer = null;
@@ -1618,7 +1487,6 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       window.addEventListener('keydown', onNavKey, true);
     } catch(e) {}
 
-    // 定期与流媒体配置对齐同步 (从 2 秒降至 10 秒，仅对比 1KB JSON，零冗余开销)
     if (window.__antigravitySyncInterval) {
       clearInterval(window.__antigravitySyncInterval);
     }
@@ -1628,7 +1496,6 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     if (window.__antigravityInterval) {
       clearInterval(window.__antigravityInterval);
     }
-    window.__antigravitySyncInterval = setInterval(syncAndApply, 10000);
   };
 
   let engineStarted = false;
@@ -1664,55 +1531,8 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 })();
 
 // =========================================================================
-// 📺 Retro CRT Television Power-Off Screen Effect
+// 📺 Retro CRT Television Power-Off Screen Effect (Clean No-Op for Stock Performance)
 // =========================================================================
-(function() {
-  function playCrtAudio() {
-    // 纯静音模式：100% 保持完全静音，彻底移除断电与开机音效
-    return;
-  }
-
-  function injectCrtStyles() {
-    try {
-      if (document.getElementById('antigravity-crt-style')) return;
-      const style = document.createElement('style');
-      style.id = 'antigravity-crt-style';
-      style.textContent = `
-        @keyframes crtTurnOffScreen {
-          0% { transform: scale(1, 1); filter: brightness(1) contrast(1); opacity: 1; }
-          14% { transform: scale(1, 1.025) skewX(0.4deg); filter: brightness(2.5) contrast(1.8) saturate(0.2); opacity: 1; }
-          35% { transform: scale(1, 0.0035); filter: brightness(5) contrast(2.5); background-color: #ffffff !important; box-shadow: 0 0 30px #ffffff, 0 0 70px #38bdf8, 0 0 120px #0284c7; opacity: 1; }
-          65% { transform: scale(0.35, 0.0035); filter: brightness(5.2); background-color: #ffffff !important; box-shadow: 0 0 30px #ffffff, 0 0 80px #38bdf8; opacity: 1; }
-          80% { transform: scale(0.004, 0.0035); filter: brightness(6); background-color: #ffffff !important; box-shadow: 0 0 25px #ffffff, 0 0 50px #38bdf8; opacity: 1; }
-          92% { transform: scale(0.002, 0.002); filter: brightness(2.2) blur(3px); background-color: #e0f2fe !important; opacity: 0.75; }
-          100% { transform: scale(0, 0); filter: brightness(0) blur(8px); opacity: 0; }
-        }
-        .crt-shutting-down {
-          animation: crtTurnOffScreen 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
-          transform-origin: 50% 50% !important;
-          will-change: transform, filter, opacity !important;
-        }
-        body.crt-active {
-          background-color: #000000 !important;
-        }
-      `;
-      (document.head || document.documentElement).appendChild(style);
-    } catch (_) {}
-  }
-
-  window.__playCrtShutdown = function() {
-    return new Promise((resolve) => {
-      try {
-        injectCrtStyles();
-        playCrtAudio();
-        document.body.classList.add('crt-active');
-        document.body.classList.add('crt-shutting-down');
-        setTimeout(() => {
-          resolve();
-        }, 650);
-      } catch (_) {
-        resolve();
-      }
-    });
-  };
-})();
+window.__playCrtShutdown = function() {
+  return Promise.resolve();
+};

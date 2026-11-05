@@ -62,7 +62,7 @@ if not defined we_id goto MENU
 set "we_id=%we_id:"=%"
 if "%we_id%"=="0" goto MENU
 set "slot="
-set /p "slot=请输入要应用的槽位 (左/中/右/下/设置) [默认 左]: "
+set /p "slot=请输入要应用的槽位 (左/下/设置) [默认 左]: "
 if not defined slot set "slot=左"
 set "slot=%slot:"=%"
 echo.

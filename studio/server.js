@@ -298,8 +298,7 @@ const server = http.createServer(async (req, res) => {
       const isAntigravityRunning = await checkAntigravityProcess();
       const slotsConfig = themeEngine.loadSlotsConfig();
       const presets = themeEngine.listPresets();
-      const fontPresets = themeEngine.FONT_PRESETS;
-
+      
       const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
       const defaultResDir = path.join(localAppData, 'Programs', 'antigravity', 'resources');
       const resDir = process.env.ANTIGRAVITY_RESOURCES || defaultResDir;
@@ -323,8 +322,7 @@ const server = http.createServer(async (req, res) => {
         isAntigravityRunning,
         slotsConfig,
         presets,
-        fontPresets,
-        hasBackup,
+                hasBackup,
         backupSize,
         weCount,
         slotsMeta: themeEngine.SLOTS_META,
@@ -470,6 +468,10 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await parseBody(req);
       const { slot, filePath } = body;
+      const normalizedSlot = themeEngine.normalizeSlotInput ? themeEngine.normalizeSlotInput(slot) : slot;
+      if (!normalizedSlot || !['left', 'bottom', 'settings'].includes(normalizedSlot)) {
+        return sendJson(res, 400, { success: false, error: "仅支持 left, bottom, settings 三个槽位" });
+      }
       if (!slot || !filePath) {
         return sendJson(res, 400, { success: false, error: 'slot and filePath are required' });
       }
@@ -491,6 +493,10 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await parseBody(req);
       const { slot, x, y } = body;
+      const normalizedSlot = themeEngine.normalizeSlotInput ? themeEngine.normalizeSlotInput(slot) : slot;
+      if (!normalizedSlot || !['left', 'bottom', 'settings'].includes(normalizedSlot)) {
+        return sendJson(res, 400, { success: false, error: "仅支持 left, bottom, settings 三个槽位" });
+      }
       if (!slot || x === undefined) {
         return sendJson(res, 400, { success: false, error: 'slot and x coordinate are required' });
       }
@@ -535,34 +541,6 @@ const server = http.createServer(async (req, res) => {
       const ok = await themeEngine.revertToBaseline();
       const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
       return sendJson(res, 200, { success: isOk });
-    } catch (err) {
-      return sendJson(res, 500, { success: false, error: err.message });
-    }
-  }
-
-  // 4. POST /api/set-font - Update font color
-  if (req.method === 'POST' && pathname === '/api/set-font') {
-    try {
-      const body = await parseBody(req);
-      const { color } = body;
-      if (!color) {
-        return sendJson(res, 400, { success: false, error: 'color is required' });
-      }
-
-      const ok = await themeEngine.setFontColor(color);
-      const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
-      return sendJson(res, 200, { success: isOk, color });
-    } catch (err) {
-      return sendJson(res, 500, { success: false, error: err.message });
-    }
-  }
-
-  // 4.1. POST /api/font/reset - Reset font to default pure-white
-  if (req.method === 'POST' && pathname === '/api/font/reset') {
-    try {
-      const ok = await themeEngine.setFontColor('pure-white');
-      const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
-      return sendJson(res, 200, { success: isOk, color: '#ffffff' });
     } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message });
     }
@@ -653,6 +631,10 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await parseBody(req);
       const { slot } = body;
+      const normalizedSlot = themeEngine.normalizeSlotInput ? themeEngine.normalizeSlotInput(slot) : slot;
+      if (!normalizedSlot || !['left', 'bottom', 'settings'].includes(normalizedSlot)) {
+        return sendJson(res, 400, { success: false, error: "仅支持 left, bottom, settings 三个槽位" });
+      }
       if (!slot) {
         return sendJson(res, 400, { success: false, error: 'slot parameter is required' });
       }
