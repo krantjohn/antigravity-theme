@@ -488,7 +488,7 @@ function renderMockupPreview() {
     let mediaUrl = '';
     let isVideo = false;
 
-    const isSlotVanilla = slotData.type === 'none' || slotData.isOriginal;
+    const isSlotVanilla = slotData.type === 'none' || (slotData.isOriginal && !slotData.stagedFilePath && !slotData.file && !state.blobUrls[slotKey]);
     if (isSlotVanilla) {
       mediaUrl = '';
       isVideo = false;
@@ -1152,6 +1152,7 @@ function handleBrowserFile(file) {
   if (!state.draftConfig[slot]) state.draftConfig[slot] = {};
   state.draftConfig[slot].stagedFileName = file.name;
   state.draftConfig[slot].type = file.type.startsWith('video/') ? 'video' : 'image';
+  delete state.draftConfig[slot].isOriginal;
 
   setDraftDirty(true);
   renderSlotInspector();
@@ -1164,6 +1165,7 @@ function stageSlotFilePath(slot, filePath) {
   state.draftConfig[slot].stagedFilePath = filePath;
   state.draftConfig[slot].stagedFileName = filePath.split(/[\\/]/).pop();
   state.draftConfig[slot].type = filePath.match(/\.(mp4|webm|mov)$/i) ? 'video' : 'image';
+  delete state.draftConfig[slot].isOriginal;
 
   if (state.blobUrls[slot]) {
     try { URL.revokeObjectURL(state.blobUrls[slot]); } catch (_) {}
@@ -1620,8 +1622,8 @@ function renderPresetsList() {
       </div>
       <div class="preset-slots-preview">
         <span class="slot-pill-tag">${t('slots.left')}: ${noneText}</span>
-        <span class="slot-pill-tag">${t('slots.mid')}: ${noneText}</span>
         <span class="slot-pill-tag">${t('slots.bottom')}: ${noneText}</span>
+        <span class="slot-pill-tag">${t('slots.settings')}: ${noneText}</span>
       </div>
       <div class="preset-actions-bar">
         <button class="btn btn-primary btn-sm btn-apply-preset" id="btn-apply-vanilla-preset">
@@ -1948,19 +1950,19 @@ function renderWeGallery() {
 
     card.querySelector('.btn-we-more').onclick = (e) => {
       e.stopPropagation();
-      const targetSlot = prompt(`请选择要装配壁纸【${item.title}】的目标槽位：\n1. mid (活跃终端)\n2. bottom (提问输入框)\n3. settings (设置弹窗)\n4. right (独立侧栏)`, 'mid');
+      const defaultChoice = state.activeSlot === 'bottom' ? 'bottom' : (state.activeSlot === 'settings' ? 'settings' : 'left');
+      const targetSlot = prompt(`请选择要装配壁纸【${item.title}】的目标槽位：\n1. left (主对话)\n2. bottom (提问输入框)\n3. settings (设置弹窗)`, defaultChoice);
       if (targetSlot) {
         let slotKey = targetSlot.trim().toLowerCase();
-        if (slotKey === '1' || slotKey === '终端') slotKey = 'mid';
-        if (slotKey === '2' || slotKey === '输入框') slotKey = 'bottom';
-        if (slotKey === '3' || slotKey === '设置') slotKey = 'settings';
-        if (slotKey === '4' || slotKey === '侧栏') slotKey = 'right';
+        if (slotKey === '1' || slotKey === '主对话' || slotKey === '左') slotKey = 'left';
+        if (slotKey === '2' || slotKey === '输入框' || slotKey === '下' || slotKey === '提问框') slotKey = 'bottom';
+        if (slotKey === '3' || slotKey === '设置' || slotKey === '弹窗') slotKey = 'settings';
 
-        if (['mid', 'bottom', 'settings', 'right'].includes(slotKey)) {
+        if (['left', 'bottom', 'settings'].includes(slotKey)) {
           switchTab('view-preview');
           stageSlotFilePath(slotKey, item.mediaPath);
         } else {
-          alert('未知槽位，请输入 mid, bottom, settings 或 right');
+          alert('未知槽位，请输入 left, bottom 或 settings (或 1, 2, 3)');
         }
       }
     };

@@ -27,6 +27,7 @@ const TEST_GROUPS = [
       { name: 'Studio REST API & V2', file: path.join(DEV_TESTS_DIR, 'test_studio_api.js') },
       { name: 'Studio V3 Bento Integration', file: path.join(DEV_TESTS_DIR, 'test_studio_v3.js') },
       { name: 'Wallpaper Engine Bridge', file: path.join(DEV_TESTS_DIR, 'test_wallpaper_engine.js') },
+      { name: 'Input Box Wallpaper & Rim Elimination', file: path.join(DEV_TESTS_DIR, 'test_bottom_slot_wallpaper.js') },
       { name: '17-Phase Master Integration Suite', file: path.join(DEV_TESTS_DIR, 'test_suite.js') }
     ]
   },

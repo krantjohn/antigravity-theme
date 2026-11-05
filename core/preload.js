@@ -879,6 +879,8 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     // [下/设置] 容器槽位
     const slotSelectors = {
       'bottom': [
+        '[id="antigravity.agentSidePanelInputBox"] .surface-composer-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+        '.surface-composer-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
         '[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
         '[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
         'div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
@@ -920,7 +922,11 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
               if (el) {
                 el.style.setProperty('background-image', 'none', 'important');
                 if (slotKey === 'bottom') {
-                  el.style.setProperty('background-color', 'var(--color-card, #131722)', 'important');
+                  if (config.isOriginal || !config.left || config.left.type === 'none') {
+                    el.style.setProperty('background-color', 'var(--color-card, #131722)', 'important');
+                  } else {
+                    el.style.removeProperty('background-color');
+                  }
                 } else {
                   el.style.removeProperty('background-color');
                 }
@@ -928,6 +934,16 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
                 el.style.removeProperty('contain');
                 el.style.removeProperty('will-change');
                 delete el.dataset.agPositioned;
+              }
+            } catch(e) {}
+          }
+        } else {
+          for (let i = 0; i < selectors.length; i++) {
+            try {
+              const el = document.querySelector(selectors[i]);
+              if (el) {
+                el.style.removeProperty('background-color');
+                el.style.removeProperty('background-image');
               }
             } catch(e) {}
           }
@@ -1088,6 +1104,8 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
               targetContainer.style.contain = 'paint';
               targetContainer.style.willChange = 'transform';
             }
+            targetContainer.style.removeProperty('background-color');
+            targetContainer.style.removeProperty('background-image');
             targetContainer.prepend(vid);
             vid.load();
             if (isVideoVisible(vid)) vid.play().catch(function(){});

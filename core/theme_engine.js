@@ -874,16 +874,20 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background {
 
 /* 5. Target 2: Input Box (slot: bottom) */
 [id="antigravity.agentSidePanelInputBox"],
+.surface-composer,
 div[data-testid="agent-input-box"],
 div.rounded-2xl.bg-card-border:has(> div.bg-card),
 div:has(> [id="antigravity.agentSidePanelInputBox"]) {
   background-color: transparent !important;
   background: transparent !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
 }
 
 ${isBottomActive ? `
 [id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
 [id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
+[id="antigravity.agentSidePanelInputBox"] .surface-composer-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
+.surface-composer-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]),
 div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]) {
   position: relative !important;
   background-color: transparent !important;
@@ -895,6 +899,8 @@ div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([role="me
 }
 
 [id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img),
+[id="antigravity.agentSidePanelInputBox"] .surface-composer-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img),
+.surface-composer-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img),
 div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]) div:not([class*="thumbnail"]):not(img) {
   background-image: none !important;
   background-color: transparent !important;
@@ -913,7 +919,17 @@ div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-men
   transform: translateZ(0) !important;
   backface-visibility: hidden !important;
 }
+` : `
+/* Bottom slot transparent pass-through when left has wallpaper */
+${isLeftActive ? `
+[id="antigravity.agentSidePanelInputBox"] .surface-composer-card,
+.surface-composer-card {
+  background-color: rgba(19, 19, 23, 0.45) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
 ` : ''}
+`}
 
 /* 6. Target 3: Settings Dialog (slot: settings) */
 [data-radix-dialog-overlay] {
@@ -1675,6 +1691,8 @@ function getClientVideoScript(config) {
       // 2. Container slots: bottom, settings
       const slotSelectors = {
         'bottom': [
+          '[id="antigravity.agentSidePanelInputBox"] .surface-composer-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
+          '.surface-composer-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
           '[id="antigravity.agentSidePanelInputBox"] > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
           '[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
           'div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-mention-menu]):not([class*="bottom-full"])',
@@ -1703,6 +1721,32 @@ function getClientVideoScript(config) {
             oldVids[i].load();
             oldVids[i].remove();
           }
+          for (let i = 0; i < selectors.length; i++) {
+            try {
+              const el = document.querySelector(selectors[i]);
+              if (el) {
+                if (config.isOriginal || (slotData && (slotData.type === 'none' || slotData.isOriginal))) {
+                  el.style.setProperty('background-image', 'none', 'important');
+                  if (slotKey === 'bottom') {
+                    if (config.isOriginal || !config.left || config.left.type === 'none') {
+                      el.style.setProperty('background-color', 'var(--color-card, #131722)', 'important');
+                    } else {
+                      el.style.removeProperty('background-color');
+                    }
+                  } else {
+                    el.style.removeProperty('background-color');
+                  }
+                  el.style.removeProperty('overflow');
+                  el.style.removeProperty('contain');
+                  el.style.removeProperty('will-change');
+                  delete el.dataset.agPositioned;
+                } else {
+                  el.style.removeProperty('background-color');
+                  el.style.removeProperty('background-image');
+                }
+              }
+            } catch(e) {}
+          }
         } else {
           let targetContainer = null;
           for (let i = 0; i < selectors.length; i++) {
@@ -1716,6 +1760,8 @@ function getClientVideoScript(config) {
           }
 
           if (targetContainer) {
+            targetContainer.style.removeProperty('background-color');
+            targetContainer.style.removeProperty('background-image');
             const allSlotVidsInContainer = targetContainer.querySelectorAll(':scope > .antigravity-slot-video[data-slot="' + slotKey + '"]');
             for (let i = 1; i < allSlotVidsInContainer.length; i++) {
               allSlotVidsInContainer[i].pause();
@@ -1857,6 +1903,8 @@ function getClientVideoScript(config) {
                 targetContainer.style.contain = 'paint';
                 targetContainer.style.willChange = 'transform';
               }
+              targetContainer.style.removeProperty('background-color');
+              targetContainer.style.removeProperty('background-image');
               targetContainer.prepend(vid);
               vid.load();
               if (isVideoVisible(vid)) vid.play().catch(function(){});
@@ -2478,9 +2526,10 @@ async function batchApplyDraft(draftConfig, fontColor) {
     const slotData = draftConfig[slotKey];
     if (!slotData) continue;
     const slotMeta = SLOTS_META[slotKey];
+    const hasStaged = Boolean(slotData.stagedFilePath && fs.existsSync(slotData.stagedFilePath));
 
     // Case 1: Slot restored to vanilla / none
-    if (slotData.type === 'none' || slotData.isOriginal) {
+    if (!hasStaged && (slotData.type === 'none' || slotData.isOriginal)) {
       if (!slotsConfig[slotKey] || slotsConfig[slotKey].type !== 'none' || !slotsConfig[slotKey].isOriginal) {
         slotsConfig[slotKey] = {
           key: slotKey,
@@ -2499,7 +2548,8 @@ async function batchApplyDraft(draftConfig, fontColor) {
     }
 
     // Case 2: New staged file for this slot
-    if (slotData.stagedFilePath && fs.existsSync(slotData.stagedFilePath)) {
+    if (hasStaged) {
+      delete slotData.isOriginal;
       const srcPath = slotData.stagedFilePath;
       const ext = path.extname(srcPath).toLowerCase();
       const isVideo = VIDEO_EXTS.has(ext);
