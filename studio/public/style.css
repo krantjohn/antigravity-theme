@@ -2173,14 +2173,14 @@ body {
 }
 
 .mockup-window.transparent-sidebar:not(.peek-vanilla) .mock-sidebar {
-  background: rgba(17, 17, 20, 0.45) !important;
+  background: rgba(17, 17, 20, var(--mock-sidebar-alpha, 0.45)) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .mockup-window.transparent-header:not(.peek-vanilla) .mock-titlebar {
-  background: rgba(17, 17, 20, 0.45) !important;
+  background: rgba(17, 17, 20, var(--mock-header-alpha, 0.45)) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;

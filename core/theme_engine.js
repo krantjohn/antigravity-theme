@@ -1070,6 +1070,9 @@ function generateMasterCss(slotsConfig) {
   const bottomAlpha = (!slotsConfig.isOriginal && (isBottomActive || isLeftActive)) ? getDarkMaskAlpha(getSlotDarkMaskOpacity(slotsConfig, 'bottom')) : 0;
   const settingsAlpha = (!slotsConfig.isOriginal && isSettingsActive) ? getDarkMaskAlpha(getSlotDarkMaskOpacity(slotsConfig, 'settings')) : 0;
 
+  const sidebarAlpha = leftAlpha > 0 ? Number((0.45 + leftAlpha * 0.45).toFixed(2)) : 0.45;
+  const headerAlpha = leftAlpha > 0 ? Number((0.45 + leftAlpha * 0.45).toFixed(2)) : 0.45;
+
   return `/* ==========================================================================
    Antigravity Wallpaper Engine - Pure 3-Target Edition
    Targets: [Target 1: left (Base)] | [Target 2: bottom (Input Box)] | [Target 3: settings (Settings Modal)]
@@ -1222,11 +1225,27 @@ ${isTransparentSidebar ? `
 /* 3a. Optional Left Sidebar Transparency (Shares Main Wallpaper) */
 div[role="navigation"][aria-label="Sidebar"],
 aside[aria-label="Sidebar"] {
-  background: rgba(17, 17, 20, 0.45) !important;
-  background-color: rgba(17, 17, 20, 0.45) !important;
+  background: rgba(17, 17, 20, ${sidebarAlpha}) !important;
+  background-color: rgba(17, 17, 20, ${sidebarAlpha}) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  position: relative !important;
+  z-index: 40 !important;
+  pointer-events: auto !important;
+}
+
+div[role="navigation"][aria-label="Sidebar"] button,
+div[role="navigation"][aria-label="Sidebar"] a,
+div[role="navigation"][aria-label="Sidebar"] [role="button"],
+aside[aria-label="Sidebar"] button,
+aside[aria-label="Sidebar"] a,
+aside[aria-label="Sidebar"] [role="button"] {
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1 !important;
+  -webkit-app-region: no-drag !important;
+  cursor: pointer !important;
 }
 
 div[role="navigation"][aria-label="Sidebar"] .bg-sidebar,
@@ -1242,17 +1261,70 @@ aside[aria-label="Sidebar"] .bg-sidebar-secondary {
 }
 ` : ''}${isTransparentHeader ? `
 /* 3b. Optional Top Header Bar Transparency (Shares Main Wallpaper) */
-div.shrink-0:has(> [data-testid="title-menu-bar"]) {
+.agy-shell > div.shrink-0,
+div.shrink-0:has(> [data-testid="title-menu-bar"]),
+div.shrink-0:has([data-testid="title-menu-bar"]) {
   background: transparent !important;
   background-color: transparent !important;
+  position: relative !important;
+  z-index: 9000 !important;
+  overflow: visible !important;
+  contain: none !important;
 }
 
 [data-testid="title-menu-bar"] {
-  background: rgba(17, 17, 20, 0.45) !important;
-  background-color: rgba(17, 17, 20, 0.45) !important;
+  background: rgba(17, 17, 20, ${headerAlpha}) !important;
+  background-color: rgba(17, 17, 20, ${headerAlpha}) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  position: relative !important;
+  z-index: 9000 !important;
+  overflow: visible !important;
+  contain: none !important;
+}
+
+[data-testid="title-menu-bar"] button,
+[data-testid="title-menu-bar"] [data-testid="title-menu-bar-item"],
+[data-testid="title-menu-bar"] [role="button"],
+[data-testid="title-menu-bar"] a,
+[data-testid="title-menu-bar"] div.relative,
+[data-testid="title-menu-bar"] div.relative * {
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  user-select: none !important;
+}
+
+[data-testid="title-menu-bar"] div.absolute.top-full,
+[data-testid="title-menu-bar"] div[data-state="open"] {
+  position: absolute !important;
+  z-index: 10000 !important;
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+  contain: none !important;
+  background: rgba(22, 24, 34, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
+  overflow: hidden !important;
+}
+
+[data-testid="title-menu-bar"] div.absolute.top-full button,
+[data-testid="title-menu-bar"] [data-testid="title-menu-bar-option"] {
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  padding: 6px 12px !important;
+  color: #f1f5f9 !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+}
+
+[data-testid="title-menu-bar"] div.absolute.top-full button:hover,
+[data-testid="title-menu-bar"] [data-testid="title-menu-bar-option"]:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
 }
 ` : ''}
 /* 4. Terminal & Auxiliary Drawer Seamless Transparency (Pure 3-Target Contract) */
@@ -3259,8 +3331,13 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
         activeConfig = (arg2 && typeof arg2 === 'object') ? arg2 : loadSlotsConfig();
       } else {
         activeConfig = (arg1 && typeof arg1 === 'object') ? arg1 : loadSlotsConfig();
-        activeCss = typeof arg2 === 'string' ? arg2 : (fs.existsSync(customCssPath) ? fs.readFileSync(customCssPath, 'utf-8') : '');
+        activeCss = typeof arg2 === 'string' ? arg2 : generateMasterCss(activeConfig);
       }
+      try {
+        if (customCssPath && fs.existsSync(path.dirname(customCssPath))) {
+          fs.writeFileSync(customCssPath, activeCss, 'utf-8');
+        }
+      } catch (e) {}
       http.get('http://127.0.0.1:8314/json', (res) => {
         let data = '';
         res.on('data', chunk => data += chunk);
@@ -3280,6 +3357,8 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                 const botMaskAlpha = (!activeConfig || activeConfig.isOriginal) ? 0 : getDarkMaskAlpha(getSlotDarkMaskOpacity(activeConfig, 'bottom'));
                 const isSettingsAct = Boolean(activeConfig && !activeConfig.isOriginal && activeConfig.settings && activeConfig.settings.type !== 'none' && activeConfig.settings.file);
                 const settingsMaskAlpha = (!activeConfig || activeConfig.isOriginal) ? 0 : getDarkMaskAlpha(getSlotDarkMaskOpacity(activeConfig, 'settings'));
+                const liveSbAlpha = leftMaskAlpha > 0 ? Number((0.45 + leftMaskAlpha * 0.45).toFixed(2)) : 0.45;
+                const liveHdrAlpha = leftMaskAlpha > 0 ? Number((0.45 + leftMaskAlpha * 0.45).toFixed(2)) : 0.45;
                 const applyCode = `
                   (function() {
                     let titlebarFix = document.getElementById('antigravity-titlebar-fix');
@@ -3314,28 +3393,14 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         '[class*="titlebar"] a,',
                         'div.absolute.top-0 button,',
                         'div.absolute.top-0 [role="button"],',
-                        '.titlebar-button {',
-                        '  -webkit-app-region: no-drag !important;',
-                        '  pointer-events: auto !important;',
-                        '  cursor: pointer !important;',
-                        '}',
-                        '/* 6.2 顶部原生菜单栏与下拉菜单层级保障 (Menubar Stacking Context & Dropdown Quality) */',
-                        '.agy-shell > div.shrink-0:first-child,',
-                        'div.shrink-0:has([data-testid="title-menu-bar"]),',
-                        '[data-testid="title-menu-bar"],',
-                        '[data-testid="title-menu-bar"] * {',
-                        '  contain: none !important;',
-                        '}',
-                        '.agy-shell > div.shrink-0:first-child,',
-                        'div.shrink-0:has([data-testid="title-menu-bar"]),',
-                        '[data-testid="title-menu-bar"] {',
-                        '  position: relative !important;',
-                        '  z-index: 9000 !important;',
-                        '  overflow: visible !important;',
-                        '}',
+                        '.titlebar-button,',
+                        '.agy-shell > div.shrink-0 button,',
+                        '.agy-shell > div.shrink-0 [role="button"],',
+                        '.agy-shell > div.shrink-0 a,',
                         '[data-testid="title-menu-bar"] button,',
                         '[data-testid="title-menu-bar"] [data-testid="title-menu-bar-item"],',
                         '[data-testid="title-menu-bar"] [role="button"],',
+                        '[data-testid="title-menu-bar"] a,',
                         '[data-testid="title-menu-bar"] div.relative,',
                         '[data-testid="title-menu-bar"] div.relative * {',
                         '  -webkit-app-region: no-drag !important;',
@@ -3343,10 +3408,22 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         '  cursor: pointer !important;',
                         '  user-select: none !important;',
                         '}',
+                        '/* 6.2 顶部原生菜单栏与下拉菜单层级保障 (Menubar Stacking Context & Dropdown Quality) */',
+                        '.agy-shell > div.shrink-0,',
+                        'div.shrink-0:has([data-testid="title-menu-bar"]),',
+                        '[data-testid="title-menu-bar"],',
+                        '[data-testid="title-menu-bar"] * {',
+                        '  contain: none !important;',
+                        '}',
+                        '.agy-shell > div.shrink-0,',
+                        'div.shrink-0:has([data-testid="title-menu-bar"]),',
+                        '[data-testid="title-menu-bar"] {',
+                        '  position: relative !important;',
+                        '  z-index: 9000 !important;',
+                        '  overflow: visible !important;',
+                        '}',
                         '[data-testid="title-menu-bar"] div.absolute.top-full,',
-                        'div.absolute.top-full:has([data-testid="title-menu-bar-option"]),',
-                        'div.absolute.top-full:has(button),',
-                        'div.absolute.top-full.border.shadow-lg {',
+                        '[data-testid="title-menu-bar"] div[data-state="open"] {',
                         '  position: absolute !important;',
                         '  z-index: 10000 !important;',
                         '  -webkit-app-region: no-drag !important;',
@@ -3358,8 +3435,8 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         '  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;',
                         '  overflow: hidden !important;',
                         '}',
-                        '[data-testid="title-menu-bar-option"],',
-                        'div.absolute.top-full:has(button) button {',
+                        '[data-testid="title-menu-bar"] div.absolute.top-full button,',
+                        '[data-testid="title-menu-bar"] [data-testid="title-menu-bar-option"] {',
                         '  -webkit-app-region: no-drag !important;',
                         '  pointer-events: auto !important;',
                         '  cursor: pointer !important;',
@@ -3368,23 +3445,60 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         '  font-weight: 500 !important;',
                         '  transition: all 0.15s ease !important;',
                         '}',
-                        '[data-testid="title-menu-bar-option"]:hover,',
-                        'div.absolute.top-full:has(button) button:hover {',
+                        '[data-testid="title-menu-bar"] div.absolute.top-full button:hover,',
+                        '[data-testid="title-menu-bar"] [data-testid="title-menu-bar-option"]:hover {',
                         '  background: rgba(255, 255, 255, 0.12) !important;',
                         '  color: #ffffff !important;',
+                        '}',
+                        '/* 6.4 侧边栏按钮点击响应与层级保障 (Sidebar Buttons Responsiveness & Stacking) */',
+                        'div[role="navigation"][aria-label="Sidebar"],',
+                        'aside[aria-label="Sidebar"] {',
+                        '  position: relative !important;',
+                        '  z-index: 40 !important;',
+                        '  pointer-events: auto !important;',
+                        '}',
+                        'div[role="navigation"][aria-label="Sidebar"] button,',
+                        'div[role="navigation"][aria-label="Sidebar"] a,',
+                        'div[role="navigation"][aria-label="Sidebar"] [role="button"],',
+                        'aside[aria-label="Sidebar"] button,',
+                        'aside[aria-label="Sidebar"] a,',
+                        'aside[aria-label="Sidebar"] [role="button"] {',
+                        '  pointer-events: auto !important;',
+                        '  position: relative !important;',
+                        '  z-index: 1 !important;',
+                        '  -webkit-app-region: no-drag !important;',
+                        '  cursor: pointer !important;',
                         '}'${!isTransSb ? `,
                         'div[role="navigation"][aria-label="Sidebar"], aside[aria-label="Sidebar"] {',
                         '  background: var(--color-sidebar, var(--sidebar, #111114)) !important;',
                         '  background-color: var(--color-sidebar, var(--sidebar, #111114)) !important;',
                         '  backdrop-filter: none !important;',
                         '  -webkit-backdrop-filter: none !important;',
-                        '}'` : ''}${!isTransHdr ? `,
+                        '}'` : `,
+                        'div[role="navigation"][aria-label="Sidebar"], aside[aria-label="Sidebar"] {',
+                        '  background: rgba(17, 17, 20, ${liveSbAlpha}) !important;',
+                        '  background-color: rgba(17, 17, 20, ${liveSbAlpha}) !important;',
+                        '  backdrop-filter: blur(20px) saturate(180%) !important;',
+                        '  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;',
+                        '  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;',
+                        '}'`}${!isTransHdr ? `,
                         '[data-testid="title-menu-bar"] {',
                         '  background: var(--color-shell, var(--shell, #111114)) !important;',
                         '  background-color: var(--color-shell, var(--shell, #111114)) !important;',
                         '  backdrop-filter: none !important;',
                         '  -webkit-backdrop-filter: none !important;',
-                        '}'` : ''}${leftMaskAlpha <= 0 ? `,
+                        '}'` : `,
+                        '.agy-shell > div.shrink-0, div.shrink-0:has(> [data-testid="title-menu-bar"]), div.shrink-0:has([data-testid="title-menu-bar"]) {',
+                        '  background: transparent !important;',
+                        '  background-color: transparent !important;',
+                        '}',
+                        '[data-testid="title-menu-bar"] {',
+                        '  background: rgba(17, 17, 20, ${liveHdrAlpha}) !important;',
+                        '  background-color: rgba(17, 17, 20, ${liveHdrAlpha}) !important;',
+                        '  backdrop-filter: blur(20px) saturate(180%) !important;',
+                        '  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;',
+                        '  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;',
+                        '}'`}${leftMaskAlpha <= 0 ? `,
                         'div[data-testid="aux-pane-split"] > div.flex:first-child,',
                         'div[data-testid="aux-pane-split"] > div:not(:first-child):not(.bg-border),',
                         '.agy-sheet:not(:has([data-testid="aux-pane-split"])),',

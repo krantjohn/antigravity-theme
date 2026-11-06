@@ -242,6 +242,7 @@ async function runTests() {
     assert(cssCombined.includes('3b. Optional Top Header Bar Transparency'));
     assert(cssCombined.includes('3c. Regional Adjustable Dark Mask'));
     assert(cssCombined.includes('rgba(7, 9, 14, 0.8)'));
+    assert(cssCombined.includes('rgba(17, 17, 20, 0.81)'), 'Sidebar and Header must uniformly dim to 0.81 with 80% left dark mask');
 
     // 2.7 Vanilla / Inactive slots -> zero overrides even if flags/masks are set
     const cssVanilla = themeEngine.generateMasterCss({
@@ -407,8 +408,8 @@ async function runTests() {
     })()`);
 
     if (liveStyles && liveStyles.hasSidebar && liveStyles.hasHeader) {
-      assert.strictEqual(liveStyles.sidebarBg, 'rgba(17, 17, 20, 0.45)', 'Live Sidebar computed background-color must be rgba(17, 17, 20, 0.45)');
-      assert.strictEqual(liveStyles.headerBg, 'rgba(17, 17, 20, 0.45)', 'Live Header computed background-color must be rgba(17, 17, 20, 0.45)');
+      assert.strictEqual(liveStyles.sidebarBg, 'rgba(17, 17, 20, 0.7)', 'Live Sidebar computed background-color must uniformly dim to rgba(17, 17, 20, 0.7)');
+      assert.strictEqual(liveStyles.headerBg, 'rgba(17, 17, 20, 0.7)', 'Live Header computed background-color must uniformly dim to rgba(17, 17, 20, 0.7)');
       assert.strictEqual(liveStyles.headerParentBg, 'rgba(0, 0, 0, 0)', 'Live Header parent wrapper must remain transparent rgba(0, 0, 0, 0)');
       if (liveStyles.hasChat) {
         assert.strictEqual(liveStyles.chatBg, 'rgba(7, 9, 14, 0.55)', 'Live Main Conversation regional dark mask must be rgba(7, 9, 14, 0.55)');

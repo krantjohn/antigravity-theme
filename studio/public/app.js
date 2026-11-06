@@ -677,10 +677,14 @@ function renderMockupPreview() {
   const bottomMaskPct = getSlotDarkMask(cfgSource, 'bottom');
   const settingsMaskPct = getSlotDarkMask(cfgSource, 'settings');
 
-  agMockup.style.setProperty('--mock-dark-mask-opacity', String((isLeftActive ? leftMaskPct : 0) / 100));
-  agMockup.style.setProperty('--mock-left-dark-mask-opacity', String((isLeftActive ? leftMaskPct : 0) / 100));
+  const leftMaskAlpha = isLeftActive ? (leftMaskPct / 100) : 0;
+  const sidebarAlpha = leftMaskAlpha > 0 ? Number((0.45 + leftMaskAlpha * 0.45).toFixed(2)) : 0.45;
+  agMockup.style.setProperty('--mock-dark-mask-opacity', String(leftMaskAlpha));
+  agMockup.style.setProperty('--mock-left-dark-mask-opacity', String(leftMaskAlpha));
   agMockup.style.setProperty('--mock-bottom-dark-mask-opacity', String(bottomMaskPct / 100));
   agMockup.style.setProperty('--mock-settings-dark-mask-opacity', String(settingsMaskPct / 100));
+  agMockup.style.setProperty('--mock-sidebar-alpha', String(sidebarAlpha));
+  agMockup.style.setProperty('--mock-header-alpha', String(sidebarAlpha));
 
   // Update view mode classes on agMockup
   agMockup.classList.toggle('mode-compact', state.viewMode === 'compact');
