@@ -38,7 +38,7 @@ function evalCdp(expression, retries = 3) {
         res.on('end', () => {
           try {
             const list = JSON.parse(data);
-            const page = list.find(p => p.type === 'page');
+            const page = list.find(p => p.type === 'page' && !p.url.startsWith('data:')) || list.find(p => p.type === 'page');
             if (!page) {
               return reject(new Error('No CDP page target found on port 8314'));
             }
@@ -103,7 +103,7 @@ function sendCdpCommand(method, params = {}, retries = 3) {
         res.on('end', () => {
           try {
             const list = JSON.parse(data);
-            const page = list.find(p => p.type === 'page');
+            const page = list.find(p => p.type === 'page' && !p.url.startsWith('data:')) || list.find(p => p.type === 'page');
             if (!page) return reject(new Error('No CDP page target'));
             const ws = new WebSocket(page.webSocketDebuggerUrl);
             let responded = false;

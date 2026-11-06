@@ -70,6 +70,13 @@ const sliderGlassDarkness = document.getElementById('slider-glass-darkness');
 const valGlassDarkness = document.getElementById('val-glass-darkness');
 const btnResetGlass = document.getElementById('btn-reset-glass');
 
+// Transparency & Dark Mask Controls (R2 & R3)
+const toggleTransparentSidebar = document.getElementById('toggle-transparent-sidebar');
+const toggleTransparentHeader = document.getElementById('toggle-transparent-header');
+const sliderDarkMask = document.getElementById('slider-dark-mask');
+const valDarkMask = document.getElementById('val-dark-mask');
+const btnResetDimmer = document.getElementById('btn-reset-dimmer');
+
 // Typography Controls
 const fontPresetsGrid = document.getElementById('font-presets');
 const fontColorPicker = document.getElementById('font-color-picker');
@@ -449,6 +456,23 @@ function renderSlotInspector() {
     sliderGlassDarkness.value = darkVal;
     valGlassDarkness.textContent = `${darkVal}%`;
   }
+
+  // Update Transparency & Dark Mask Controls (R2 & R3)
+  const cfgSource = state.draftConfig || state.slotsConfig || {};
+  if (toggleTransparentSidebar) {
+    toggleTransparentSidebar.checked = cfgSource.transparentSidebar === true;
+  }
+  if (toggleTransparentHeader) {
+    toggleTransparentHeader.checked = cfgSource.transparentHeader === true;
+  }
+  if (sliderDarkMask && valDarkMask) {
+    const rawMask = Number(cfgSource.darkMaskOpacity);
+    const maskVal = Number.isFinite(rawMask)
+      ? Math.max(0, Math.min(80, Math.round(rawMask > 0 && rawMask < 1 ? rawMask * 100 : rawMask)))
+      : 0;
+    sliderDarkMask.value = maskVal;
+    valDarkMask.textContent = `${maskVal}%`;
+  }
 }
 
 function parsePositionString(pos) {
@@ -580,6 +604,23 @@ function renderMockupPreview() {
   const currentDarkness = state.draftConfig.glassDarkness || state.glassDarkness || 70;
   agMockup.style.setProperty('--mock-glass-blur', `${currentBlur}px`);
   agMockup.style.setProperty('--mock-glass-darkness', currentDarkness / 100);
+
+  // Apply Optional Sidebar/Header Transparency (R2) & Regional Dark Mask (R3) in Live Mockup
+  const cfgSource = state.draftConfig || state.slotsConfig || {};
+  const leftSlot = cfgSource.left || {};
+  const isLeftActive = !cfgSource.isOriginal &&
+    leftSlot.type !== 'none' &&
+    leftSlot.type !== 'vanilla' &&
+    Boolean(leftSlot.file || leftSlot.stagedFilePath || state.blobUrls['left']);
+
+  agMockup.classList.toggle('transparent-sidebar', Boolean(isLeftActive && cfgSource.transparentSidebar === true));
+  agMockup.classList.toggle('transparent-header', Boolean(isLeftActive && cfgSource.transparentHeader === true));
+
+  const rawMask = Number(cfgSource.darkMaskOpacity);
+  const maskPct = (isLeftActive && Number.isFinite(rawMask) && rawMask > 0)
+    ? Math.max(0, Math.min(80, Math.round(rawMask < 1 ? rawMask * 100 : rawMask)))
+    : 0;
+  agMockup.style.setProperty('--mock-dark-mask-opacity', String(maskPct / 100));
 
   // Update view mode classes on agMockup
   agMockup.classList.toggle('mode-compact', state.viewMode === 'compact');
@@ -945,7 +986,10 @@ function initPreviewToolbar() {
           right: { file: '', type: 'vanilla', position: 'center center' },
           bottom: { file: '', type: 'vanilla', position: 'center center' },
           settings: { file: '', type: 'vanilla', position: 'center center' },
-          fontColor: { primary: '#ffffff' }
+          fontColor: { primary: '#ffffff' },
+          transparentSidebar: false,
+          transparentHeader: false,
+          darkMaskOpacity: 0
         };
         cleanBlobUrls();
         setDraftDirty(true);
@@ -1515,6 +1559,53 @@ function initPositionControls() {
       setDraftDirty(true);
       renderMockupPreview();
       showToast('毛玻璃与遮罩暗度已重置为默认基准');
+    };
+  }
+
+  // Transparency & Dark Mask Controls (R2 & R3)
+  if (toggleTransparentSidebar) {
+    toggleTransparentSidebar.onchange = () => {
+      if (!state.draftConfig) state.draftConfig = {};
+      state.draftConfig.transparentSidebar = Boolean(toggleTransparentSidebar.checked);
+      setDraftDirty(true);
+      renderMockupPreview();
+    };
+  }
+
+  if (toggleTransparentHeader) {
+    toggleTransparentHeader.onchange = () => {
+      if (!state.draftConfig) state.draftConfig = {};
+      state.draftConfig.transparentHeader = Boolean(toggleTransparentHeader.checked);
+      setDraftDirty(true);
+      renderMockupPreview();
+    };
+  }
+
+  if (sliderDarkMask && valDarkMask) {
+    sliderDarkMask.oninput = () => {
+      const raw = parseInt(sliderDarkMask.value, 10);
+      const val = Number.isFinite(raw) ? Math.max(0, Math.min(80, raw)) : 0;
+      valDarkMask.textContent = `${val}%`;
+      if (!state.draftConfig) state.draftConfig = {};
+      state.draftConfig.darkMaskOpacity = val;
+      setDraftDirty(true);
+      renderMockupPreview();
+    };
+  }
+
+  if (btnResetDimmer) {
+    btnResetDimmer.onclick = () => {
+      if (!state.draftConfig) state.draftConfig = {};
+      state.draftConfig.transparentSidebar = false;
+      state.draftConfig.transparentHeader = false;
+      state.draftConfig.darkMaskOpacity = 0;
+      if (toggleTransparentSidebar) toggleTransparentSidebar.checked = false;
+      if (toggleTransparentHeader) toggleTransparentHeader.checked = false;
+      if (sliderDarkMask) sliderDarkMask.value = 0;
+      if (valDarkMask) valDarkMask.textContent = '0%';
+      setDraftDirty(true);
+      renderMockupPreview();
+      showToast(t('toast.reset_dimmer'));
     };
   }
 }
@@ -2386,13 +2477,37 @@ function setupEventListeners() {
     }
     try {
       showToast(`正在保存预设【${name}】...`, 3000);
+      if (state.isDirty) {
+        for (const [slot, file] of Object.entries(state.pendingFiles)) {
+          if (file) {
+            const url = `/api/upload?slot=${encodeURIComponent(slot)}&filename=${encodeURIComponent(file.name)}`;
+            const upRes = await fetch(url, {
+              method: 'POST',
+              body: file,
+              headers: { 'Content-Type': 'application/octet-stream' }
+            });
+            const upData = await upRes.json();
+            if (upData.success && upData.filePath) {
+              if (!state.draftConfig[slot]) state.draftConfig[slot] = {};
+              state.draftConfig[slot].stagedFilePath = upData.filePath;
+            }
+          }
+        }
+      }
       const res = await fetch('/api/presets/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
+        body: JSON.stringify({
+          name,
+          draftConfig: state.isDirty ? state.draftConfig : undefined
+        })
       });
       const data = await res.json();
       if (data.success) {
+        if (state.isDirty) {
+          cleanBlobUrls();
+          setDraftDirty(false);
+        }
         showToast(`✨ 预设【${name}】保存成功！`);
         savePresetModal.classList.remove('active');
         await fetchStatus();

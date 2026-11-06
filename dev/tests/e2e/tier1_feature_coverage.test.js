@@ -50,6 +50,31 @@ async function runTier1FeatureCoverageTests() {
   const { server, PORT } = require(path.join(REPO_ROOT, 'studio', 'server'));
   const STUDIO_BASE = `http://127.0.0.1:${PORT}`;
 
+  // Helper: Poll Studio server readiness up to timeoutMs before REST tests
+  async function ensureStudioServerReady(timeoutMs = 2500) {
+    const start = Date.now();
+    let lastError = null;
+    while (Date.now() - start < timeoutMs) {
+      if (!server.listening) {
+        try {
+          server.listen(PORT, '127.0.0.1');
+        } catch (e) {
+          lastError = e;
+        }
+      }
+      try {
+        const res = await httpRequest('GET', `${STUDIO_BASE}/api/status`);
+        if (res && res.status === 200) {
+          return true;
+        }
+      } catch (err) {
+        lastError = err;
+      }
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+    throw new Error(`Studio server at ${STUDIO_BASE} failed readiness check after ${timeoutMs}ms: ${lastError ? lastError.message : 'timeout'}`);
+  }
+
   try {
     // -----------------------------------------------------------------
     // Feature 1: Pure 3-Target Wallpaper Injection (>=6 tests)
@@ -354,6 +379,7 @@ async function runTier1FeatureCoverageTests() {
     // Feature 5: Studio REST API Contracts (>=5 tests)
     // -----------------------------------------------------------------
     console.log('\n--- [Feature 5] Studio REST API Contracts ---');
+    await ensureStudioServerReady(2500);
 
     // F5.1: GET /api/status returns 3 target slots
     try {
@@ -438,6 +464,11 @@ async function runTier1FeatureCoverageTests() {
 
 
   } finally {
+    if (server && server.listening) {
+      try {
+        server.close();
+      } catch (e) {}
+    }
     await sessionBackup.restore(themeEngine);
   }
 

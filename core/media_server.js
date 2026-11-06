@@ -69,9 +69,9 @@ function createMediaServer(wallpapersDir, port = DEFAULT_PORT) {
 
       // API endpoint for slots config
       if (pathname === '/api/slots' || pathname === '/slots_config.json') {
-        const configPath1 = path.join(wallpapersDir, 'slots_config.json');
-        const configPath2 = path.join(path.dirname(wallpapersDir), 'slots_config.json');
-        const configPath = fs.existsSync(configPath1) ? configPath1 : (fs.existsSync(configPath2) ? configPath2 : null);
+        const configPathPrimary = path.join(path.dirname(wallpapersDir), 'slots_config.json');
+        const configPathMirror = path.join(wallpapersDir, 'slots_config.json');
+        const configPath = fs.existsSync(configPathPrimary) ? configPathPrimary : (fs.existsSync(configPathMirror) ? configPathMirror : null);
 
         if (configPath) {
           try {

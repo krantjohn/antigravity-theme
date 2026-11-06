@@ -50,6 +50,31 @@ async function runTier3CombinationsTests() {
   const { server, PORT } = require(path.join(REPO_ROOT, 'studio', 'server'));
   const STUDIO_BASE = `http://127.0.0.1:${PORT}`;
 
+  // Helper: Poll Studio server readiness up to timeoutMs before REST tests
+  async function ensureStudioServerReady(timeoutMs = 2500) {
+    const start = Date.now();
+    let lastError = null;
+    while (Date.now() - start < timeoutMs) {
+      if (!server.listening) {
+        try {
+          server.listen(PORT, '127.0.0.1');
+        } catch (e) {
+          lastError = e;
+        }
+      }
+      try {
+        const res = await httpRequest('GET', `${STUDIO_BASE}/api/status`);
+        if (res && res.status === 200) {
+          return true;
+        }
+      } catch (err) {
+        lastError = err;
+      }
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+    throw new Error(`Studio server at ${STUDIO_BASE} failed readiness check after ${timeoutMs}ms: ${lastError ? lastError.message : 'timeout'}`);
+  }
+
   try {
     // -----------------------------------------------------------------
     // Combination 1: Multi-Target Hybrid Matrix (>=4 tests)
@@ -219,6 +244,7 @@ async function runTier3CombinationsTests() {
     // Combination 4: CLI + Studio REST API Interoperability (>=4 tests)
     // -----------------------------------------------------------------
     console.log('\n--- [Combination 4] CLI + Studio REST API Interoperability ---');
+    await ensureStudioServerReady(2500);
 
     // T3.10: Wallpaper applied via CLI is immediately visible in Studio /api/status
     try {
@@ -283,6 +309,11 @@ async function runTier3CombinationsTests() {
     }
 
   } finally {
+    if (server && server.listening) {
+      try {
+        server.close();
+      } catch (e) {}
+    }
     await sessionBackup.restore(themeEngine);
   }
 

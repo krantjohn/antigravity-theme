@@ -1057,6 +1057,83 @@ body {
   transform: scale(1.2);
 }
 
+/* Transparency & Dark Mask Control Group (R2 & R3) */
+.dimmer-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.toggle-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.toggle-label-text {
+  font-weight: 500;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #cbd5e1;
+  border-radius: 50%;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(16px);
+  background-color: var(--accent-cyan);
+}
+
 /* Typography Presets Grid */
 .font-presets-grid {
   display: grid;
@@ -2043,6 +2120,88 @@ body {
   position: relative;
   overflow: hidden;
   z-index: 10;
+}
+
+/* Regional Adjustable Dark Mask / Brightness Dimmer (R3) in Live Mockup */
+#mock-slot-left::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, var(--mock-dark-mask-opacity, 0));
+  pointer-events: none;
+  z-index: 2;
+  transition: background-color 0.08s ease;
+}
+
+.mockup-window.peek-vanilla #mock-slot-left::before {
+  display: none !important;
+}
+
+/* Optional Left Sidebar & Top Header Bar Transparency (R2) in Live Mockup */
+.mockup-window:not(.transparent-sidebar) .mock-sidebar {
+  background: #111114;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.mockup-window.transparent-sidebar:not(.peek-vanilla) .mock-body,
+.mockup-window.transparent-header:not(.peek-vanilla) .mock-body {
+  overflow: visible;
+}
+
+.mockup-window.transparent-sidebar:not(.peek-vanilla) .mock-chat-workspace,
+.mockup-window.transparent-header:not(.peek-vanilla) .mock-chat-workspace {
+  overflow: visible;
+}
+
+.mockup-window.transparent-sidebar:not(.peek-vanilla) .mock-sidebar {
+  background: rgba(17, 17, 20, 0.45) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.mockup-window.transparent-header:not(.peek-vanilla) .mock-titlebar {
+  background: rgba(17, 17, 20, 0.45) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.mockup-window.transparent-sidebar:not(.peek-vanilla) .mock-bg-left {
+  left: -256px;
+}
+
+.mockup-window.mode-focus-left.transparent-sidebar:not(.peek-vanilla) .mock-bg-left {
+  left: -160px;
+}
+
+.mockup-window.transparent-header:not(.peek-vanilla) .mock-bg-left {
+  top: -35px;
+  left: -256px;
+  right: -380px;
+}
+
+.mockup-window.transparent-header:not(.peek-vanilla) .mock-bg-left > .slot-focus-indicator {
+  top: 43px;
+  right: 388px;
+}
+
+.mockup-window.mode-focus-left.transparent-header:not(.peek-vanilla) .mock-bg-left {
+  left: -160px;
+  right: -220px;
+}
+
+.mockup-window.mode-focus-left.transparent-header:not(.peek-vanilla) .mock-bg-left > .slot-focus-indicator {
+  right: 228px;
+}
+
+.mockup-window.aux-closed.transparent-header:not(.peek-vanilla) .mock-bg-left {
+  right: 0;
+}
+
+.mockup-window.aux-closed.transparent-header:not(.peek-vanilla) .mock-bg-left > .slot-focus-indicator {
+  right: 8px;
 }
 
 /* Top Chat Header */

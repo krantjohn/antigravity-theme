@@ -9,7 +9,8 @@ async function runTests() {
   const studio = require('../../studio/server');
   const server = studio.server;
   const PORT = studio.PORT;
-  const { loadSlotsConfig, saveSlotsConfig, triggerLiveHotReload, generateMasterCss } = require('../../core/theme_engine');
+  const themeEngine = require('../../core/theme_engine');
+  const { loadSlotsConfig, saveSlotsConfig, triggerLiveHotReload, generateMasterCss, wallpapersDir } = themeEngine;
   const initialConfig = JSON.parse(JSON.stringify(loadSlotsConfig()));
   
   function get(urlPath, headers = {}) {
@@ -98,6 +99,16 @@ async function runTests() {
 
     // Test 6: /api/preview-file
     console.log('[Test 6] GET /api/preview-file?path=left_wallpaper.mp4');
+    const liveWallpapersDir = wallpapersDir || path.join(require('os').homedir(), '.gemini', 'antigravity', 'wallpapers');
+    const previewMedia = path.join(liveWallpapersDir, 'left_wallpaper.mp4');
+    const sampleVideo = path.join(__dirname, 'sample_wallpaper.mp4');
+    if (!fs.existsSync(previewMedia) && fs.existsSync(sampleVideo)) {
+      try {
+        fs.copyFileSync(sampleVideo, previewMedia);
+        console.log('✓ Staged left_wallpaper.mp4 into wallpapersDir for /api/preview-file test');
+      } catch (e) {}
+    }
+
     const previewRes = await get('/api/preview-file?path=left_wallpaper.mp4', { Range: 'bytes=0-1023' });
     if (previewRes.status === 206 || previewRes.status === 200) {
       console.log(`✓ /api/preview-file streaming responded with status ${previewRes.status}`);
@@ -134,7 +145,10 @@ async function runTests() {
         await triggerLiveHotReload(css, initialConfig);
       } catch (e) {}
     }
-    if (server.listening) {
+    if (server && server.listening) {
+      if (typeof server.closeAllConnections === 'function') {
+        server.closeAllConnections();
+      }
       server.close();
     }
     process.exit(process.exitCode || 0);

@@ -8,7 +8,7 @@ function evalCdp(expression) {
       res.on('end', () => {
         try {
           const list = JSON.parse(data);
-          const page = list.find(p => p.type === 'page');
+          const page = list.find(p => p.type === 'page' && !p.url.startsWith('data:')) || list.find(p => p.type === 'page');
           if (!page) return reject(new Error('No page'));
           const ws = new WebSocket(page.webSocketDebuggerUrl);
           ws.addEventListener('open', () => {

@@ -40,32 +40,20 @@ async function runWallpaperEngineTests() {
     }
   }
 
-  let userConfigBackup = loadSlotsConfig();
-  if (fs.existsSync(goldenConfigPath)) {
-    try { userConfigBackup = JSON.parse(fs.readFileSync(goldenConfigPath, 'utf8')); } catch (e) {}
-  } else if (fs.existsSync(path.join(userBackupDir, 'slots_config.json'))) {
-    try { userConfigBackup = JSON.parse(fs.readFileSync(path.join(userBackupDir, 'slots_config.json'), 'utf8')); } catch (e) {}
+  // Ensure obsolete user_wallpaper_backup/slots_config.json with legacy keys is eliminated
+  const staleBackupConfig = path.join(userBackupDir, 'slots_config.json');
+  if (fs.existsSync(staleBackupConfig)) {
+    try { fs.unlinkSync(staleBackupConfig); } catch (e) {}
   }
 
   async function restoreUserWallpaperEnvironment() {
-    console.log('\n[Restore] 正在自动恢复用户原始壁纸与字体配置 (杜绝误重置)...');
-    if (fs.existsSync(userBackupDir)) {
-      fs.readdirSync(userBackupDir).forEach(f => {
-        try {
-          fs.copyFileSync(path.join(userBackupDir, f), path.join(liveWallpapersDir, f));
-        } catch (e) {}
-      });
+    console.log('\n[Restore] 正在自动恢复至黄金基线环境 (revertToBaseline)...');
+    const staleBackupFile = path.join(userBackupDir, 'slots_config.json');
+    if (fs.existsSync(staleBackupFile)) {
+      try { fs.unlinkSync(staleBackupFile); } catch (e) {}
     }
-    let targetConfig = userConfigBackup;
-    if (fs.existsSync(goldenConfigPath)) {
-      try { targetConfig = JSON.parse(fs.readFileSync(goldenConfigPath, 'utf8')); } catch (e) {}
-    }
-    saveSlotsConfig(targetConfig);
-    const userCss = generateMasterCss(targetConfig);
-    fs.writeFileSync(customCssPath, userCss, 'utf-8');
-    try { fs.writeFileSync(path.join(liveWallpapersDir, 'custom_theme.css'), userCss, 'utf-8'); } catch (e) {}
-    await triggerLiveHotReload(userCss, targetConfig);
-    console.log('✓ 用户原始壁纸与配置已 100% 自动恢复！');
+    await revertToBaseline();
+    console.log('✓ 黄金基线环境已 100% 自动恢复！');
   }
 
   try {

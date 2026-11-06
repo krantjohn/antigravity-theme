@@ -257,7 +257,41 @@
           </div>
         </div>
 
-        
+        <!-- Transparency & Dark Mask Control (R2 & R3) -->
+        <div class="inspector-section" id="section-transparency-dimmer">
+          <div class="section-title-row">
+            <span class="section-tag" data-i18n="dimmer.tag">TRANSPARENCY & DIMMER</span>
+            <div class="quick-pos-actions">
+              <button class="btn-text-action" id="btn-reset-dimmer" title="重置透明化与暗色遮罩参数" data-i18n-title="dimmer.reset_title" data-i18n="dimmer.reset">重置默认</button>
+            </div>
+          </div>
+
+          <div class="dimmer-control-group">
+            <label class="toggle-row" for="toggle-transparent-sidebar" title="让左侧历史对话栏变成半透明毛玻璃，与主对话区共享底层壁纸" data-i18n-title="dimmer.transparent_sidebar_title">
+              <span class="toggle-label-text" data-i18n="dimmer.transparent_sidebar">左侧对话栏透明</span>
+              <span class="toggle-switch">
+                <input type="checkbox" id="toggle-transparent-sidebar">
+                <span class="toggle-slider"></span>
+              </span>
+            </label>
+
+            <label class="toggle-row" for="toggle-transparent-header" title="让顶部黑色标题与菜单栏变成半透明毛玻璃，与主对话区共享底层壁纸" data-i18n-title="dimmer.transparent_header_title">
+              <span class="toggle-label-text" data-i18n="dimmer.transparent_header">顶部状态栏透明</span>
+              <span class="toggle-switch">
+                <input type="checkbox" id="toggle-transparent-header">
+                <span class="toggle-slider"></span>
+              </span>
+            </label>
+
+            <div class="slider-row">
+              <div class="slider-label-line">
+                <span data-i18n="dimmer.dark_mask_label">壁纸暗色遮罩 / 亮度调节</span>
+                <span class="slider-val-tag" id="val-dark-mask">0%</span>
+              </div>
+              <input type="range" class="range-slider" id="slider-dark-mask" min="0" max="80" step="1" value="0" title="降低过亮壁纸的底色亮度，使对话文字清晰可读 (0% - 80%)" data-i18n-title="dimmer.dark_mask_title">
+            </div>
+          </div>
+        </div>
       </aside>
 
       <!-- Right Column: 1:1 Antigravity Interactive Live Mockup Canvas -->

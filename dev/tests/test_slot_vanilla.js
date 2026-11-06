@@ -60,13 +60,24 @@ async function runTests() {
     console.log('🎉 ALL PER-SLOT VANILLA RESTORE TESTS PASSED!');
     console.log('=======================================================');
   } finally {
-    // Restore initial config if present
+    // Restore clean state using themeEngine
     if (initialConfig) {
-      fs.writeFileSync(configPath, JSON.stringify(initialConfig, null, 2), 'utf8');
+      themeEngine.saveSlotsConfig(initialConfig);
       const css = themeEngine.generateMasterCss(initialConfig);
       const customCssPath = path.join(path.dirname(configPath), 'custom_theme.css');
-      fs.writeFileSync(customCssPath, css, 'utf8');
+      try {
+        themeEngine.writeFileSyncSafe(customCssPath, css);
+      } catch (e) {
+        fs.writeFileSync(customCssPath, css, 'utf8');
+      }
+      try {
+        await themeEngine.triggerLiveHotReload(css, initialConfig);
+      } catch (e) {}
       console.log('✓ Initial config restored.');
+    } else {
+      try {
+        await themeEngine.revertToBaseline();
+      } catch (e) {}
     }
   }
 }

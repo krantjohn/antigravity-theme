@@ -555,7 +555,10 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { success: false, error: 'Preset name is required' });
       }
 
-      const ok = themeEngine.savePreset(name, desc || '');
+      if (body.draftConfig && typeof body.draftConfig === 'object') {
+        await themeEngine.batchApplyDraft(body.draftConfig);
+      }
+      const ok = themeEngine.savePreset(name, desc || '', { draftConfig: body.draftConfig });
       const isOk = typeof ok === 'boolean' ? ok : Boolean(ok && ok.ok !== false);
       return sendJson(res, 200, { success: isOk, name });
     } catch (err) {
@@ -609,10 +612,18 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 8.5. POST /api/theme/apply-draft - Atomic batch apply drafted theme changes to Antigravity
-  if (req.method === 'POST' && pathname === '/api/theme/apply-draft') {
+  if (req.method === 'POST' && (pathname === '/api/theme/apply-draft' || pathname === '/api/apply-draft')) {
     try {
       const body = await parseBody(req);
-      const { draftConfig, fontColor } = body;
+      let { draftConfig, fontColor } = body;
+      if (!draftConfig && body && typeof body === 'object' && (body.left || body.bottom || body.settings || body.transparentSidebar !== undefined || body.transparentHeader !== undefined || body.darkMaskOpacity !== undefined)) {
+        draftConfig = body;
+      }
+      if (draftConfig && typeof draftConfig === 'object') {
+        if (body.transparentSidebar !== undefined && draftConfig.transparentSidebar === undefined) draftConfig.transparentSidebar = body.transparentSidebar;
+        if (body.transparentHeader !== undefined && draftConfig.transparentHeader === undefined) draftConfig.transparentHeader = body.transparentHeader;
+        if (body.darkMaskOpacity !== undefined && draftConfig.darkMaskOpacity === undefined) draftConfig.darkMaskOpacity = body.darkMaskOpacity;
+      }
       if (!draftConfig || typeof draftConfig !== 'object') {
         return sendJson(res, 400, { success: false, error: 'draftConfig is required' });
       }

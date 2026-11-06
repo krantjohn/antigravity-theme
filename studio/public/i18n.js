@@ -106,6 +106,18 @@ const I18N = {
     "pos.label_x": "水平位置 (X轴对齐)",
     "pos.label_y": "垂直位置 (Y轴对齐)",
 
+    // Transparency & Dark Mask (R2 & R3)
+    "dimmer.tag": "TRANSPARENCY & DIMMER",
+    "dimmer.reset": "重置默认",
+    "dimmer.reset_title": "重置透明化与暗色遮罩参数",
+    "dimmer.transparent_sidebar": "左侧对话栏透明",
+    "dimmer.transparent_sidebar_title": "让左侧历史对话栏变成半透明毛玻璃，与主对话区共享底层壁纸",
+    "dimmer.transparent_header": "顶部状态栏透明",
+    "dimmer.transparent_header_title": "让顶部黑色标题与菜单栏变成半透明毛玻璃，与主对话区共享底层壁纸",
+    "dimmer.dark_mask_label": "壁纸暗色遮罩 / 亮度调节",
+    "dimmer.dark_mask_title": "降低过亮壁纸的底色亮度，使对话文字清晰可读 (0% - 80%)",
+    "toast.reset_dimmer": "透明化与暗色遮罩已重置为默认基准",
+
     // Mockup Canvas & Stage
     "stage.tag": "1:1 LIVE SIMULATION",
     "stage.title": "Antigravity 界面仿真视窗",
@@ -372,6 +384,18 @@ const I18N = {
     "pos.reset_all_pos_title": "Reset alignment for all slots",
     "pos.label_x": "Horizontal Alignment (X-Axis)",
     "pos.label_y": "Vertical Alignment (Y-Axis)",
+
+    // Transparency & Dark Mask (R2 & R3)
+    "dimmer.tag": "TRANSPARENCY & DIMMER",
+    "dimmer.reset": "Reset",
+    "dimmer.reset_title": "Reset transparency & dark mask settings",
+    "dimmer.transparent_sidebar": "Transparent Left Sidebar",
+    "dimmer.transparent_sidebar_title": "Make the left conversation sidebar translucent so it shares the main wallpaper",
+    "dimmer.transparent_header": "Transparent Top Bar",
+    "dimmer.transparent_header_title": "Make the top title and menu bar translucent so it shares the main wallpaper",
+    "dimmer.dark_mask_label": "Dark Mask / Brightness Dimmer",
+    "dimmer.dark_mask_title": "Dim bright wallpapers so conversation text stays legible (0% - 80%)",
+    "toast.reset_dimmer": "Transparency & dark mask reset to default",
 
     // Mockup Canvas & Stage
     "stage.tag": "1:1 LIVE SIMULATION",

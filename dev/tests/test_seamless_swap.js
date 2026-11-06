@@ -8,6 +8,7 @@ const themeEngine = require(path.join(repoRoot, 'core', 'theme_engine.js'));
 
 async function runTests() {
   console.log('=== [TEST] Seamless Wallpaper Hot-Swap & Anti-Ghosting Verification ===');
+  try {
 
   // Test 1: Verify versioned query strings in generated CSS
   console.log('[Test 1] Verifying versioned URLs in generateMasterCss...');
@@ -77,6 +78,15 @@ async function runTests() {
   console.log('=======================================================');
   console.log('🎉 ALL SEAMLESS HOT-SWAP & ANTI-GHOSTING TESTS PASSED!');
   console.log('=======================================================');
+  } finally {
+    console.log('  [Teardown] Reverting to clean baseline (revertToBaseline)...');
+    try {
+      await themeEngine.revertToBaseline();
+      console.log('  ✓ Clean baseline restored.');
+    } catch (e) {
+      console.warn('  ⚠️ Teardown revertToBaseline warning:', e.message);
+    }
+  }
   process.exit(0);
 }
 
