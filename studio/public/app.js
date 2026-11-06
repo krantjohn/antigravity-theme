@@ -71,8 +71,11 @@ const valGlassDarkness = document.getElementById('val-glass-darkness');
 const btnResetGlass = document.getElementById('btn-reset-glass');
 
 // Transparency & Dark Mask Controls (R2 & R3)
+const sectionTransparencyDimmer = document.getElementById('section-transparency-dimmer');
+const dimmerLeftOnlyToggles = document.getElementById('dimmer-left-only-toggles');
 const toggleTransparentSidebar = document.getElementById('toggle-transparent-sidebar');
 const toggleTransparentHeader = document.getElementById('toggle-transparent-header');
+const labelDarkMask = document.getElementById('label-dark-mask');
 const sliderDarkMask = document.getElementById('slider-dark-mask');
 const valDarkMask = document.getElementById('val-dark-mask');
 const btnResetDimmer = document.getElementById('btn-reset-dimmer');
@@ -459,19 +462,66 @@ function renderSlotInspector() {
 
   // Update Transparency & Dark Mask Controls (R2 & R3)
   const cfgSource = state.draftConfig || state.slotsConfig || {};
+  if (sectionTransparencyDimmer) {
+    sectionTransparencyDimmer.style.display = '';
+  }
+  if (dimmerLeftOnlyToggles) {
+    dimmerLeftOnlyToggles.style.display = slotKey === 'left' ? '' : 'none';
+  }
   if (toggleTransparentSidebar) {
     toggleTransparentSidebar.checked = cfgSource.transparentSidebar === true;
   }
   if (toggleTransparentHeader) {
     toggleTransparentHeader.checked = cfgSource.transparentHeader === true;
   }
+  if (labelDarkMask) {
+    const slotLabelKey = `dimmer.dark_mask_label_${slotKey}`;
+    const translated = t(slotLabelKey);
+    labelDarkMask.textContent = (translated && translated !== slotLabelKey) ? translated : t('dimmer.dark_mask_label');
+    labelDarkMask.setAttribute('data-i18n', slotLabelKey);
+  }
   if (sliderDarkMask && valDarkMask) {
-    const rawMask = Number(cfgSource.darkMaskOpacity);
-    const maskVal = Number.isFinite(rawMask)
-      ? Math.max(0, Math.min(80, Math.round(rawMask > 0 && rawMask < 1 ? rawMask * 100 : rawMask)))
-      : 0;
+    const maskVal = getSlotDarkMask(cfgSource, slotKey);
     sliderDarkMask.value = maskVal;
     valDarkMask.textContent = `${maskVal}%`;
+    sliderDarkMask.disabled = false;
+  }
+}
+
+function ensureDraftConfig() {
+  if (!state.draftConfig || typeof state.draftConfig !== 'object') {
+    state.draftConfig = JSON.parse(JSON.stringify(state.slotsConfig || {}));
+  }
+  return state.draftConfig;
+}
+
+function normalizeMaskPct(val) {
+  if (val === null || val === undefined || val === '' || typeof val === 'boolean' || typeof val === 'object') return 0;
+  const num = Number(val);
+  if (!Number.isFinite(num) || num <= 0) return 0;
+  if (num > 0 && num < 1) return Math.min(80, Math.round(num * 100));
+  return Math.max(0, Math.min(80, Math.round(num)));
+}
+
+function getSlotDarkMask(cfg, slotKey = 'left') {
+  if (!cfg || typeof cfg !== 'object') return 0;
+  const slotObj = cfg[slotKey];
+  if (slotObj && typeof slotObj === 'object' && slotObj.darkMaskOpacity !== undefined && slotObj.darkMaskOpacity !== null) {
+    return normalizeMaskPct(slotObj.darkMaskOpacity);
+  }
+  if (slotKey === 'left') {
+    return normalizeMaskPct(cfg.darkMaskOpacity);
+  }
+  return 0;
+}
+
+function setSlotDarkMask(cfg, slotKey, val) {
+  if (!cfg || typeof cfg !== 'object') return;
+  const norm = normalizeMaskPct(val);
+  if (!cfg[slotKey] || typeof cfg[slotKey] !== 'object') cfg[slotKey] = {};
+  cfg[slotKey].darkMaskOpacity = norm;
+  if (slotKey === 'left') {
+    cfg.darkMaskOpacity = norm;
   }
 }
 
@@ -586,7 +636,7 @@ function renderMockupPreview() {
     // Interactive target highlight
     if (slotContainer) {
       slotContainer.classList.toggle('slot-vanilla', Boolean(isSlotVanilla));
-      if (slotKey === 'bottom') {
+      if (slotKey === 'bottom' || slotKey === 'settings') {
         slotContainer.classList.toggle('has-media', Boolean(mediaUrl));
       }
       if (state.activeSlot === slotKey) {
@@ -605,22 +655,32 @@ function renderMockupPreview() {
   agMockup.style.setProperty('--mock-glass-blur', `${currentBlur}px`);
   agMockup.style.setProperty('--mock-glass-darkness', currentDarkness / 100);
 
-  // Apply Optional Sidebar/Header Transparency (R2) & Regional Dark Mask (R3) in Live Mockup
+  // Apply Optional Sidebar/Header Transparency (R2) & Per-Slot Dark Mask (R3) in Live Mockup
   const cfgSource = state.draftConfig || state.slotsConfig || {};
-  const leftSlot = cfgSource.left || {};
-  const isLeftActive = !cfgSource.isOriginal &&
-    leftSlot.type !== 'none' &&
-    leftSlot.type !== 'vanilla' &&
-    Boolean(leftSlot.file || leftSlot.stagedFilePath || state.blobUrls['left']);
+  const isSlotActive = (sKey) => {
+    const sObj = cfgSource[sKey] || {};
+    return !cfgSource.isOriginal &&
+      sObj.type !== 'none' &&
+      sObj.type !== 'vanilla' &&
+      !sObj.isOriginal &&
+      Boolean(sObj.file || sObj.stagedFilePath || sObj.stagedFileName || state.blobUrls[sKey]);
+  };
+  const isLeftActive = isSlotActive('left');
+  const isBottomActive = isSlotActive('bottom');
+  const isSettingsActive = isSlotActive('settings');
 
+  agMockup.classList.toggle('has-left-wallpaper', Boolean(isLeftActive));
   agMockup.classList.toggle('transparent-sidebar', Boolean(isLeftActive && cfgSource.transparentSidebar === true));
   agMockup.classList.toggle('transparent-header', Boolean(isLeftActive && cfgSource.transparentHeader === true));
 
-  const rawMask = Number(cfgSource.darkMaskOpacity);
-  const maskPct = (isLeftActive && Number.isFinite(rawMask) && rawMask > 0)
-    ? Math.max(0, Math.min(80, Math.round(rawMask < 1 ? rawMask * 100 : rawMask)))
-    : 0;
-  agMockup.style.setProperty('--mock-dark-mask-opacity', String(maskPct / 100));
+  const leftMaskPct = isLeftActive ? getSlotDarkMask(cfgSource, 'left') : 0;
+  const bottomMaskPct = isBottomActive ? getSlotDarkMask(cfgSource, 'bottom') : 0;
+  const settingsMaskPct = isSettingsActive ? getSlotDarkMask(cfgSource, 'settings') : 0;
+
+  agMockup.style.setProperty('--mock-dark-mask-opacity', String(leftMaskPct / 100));
+  agMockup.style.setProperty('--mock-left-dark-mask-opacity', String(leftMaskPct / 100));
+  agMockup.style.setProperty('--mock-bottom-dark-mask-opacity', String(bottomMaskPct / 100));
+  agMockup.style.setProperty('--mock-settings-dark-mask-opacity', String(settingsMaskPct / 100));
 
   // Update view mode classes on agMockup
   agMockup.classList.toggle('mode-compact', state.viewMode === 'compact');
@@ -981,11 +1041,11 @@ function initPreviewToolbar() {
 
       if (val === '__vanilla__') {
         state.draftConfig = {
-          left: { file: '', type: 'vanilla', position: 'center center' },
+          left: { file: '', type: 'vanilla', position: 'center center', darkMaskOpacity: 0 },
           mid: { file: '', type: 'vanilla', position: 'center center' },
           right: { file: '', type: 'vanilla', position: 'center center' },
-          bottom: { file: '', type: 'vanilla', position: 'center center' },
-          settings: { file: '', type: 'vanilla', position: 'center center' },
+          bottom: { file: '', type: 'vanilla', position: 'center center', darkMaskOpacity: 0 },
+          settings: { file: '', type: 'vanilla', position: 'center center', darkMaskOpacity: 0 },
           fontColor: { primary: '#ffffff' },
           transparentSidebar: false,
           transparentHeader: false,
@@ -1205,6 +1265,7 @@ function handleBrowserFile(file) {
 }
 
 function stageSlotFilePath(slot, filePath) {
+  ensureDraftConfig();
   if (!state.draftConfig[slot]) state.draftConfig[slot] = {};
   state.draftConfig[slot].stagedFilePath = filePath;
   state.draftConfig[slot].stagedFileName = filePath.split(/[\\/]/).pop();
@@ -1428,6 +1489,7 @@ function discardDraftChanges() {
 // 14. Alignment & Position Controls
 // =========================================================================
 function updateActiveSlotPosition(x, y) {
+  ensureDraftConfig();
   const slot = state.activeSlot;
   if (!state.draftConfig[slot]) state.draftConfig[slot] = {};
   state.draftConfig[slot].position = `${x}% ${y}%`;
@@ -1460,6 +1522,7 @@ function initPositionControls() {
 
   btnResetAllPos.onclick = () => {
     if (!confirm('确定要重置所有 5 个槽位的对齐位置为默认基准值吗？')) return;
+    ensureDraftConfig();
     for (const [sKey, meta] of Object.entries(state.slotsMeta)) {
       if (!state.draftConfig[sKey]) state.draftConfig[sKey] = {};
       state.draftConfig[sKey].position = meta.defaultPosition || 'center center';
@@ -1472,6 +1535,7 @@ function initPositionControls() {
   if (btnRestoreSlotVanilla) {
     btnRestoreSlotVanilla.onclick = (e) => {
       if (e) e.stopPropagation();
+      ensureDraftConfig();
       const slot = state.activeSlot;
       const meta = state.slotsMeta[slot] || {};
 
@@ -1485,6 +1549,7 @@ function initPositionControls() {
       state.draftConfig[slot].file = '';
       state.draftConfig[slot].type = 'none';
       state.draftConfig[slot].isOriginal = true;
+      setSlotDarkMask(state.draftConfig, slot, 0);
       delete state.draftConfig[slot].stagedFilePath;
       delete state.draftConfig[slot].stagedFileName;
       delete state.draftConfig[slot].poster;
@@ -1498,6 +1563,7 @@ function initPositionControls() {
 
   btnResetSlot.onclick = (e) => {
       if (e) e.stopPropagation();
+    ensureDraftConfig();
     const slot = state.activeSlot;
     const meta = state.slotsMeta[slot] || {};
     if (!confirm(`确定要重置槽位 [${meta.desc || slot}] 的素材为默认官方壁纸吗？`)) return;
@@ -1525,7 +1591,7 @@ function initPositionControls() {
       const val = parseInt(sliderGlassBlur.value, 10);
       valGlassBlur.textContent = `${val}px`;
       state.glassBlur = val;
-      if (!state.draftConfig) state.draftConfig = {};
+      ensureDraftConfig();
       state.draftConfig.glassBlur = val;
       setDraftDirty(true);
       renderMockupPreview();
@@ -1537,7 +1603,7 @@ function initPositionControls() {
       const val = parseInt(sliderGlassDarkness.value, 10);
       valGlassDarkness.textContent = `${val}%`;
       state.glassDarkness = val;
-      if (!state.draftConfig) state.draftConfig = {};
+      ensureDraftConfig();
       state.draftConfig.glassDarkness = val;
       setDraftDirty(true);
       renderMockupPreview();
@@ -1552,10 +1618,9 @@ function initPositionControls() {
       if (valGlassBlur) valGlassBlur.textContent = '16px';
       if (sliderGlassDarkness) sliderGlassDarkness.value = 70;
       if (valGlassDarkness) valGlassDarkness.textContent = '70%';
-      if (state.draftConfig) {
-        state.draftConfig.glassBlur = 16;
-        state.draftConfig.glassDarkness = 70;
-      }
+      ensureDraftConfig();
+      state.draftConfig.glassBlur = 16;
+      state.draftConfig.glassDarkness = 70;
       setDraftDirty(true);
       renderMockupPreview();
       showToast('毛玻璃与遮罩暗度已重置为默认基准');
@@ -1565,7 +1630,7 @@ function initPositionControls() {
   // Transparency & Dark Mask Controls (R2 & R3)
   if (toggleTransparentSidebar) {
     toggleTransparentSidebar.onchange = () => {
-      if (!state.draftConfig) state.draftConfig = {};
+      ensureDraftConfig();
       state.draftConfig.transparentSidebar = Boolean(toggleTransparentSidebar.checked);
       setDraftDirty(true);
       renderMockupPreview();
@@ -1574,7 +1639,7 @@ function initPositionControls() {
 
   if (toggleTransparentHeader) {
     toggleTransparentHeader.onchange = () => {
-      if (!state.draftConfig) state.draftConfig = {};
+      ensureDraftConfig();
       state.draftConfig.transparentHeader = Boolean(toggleTransparentHeader.checked);
       setDraftDirty(true);
       renderMockupPreview();
@@ -1586,8 +1651,8 @@ function initPositionControls() {
       const raw = parseInt(sliderDarkMask.value, 10);
       const val = Number.isFinite(raw) ? Math.max(0, Math.min(80, raw)) : 0;
       valDarkMask.textContent = `${val}%`;
-      if (!state.draftConfig) state.draftConfig = {};
-      state.draftConfig.darkMaskOpacity = val;
+      ensureDraftConfig();
+      setSlotDarkMask(state.draftConfig, state.activeSlot || 'left', val);
       setDraftDirty(true);
       renderMockupPreview();
     };
@@ -1595,12 +1660,15 @@ function initPositionControls() {
 
   if (btnResetDimmer) {
     btnResetDimmer.onclick = () => {
-      if (!state.draftConfig) state.draftConfig = {};
-      state.draftConfig.transparentSidebar = false;
-      state.draftConfig.transparentHeader = false;
-      state.draftConfig.darkMaskOpacity = 0;
-      if (toggleTransparentSidebar) toggleTransparentSidebar.checked = false;
-      if (toggleTransparentHeader) toggleTransparentHeader.checked = false;
+      ensureDraftConfig();
+      const slot = state.activeSlot || 'left';
+      setSlotDarkMask(state.draftConfig, slot, 0);
+      if (slot === 'left') {
+        state.draftConfig.transparentSidebar = false;
+        state.draftConfig.transparentHeader = false;
+        if (toggleTransparentSidebar) toggleTransparentSidebar.checked = false;
+        if (toggleTransparentHeader) toggleTransparentHeader.checked = false;
+      }
       if (sliderDarkMask) sliderDarkMask.value = 0;
       if (valDarkMask) valDarkMask.textContent = '0%';
       setDraftDirty(true);

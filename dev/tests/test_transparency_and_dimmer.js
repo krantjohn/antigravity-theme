@@ -102,9 +102,9 @@ async function runTests() {
 
   try {
     // -----------------------------------------------------------------------
-    // Phase 1: Normalization & Edge-Case Sanitization Unit Tests
+    // Phase 1: Normalization, Per-Slot Extraction & Sync Unit Tests
     // -----------------------------------------------------------------------
-    console.log('\n[Phase 1] 校验 normalizeDarkMaskOpacity 与 getDarkMaskAlpha 边界值与异常输入...');
+    console.log('\n[Phase 1] 校验 normalizeDarkMaskOpacity / getSlotDarkMaskOpacity / syncConfigDarkMaskOpacity 边界值与双向同步...');
     assert.strictEqual(themeEngine.normalizeDarkMaskOpacity(undefined), 0);
     assert.strictEqual(themeEngine.normalizeDarkMaskOpacity(null), 0);
     assert.strictEqual(themeEngine.normalizeDarkMaskOpacity(NaN), 0);
@@ -127,27 +127,54 @@ async function runTests() {
     assert.strictEqual(themeEngine.getDarkMaskAlpha(80), 0.8);
     assert.strictEqual(themeEngine.getDarkMaskAlpha(100), 0.8);
     assert.strictEqual(themeEngine.getDarkMaskAlpha(0.5), 0.5);
-    console.log('   ✓ normalizeDarkMaskOpacity / getDarkMaskAlpha 边界测试全部通过');
+
+    // Per-slot extraction & bidirectional sync between left.darkMaskOpacity and top-level darkMaskOpacity
+    const syncTestCfg = {
+      left: { file: 'a.mp4', type: 'video' },
+      bottom: { file: 'b.mp4', type: 'video', darkMaskOpacity: 35 },
+      settings: { file: 'c.mp4', type: 'video', darkMaskOpacity: 95 },
+      darkMaskOpacity: 50
+    };
+    themeEngine.syncConfigDarkMaskOpacity(syncTestCfg);
+    assert.strictEqual(syncTestCfg.left.darkMaskOpacity, 50, 'top-level darkMaskOpacity must sync into left.darkMaskOpacity');
+    assert.strictEqual(syncTestCfg.darkMaskOpacity, 50);
+    assert.strictEqual(syncTestCfg.bottom.darkMaskOpacity, 35);
+    assert.strictEqual(syncTestCfg.settings.darkMaskOpacity, 80, 'settings.darkMaskOpacity must clamp to 80');
+
+    // Mutate top-level darkMaskOpacity -> must propagate to left.darkMaskOpacity
+    syncTestCfg.darkMaskOpacity = 25;
+    themeEngine.syncConfigDarkMaskOpacity(syncTestCfg);
+    assert.strictEqual(syncTestCfg.left.darkMaskOpacity, 25);
+    assert.strictEqual(syncTestCfg.darkMaskOpacity, 25);
+
+    // Mutate left.darkMaskOpacity -> must propagate to top-level darkMaskOpacity
+    syncTestCfg.left.darkMaskOpacity = 65;
+    themeEngine.syncConfigDarkMaskOpacity(syncTestCfg);
+    assert.strictEqual(syncTestCfg.left.darkMaskOpacity, 65);
+    assert.strictEqual(syncTestCfg.darkMaskOpacity, 65);
+    console.log('   ✓ normalizeDarkMaskOpacity / getSlotDarkMaskOpacity / syncConfigDarkMaskOpacity 边界与双向同步测试全部通过');
 
     // -----------------------------------------------------------------------
-    // Phase 2: generateMasterCss Conditional Injection & Zero-Diff Guarantee
+    // Phase 2: generateMasterCss Conditional Injection & Per-Slot Dark Mask
     // -----------------------------------------------------------------------
-    console.log('\n[Phase 2] 校验 generateMasterCss 独立开关与零污染保证...');
+    console.log('\n[Phase 2] 校验 generateMasterCss 三槽位独立遮罩、主对话右侧栏联动与零污染保证...');
     const baseMockConfig = {
       isOriginal: false,
-      left: { key: 'left', file: 'left_wallpaper.mp4', type: 'video', position: 'center center' },
-      bottom: { key: 'bottom', file: '', type: 'none', position: 'center center', isOriginal: true },
-      settings: { key: 'settings', file: '', type: 'none', position: 'center center', isOriginal: true },
+      left: { key: 'left', file: 'left_wallpaper.mp4', type: 'video', position: 'center center', darkMaskOpacity: 0 },
+      bottom: { key: 'bottom', file: '', type: 'none', position: 'center center', isOriginal: true, darkMaskOpacity: 0 },
+      settings: { key: 'settings', file: '', type: 'none', position: 'center center', isOriginal: true, darkMaskOpacity: 0 },
       transparentSidebar: false,
       transparentHeader: false,
       darkMaskOpacity: 0
     };
 
-    // 2.1 Default disabled -> zero overrides for sidebar, header, or dimmer
+    // 2.1 Default disabled -> zero overrides for sidebar, header, or any slot dimmer
     const cssDefault = themeEngine.generateMasterCss(baseMockConfig);
     assert(!cssDefault.includes('3a. Optional Left Sidebar Transparency'), 'Default config must not emit sidebar transparency');
     assert(!cssDefault.includes('3b. Optional Top Header Bar Transparency'), 'Default config must not emit header transparency');
-    assert(!cssDefault.includes('3c. Regional Adjustable Dark Mask'), 'Default config must not emit dark mask');
+    assert(!cssDefault.includes('3c. Regional Adjustable Dark Mask'), 'Default config must not emit left dark mask');
+    assert(!cssDefault.includes('5b. Input Box Dark Mask'), 'Default config must not emit bottom dark mask');
+    assert(!cssDefault.includes('6b. Settings Dialog Dark Mask'), 'Default config must not emit settings dark mask');
     assert(!cssDefault.includes('div[role="navigation"][aria-label="Sidebar"]'), 'Default config must not touch Sidebar');
     assert(!cssDefault.includes('[data-testid="title-menu-bar"]'), 'Default config must not touch Title Menu Bar');
 
@@ -174,18 +201,37 @@ async function runTests() {
     assert(!cssHeaderOnly.includes('3a. Optional Left Sidebar Transparency'), 'Must not emit 3a when transparentSidebar is false');
     assert(!cssHeaderOnly.includes('3c. Regional Adjustable Dark Mask'), 'Must not emit 3c when darkMaskOpacity is 0');
 
-    // 2.4 Only darkMaskOpacity = 45
+    // 2.4 Left darkMaskOpacity = 45 -> must dim BOTH main conversation AND right auxiliary pane
     const cssMaskOnly = themeEngine.generateMasterCss({
       ...baseMockConfig,
+      left: { ...baseMockConfig.left, darkMaskOpacity: 45 },
       darkMaskOpacity: 45
     });
-    assert(cssMaskOnly.includes('3c. Regional Adjustable Dark Mask'), 'Must emit 3c when darkMaskOpacity > 0');
+    assert(cssMaskOnly.includes('3c. Regional Adjustable Dark Mask'), 'Must emit 3c when left darkMaskOpacity > 0');
     assert(cssMaskOnly.includes('div[data-testid="aux-pane-split"] > div.flex:first-child'), 'Must target main conversation region');
-    assert(cssMaskOnly.includes('rgba(0, 0, 0, 0.45)'), 'Must emit exact alpha 0.45');
+    assert(cssMaskOnly.includes('div[data-testid="aux-pane-split"] > div:not(:first-child):not(.bg-border)'), 'Must target right auxiliary pane in aux-pane-split');
+    assert(cssMaskOnly.includes('[aria-label="Auxiliary Pane"]'), 'Must target Auxiliary Pane selector');
+    assert(cssMaskOnly.includes('rgba(7, 9, 14, 0.45)'), 'Must emit exact alpha 0.45 with rgba(7, 9, 14, 0.45)');
     assert(!cssMaskOnly.includes('3a. Optional Left Sidebar Transparency'));
     assert(!cssMaskOnly.includes('3b. Optional Top Header Bar Transparency'));
 
-    // 2.5 Combined: Sidebar + Header + Dark Mask (80%)
+    // 2.5 Per-Slot Independent Dark Masks: bottom (50%) and settings (65%)
+    const cssPerSlotMasks = themeEngine.generateMasterCss({
+      ...baseMockConfig,
+      left: { ...baseMockConfig.left, darkMaskOpacity: 30 },
+      bottom: { key: 'bottom', file: 'input_wallpaper.mp4', type: 'video', position: 'center center', isOriginal: false, darkMaskOpacity: 50 },
+      settings: { key: 'settings', file: 'settings_wallpaper.mp4', type: 'video', position: 'center center', isOriginal: false, darkMaskOpacity: 65 }
+    });
+    assert(cssPerSlotMasks.includes('3c. Regional Adjustable Dark Mask'), 'Must emit 3c for left');
+    assert(cssPerSlotMasks.includes('rgba(7, 9, 14, 0.3)'), 'Must emit left alpha 0.3');
+    assert(cssPerSlotMasks.includes('5b. Input Box Dark Mask / Brightness Dimmer (slot: bottom)'), 'Must emit 5b for bottom');
+    assert(cssPerSlotMasks.includes('linear-gradient(rgba(7, 9, 14, 0.5), rgba(7, 9, 14, 0.5))'), 'Must layer linear-gradient 0.5 on bottom');
+    assert(cssPerSlotMasks.includes(':has(> .antigravity-slot-video[data-slot="bottom"])::after'), 'Must emit ::after video dimmer for bottom');
+    assert(cssPerSlotMasks.includes('6b. Settings Dialog Dark Mask / Brightness Dimmer (slot: settings)'), 'Must emit 6b for settings');
+    assert(cssPerSlotMasks.includes('linear-gradient(rgba(7, 9, 14, 0.65), rgba(7, 9, 14, 0.65))'), 'Must layer linear-gradient 0.65 on settings');
+    assert(cssPerSlotMasks.includes(':has(> .antigravity-slot-video[data-slot="settings"])::after'), 'Must emit ::after video dimmer for settings');
+
+    // 2.6 Combined: Sidebar + Header + Dark Mask (80%)
     const cssCombined = themeEngine.generateMasterCss({
       ...baseMockConfig,
       transparentSidebar: true,
@@ -195,36 +241,42 @@ async function runTests() {
     assert(cssCombined.includes('3a. Optional Left Sidebar Transparency'));
     assert(cssCombined.includes('3b. Optional Top Header Bar Transparency'));
     assert(cssCombined.includes('3c. Regional Adjustable Dark Mask'));
-    assert(cssCombined.includes('rgba(0, 0, 0, 0.8)'));
+    assert(cssCombined.includes('rgba(7, 9, 14, 0.8)'));
 
-    // 2.6 Vanilla / Inactive left slot -> zero overrides even if flags are true
+    // 2.7 Vanilla / Inactive slots -> zero overrides even if flags/masks are set
     const cssVanilla = themeEngine.generateMasterCss({
       ...baseMockConfig,
       isOriginal: true,
       transparentSidebar: true,
       transparentHeader: true,
-      darkMaskOpacity: 60
+      darkMaskOpacity: 60,
+      left: { ...baseMockConfig.left, darkMaskOpacity: 60 },
+      bottom: { ...baseMockConfig.bottom, darkMaskOpacity: 60 },
+      settings: { ...baseMockConfig.settings, darkMaskOpacity: 60 }
     });
     assert.strictEqual(cssVanilla, '/* Antigravity Wallpaper Engine: Vanilla Mode */\n', 'Vanilla mode must emit only the Vanilla Mode comment');
 
-    const cssInactiveLeft = themeEngine.generateMasterCss({
+    const cssInactiveLeftButActiveBottom = themeEngine.generateMasterCss({
       ...baseMockConfig,
-      left: { key: 'left', file: '', type: 'none', isOriginal: true },
-      bottom: { key: 'bottom', file: 'input_wallpaper.mp4', type: 'video', position: 'center center' },
+      left: { key: 'left', file: '', type: 'none', isOriginal: true, darkMaskOpacity: 60 },
+      bottom: { key: 'bottom', file: 'input_wallpaper.mp4', type: 'video', position: 'center center', isOriginal: false, darkMaskOpacity: 40 },
       transparentSidebar: true,
       transparentHeader: true,
       darkMaskOpacity: 60
     });
-    assert(!cssInactiveLeft.includes('3a. Optional Left Sidebar Transparency'), 'Inactive left slot must not make sidebar transparent');
-    assert(!cssInactiveLeft.includes('3b. Optional Top Header Bar Transparency'), 'Inactive left slot must not make header transparent');
-    assert(!cssInactiveLeft.includes('3c. Regional Adjustable Dark Mask'), 'Inactive left slot must not apply dark mask');
-    console.log('   ✓ generateMasterCss 条件生成与零污染校验全部通过');
+    assert(!cssInactiveLeftButActiveBottom.includes('3a. Optional Left Sidebar Transparency'), 'Inactive left slot must not make sidebar transparent');
+    assert(!cssInactiveLeftButActiveBottom.includes('3b. Optional Top Header Bar Transparency'), 'Inactive left slot must not make header transparent');
+    assert(!cssInactiveLeftButActiveBottom.includes('3c. Regional Adjustable Dark Mask'), 'Inactive left slot must not apply left dark mask');
+    assert(cssInactiveLeftButActiveBottom.includes('5b. Input Box Dark Mask / Brightness Dimmer (slot: bottom)'), 'Active bottom slot must still emit its own 40% dark mask');
+    console.log('   ✓ generateMasterCss 三槽位独立遮罩、主对话右侧栏联动与零污染校验全部通过');
 
     // -----------------------------------------------------------------------
     // Phase 3: Persistence across batchApplyDraft, Presets, Vanilla & Baseline
     // -----------------------------------------------------------------------
-    console.log('\n[Phase 3] 校验草稿提交、预设存取、原版还原与基准重置持久化...');
+    console.log('\n[Phase 3] 校验三槽位独立遮罩在草稿提交、预设存取、单槽位还原与原版重置中的持久化...');
     const sampleLeft = (configSnapshot.left && configSnapshot.left.file) || 'left_wallpaper.mp4';
+    const sampleBottom = (configSnapshot.bottom && configSnapshot.bottom.file) || sampleLeft;
+    const sampleSettings = (configSnapshot.settings && configSnapshot.settings.file) || sampleLeft;
     const draftToApply = {
       ...configSnapshot,
       isOriginal: false,
@@ -234,7 +286,26 @@ async function runTests() {
         file: sampleLeft,
         type: sampleLeft.endsWith('.mp4') ? 'video' : 'image',
         position: 'center center',
-        isOriginal: false
+        isOriginal: false,
+        darkMaskOpacity: 55
+      },
+      bottom: {
+        ...(configSnapshot.bottom || {}),
+        key: 'bottom',
+        file: sampleBottom,
+        type: sampleBottom.endsWith('.mp4') ? 'video' : 'image',
+        position: 'center center',
+        isOriginal: false,
+        darkMaskOpacity: 45
+      },
+      settings: {
+        ...(configSnapshot.settings || {}),
+        key: 'settings',
+        file: sampleSettings,
+        type: sampleSettings.endsWith('.mp4') ? 'video' : 'image',
+        position: 'center center',
+        isOriginal: false,
+        darkMaskOpacity: 60
       },
       transparentSidebar: true,
       transparentHeader: true,
@@ -245,38 +316,52 @@ async function runTests() {
     assert.strictEqual(appliedCfg.transparentSidebar, true);
     assert.strictEqual(appliedCfg.transparentHeader, true);
     assert.strictEqual(appliedCfg.darkMaskOpacity, 55);
+    assert.strictEqual(appliedCfg.left.darkMaskOpacity, 55);
+    assert.strictEqual(appliedCfg.bottom.darkMaskOpacity, 45);
+    assert.strictEqual(appliedCfg.settings.darkMaskOpacity, 60);
 
     const diskCfg = themeEngine.loadSlotsConfig();
     assert.strictEqual(diskCfg.transparentSidebar, true);
     assert.strictEqual(diskCfg.transparentHeader, true);
     assert.strictEqual(diskCfg.darkMaskOpacity, 55);
+    assert.strictEqual(diskCfg.left.darkMaskOpacity, 55);
+    assert.strictEqual(diskCfg.bottom.darkMaskOpacity, 45);
+    assert.strictEqual(diskCfg.settings.darkMaskOpacity, 60);
 
     const testPresetName = `R2_R3_AutoTest_${Date.now()}`;
     try {
-      const savedManifest = themeEngine.savePreset(testPresetName, 'R2/R3/R4 transparency and dimmer test preset');
+      const savedManifest = themeEngine.savePreset(testPresetName, 'R2/R3/R4 per-slot dark mask test preset');
       assert(savedManifest && savedManifest.slotsConfig, 'savePreset must return manifest with slotsConfig');
       assert.strictEqual(savedManifest.slotsConfig.transparentSidebar, true);
       assert.strictEqual(savedManifest.slotsConfig.transparentHeader, true);
       assert.strictEqual(savedManifest.slotsConfig.darkMaskOpacity, 55);
+      assert.strictEqual(savedManifest.slotsConfig.left.darkMaskOpacity, 55);
+      assert.strictEqual(savedManifest.slotsConfig.bottom.darkMaskOpacity, 45);
+      assert.strictEqual(savedManifest.slotsConfig.settings.darkMaskOpacity, 60);
 
-      // Restore original vanilla -> must reset flags to false / 0
+      // Restore original vanilla -> must reset all flags and per-slot masks to false / 0
       await themeEngine.restoreOriginal();
       const vanillaCfg = themeEngine.loadSlotsConfig();
       assert.strictEqual(vanillaCfg.isOriginal, true);
       assert.strictEqual(vanillaCfg.transparentSidebar, false);
       assert.strictEqual(vanillaCfg.transparentHeader, false);
       assert.strictEqual(vanillaCfg.darkMaskOpacity, 0);
+      assert.strictEqual(vanillaCfg.left.darkMaskOpacity, 0);
+      assert.strictEqual(vanillaCfg.bottom.darkMaskOpacity, 0);
+      assert.strictEqual(vanillaCfg.settings.darkMaskOpacity, 0);
 
-      // Apply saved preset -> must restore flags to true / true / 55
+      // Apply saved preset -> must restore flags and all 3 per-slot dark masks (55 / 45 / 60)
       const presetAppliedOk = await themeEngine.applyPreset(testPresetName);
       assert(presetAppliedOk, 'applyPreset must succeed');
       const restoredFromPreset = themeEngine.loadSlotsConfig();
       assert.strictEqual(restoredFromPreset.transparentSidebar, true);
       assert.strictEqual(restoredFromPreset.transparentHeader, true);
       assert.strictEqual(restoredFromPreset.darkMaskOpacity, 55);
+      assert.strictEqual(restoredFromPreset.left.darkMaskOpacity, 55);
+      assert.strictEqual(restoredFromPreset.bottom.darkMaskOpacity, 45);
+      assert.strictEqual(restoredFromPreset.settings.darkMaskOpacity, 60);
     } finally {
       try { themeEngine.deletePreset(testPresetName); } catch (_) {}
-      // Also clean up any previous R2_R3_AutoTest_* preset
       try {
         (themeEngine.listPresets() || []).forEach(p => {
           if (p.name && p.name.startsWith('R2_R3_AutoTest_')) {
@@ -285,53 +370,89 @@ async function runTests() {
         });
       } catch (_) {}
     }
-    console.log('   ✓ 草稿固化、预设保存/恢复、原版重置持久化校验全部通过');
+    console.log('   ✓ 三槽位独立遮罩在草稿固化、预设保存/恢复、原版重置中的持久化校验全部通过');
 
     // -----------------------------------------------------------------------
     // Phase 4: Live CDP 8314 DOM Verification (if Antigravity is running)
     // -----------------------------------------------------------------------
-    console.log('\n[Phase 4] 校验 CDP 8314 实时 DOM 样式计算 (Live Antigravity Client)...');
+    console.log('\n[Phase 4] 校验 CDP 8314 实时 DOM 样式计算 (主对话区 + 右侧副栏联动遮罩 + 提问框遮罩)...');
     const liveStyles = await evaluateOnCdp8314(`(function() {
       var sb = document.querySelector('div[role="navigation"][aria-label="Sidebar"]');
       var hdr = document.querySelector('[data-testid="title-menu-bar"]');
       var hdrParent = hdr ? hdr.parentElement : null;
-      var chat = document.querySelector('div[data-testid="aux-pane-split"] > div.flex:first-child') || document.querySelector('.agy-sheet');
+      var sheet = document.querySelector('.agy-sheet');
+      var split = document.querySelector('div[data-testid="aux-pane-split"]');
+      var chat = document.querySelector('div[data-testid="aux-pane-split"] > div.flex:first-child') || sheet;
+      var aux = document.querySelector('div[data-testid="aux-pane-split"] > div:not(:first-child):not(.bg-border)') || document.querySelector('[aria-label="Auxiliary Pane"]');
+      var auxInner = aux ? aux.querySelector('.browser-hole-ancestor') : null;
+      var composer = document.querySelector('#antigravity\\\\.agentSidePanelInputBox .surface-composer-card');
+      var composerAfterBg = composer ? window.getComputedStyle(composer, '::after').backgroundColor : null;
       return {
         hasSidebar: Boolean(sb),
         sidebarBg: sb ? window.getComputedStyle(sb).backgroundColor : null,
         hasHeader: Boolean(hdr),
         headerBg: hdr ? window.getComputedStyle(hdr).backgroundColor : null,
         headerParentBg: hdrParent ? window.getComputedStyle(hdrParent).backgroundColor : null,
+        sheetBg: sheet ? window.getComputedStyle(sheet).backgroundColor : null,
+        splitBg: split ? window.getComputedStyle(split).backgroundColor : null,
         hasChat: Boolean(chat),
-        chatBg: chat ? window.getComputedStyle(chat).backgroundColor : null
+        chatBg: chat ? window.getComputedStyle(chat).backgroundColor : null,
+        hasAux: Boolean(aux),
+        auxBg: aux ? window.getComputedStyle(aux).backgroundColor : null,
+        auxInnerBg: auxInner ? window.getComputedStyle(auxInner).backgroundColor : null,
+        hasComposer: Boolean(composer),
+        composerBgImage: composer ? window.getComputedStyle(composer).backgroundImage : null,
+        composerAfterBg: composerAfterBg
       };
     })()`);
 
     if (liveStyles && liveStyles.hasSidebar && liveStyles.hasHeader) {
       assert.strictEqual(liveStyles.sidebarBg, 'rgba(17, 17, 20, 0.45)', 'Live Sidebar computed background-color must be rgba(17, 17, 20, 0.45)');
       assert.strictEqual(liveStyles.headerBg, 'rgba(17, 17, 20, 0.45)', 'Live Header computed background-color must be rgba(17, 17, 20, 0.45)');
-      assert.strictEqual(liveStyles.headerParentBg, 'rgba(0, 0, 0, 0)', 'Live Header parent wrapper must remain transparent rgba(0, 0, 0, 0) to prevent double-stacked 70% darkness');
+      assert.strictEqual(liveStyles.headerParentBg, 'rgba(0, 0, 0, 0)', 'Live Header parent wrapper must remain transparent rgba(0, 0, 0, 0)');
       if (liveStyles.hasChat) {
-        assert.strictEqual(liveStyles.chatBg, 'rgba(0, 0, 0, 0.55)', 'Live Chat regional dark mask computed background-color must be rgba(0, 0, 0, 0.55)');
+        assert.strictEqual(liveStyles.chatBg, 'rgba(7, 9, 14, 0.55)', 'Live Main Conversation regional dark mask must be rgba(7, 9, 14, 0.55)');
       }
-      console.log(`   ✓ CDP 8314 开启态实时计算样式验证通过 (无双层叠加): Sidebar=${liveStyles.sidebarBg}, Header=${liveStyles.headerBg}, HeaderParent=${liveStyles.headerParentBg}, ChatDimmer=${liveStyles.chatBg}`);
+      if (liveStyles.hasAux) {
+        assert.strictEqual(liveStyles.auxBg, 'rgba(7, 9, 14, 0.55)', 'Live Right Auxiliary Pane dark mask must match Main Conversation at rgba(7, 9, 14, 0.55)');
+        if (liveStyles.splitBg !== null) {
+          assert.strictEqual(liveStyles.splitBg, 'rgba(0, 0, 0, 0)', 'aux-pane-split wrapper must remain transparent to prevent double-stacking');
+        }
+        if (liveStyles.auxInnerBg !== null) {
+          assert.strictEqual(liveStyles.auxInnerBg, 'rgba(0, 0, 0, 0)', 'Nested child inside Right Auxiliary Pane must remain transparent to prevent double-stacking');
+        }
+      }
+      if (liveStyles.hasComposer) {
+        const hasBottomDimmer = (liveStyles.composerBgImage && liveStyles.composerBgImage.includes('rgba(7, 9, 14, 0.45)')) ||
+          liveStyles.composerAfterBg === 'rgba(7, 9, 14, 0.45)';
+        assert(hasBottomDimmer, 'Live Input Box (.surface-composer-card) must have 45% dark mask rgba(7, 9, 14, 0.45)');
+      }
+      console.log(`   ✓ CDP 8314 开启态实时计算样式验证通过 (无双层叠加): Sidebar=${liveStyles.sidebarBg}, Header=${liveStyles.headerBg}, MainChat=${liveStyles.chatBg}, RightAuxPane=${liveStyles.auxBg}, AuxInner=${liveStyles.auxInnerBg}`);
 
-      // Edge Case: restoreSlotVanilla('left') while transparentSidebar/Header/darkMaskOpacity remain true/55 in config
+      // Edge Case: restoreSlotVanilla('left') must clear left & right aux pane mask to 0, while keeping bottom's 45% mask intact
       await themeEngine.restoreSlotVanilla('left');
       const afterLeftVanillaCfg = themeEngine.loadSlotsConfig();
+      assert.strictEqual(afterLeftVanillaCfg.left.darkMaskOpacity, 0, 'restoreSlotVanilla(left) must reset left.darkMaskOpacity to 0');
+      assert.strictEqual(afterLeftVanillaCfg.darkMaskOpacity, 0, 'restoreSlotVanilla(left) must reset top-level darkMaskOpacity to 0');
+      assert.strictEqual(afterLeftVanillaCfg.bottom.darkMaskOpacity, 45, 'restoreSlotVanilla(left) must preserve bottom.darkMaskOpacity = 45');
+      assert.strictEqual(afterLeftVanillaCfg.settings.darkMaskOpacity, 60, 'restoreSlotVanilla(left) must preserve settings.darkMaskOpacity = 60');
+
       const afterLeftVanillaCss = themeEngine.generateMasterCss(afterLeftVanillaCfg);
-      assert(!afterLeftVanillaCss.includes('3a. Optional Left Sidebar Transparency'), 'restoreSlotVanilla(left) must suppress 3a even when transparentSidebar is true');
-      assert(!afterLeftVanillaCss.includes('3b. Optional Top Header Bar Transparency'), 'restoreSlotVanilla(left) must suppress 3b even when transparentHeader is true');
-      assert(!afterLeftVanillaCss.includes('3c. Regional Adjustable Dark Mask'), 'restoreSlotVanilla(left) must suppress 3c even when darkMaskOpacity > 0');
+      assert(!afterLeftVanillaCss.includes('3a. Optional Left Sidebar Transparency'), 'restoreSlotVanilla(left) must suppress 3a');
+      assert(!afterLeftVanillaCss.includes('3b. Optional Top Header Bar Transparency'), 'restoreSlotVanilla(left) must suppress 3b');
+      assert(!afterLeftVanillaCss.includes('3c. Regional Adjustable Dark Mask'), 'restoreSlotVanilla(left) must suppress 3c');
+      assert(afterLeftVanillaCss.includes('5b. Input Box Dark Mask'), 'restoreSlotVanilla(left) must keep 5b active for bottom');
 
       const liveAfterLeftVanilla = await evaluateOnCdp8314(`(function() {
         var sb = document.querySelector('div[role="navigation"][aria-label="Sidebar"]');
         var hdr = document.querySelector('[data-testid="title-menu-bar"]');
         var chat = document.querySelector('div[data-testid="aux-pane-split"] > div.flex:first-child') || document.querySelector('.agy-sheet');
+        var aux = document.querySelector('div[data-testid="aux-pane-split"] > div:not(:first-child):not(.bg-border)');
         return {
           sidebarBg: sb ? window.getComputedStyle(sb).backgroundColor : null,
           headerBg: hdr ? window.getComputedStyle(hdr).backgroundColor : null,
-          chatBg: chat ? window.getComputedStyle(chat).backgroundColor : null
+          chatBg: chat ? window.getComputedStyle(chat).backgroundColor : null,
+          auxBg: aux ? window.getComputedStyle(aux).backgroundColor : null
         };
       })()`);
       if (liveAfterLeftVanilla) {
@@ -340,11 +461,17 @@ async function runTests() {
         if (liveAfterLeftVanilla.chatBg) {
           assert.strictEqual(liveAfterLeftVanilla.chatBg, 'rgba(0, 0, 0, 0)', 'ChatDimmer must revert to transparent when left slot is restored to vanilla');
         }
+        if (liveAfterLeftVanilla.auxBg) {
+          assert.strictEqual(liveAfterLeftVanilla.auxBg, 'rgba(0, 0, 0, 0)', 'RightAuxPane must revert to transparent when left slot is restored to vanilla');
+        }
       }
 
-      // Now explicitly disable toggles & dimmer with active left slot and verify stock opaque restoration in live DOM
+      // Now explicitly disable toggles & all slot dimmers with active left slot and verify stock restoration in live DOM
       await themeEngine.batchApplyDraft({
         ...draftToApply,
+        left: { ...draftToApply.left, darkMaskOpacity: 0 },
+        bottom: { ...draftToApply.bottom, darkMaskOpacity: 0 },
+        settings: { ...draftToApply.settings, darkMaskOpacity: 0 },
         transparentSidebar: false,
         transparentHeader: false,
         darkMaskOpacity: 0
@@ -353,10 +480,12 @@ async function runTests() {
         var sb = document.querySelector('div[role="navigation"][aria-label="Sidebar"]');
         var hdr = document.querySelector('[data-testid="title-menu-bar"]');
         var chat = document.querySelector('div[data-testid="aux-pane-split"] > div.flex:first-child') || document.querySelector('.agy-sheet');
+        var aux = document.querySelector('div[data-testid="aux-pane-split"] > div:not(:first-child):not(.bg-border)');
         return {
           sidebarBg: sb ? window.getComputedStyle(sb).backgroundColor : null,
           headerBg: hdr ? window.getComputedStyle(hdr).backgroundColor : null,
-          chatBg: chat ? window.getComputedStyle(chat).backgroundColor : null
+          chatBg: chat ? window.getComputedStyle(chat).backgroundColor : null,
+          auxBg: aux ? window.getComputedStyle(aux).backgroundColor : null
         };
       })()`);
       if (liveOpaqueStyles) {
@@ -365,7 +494,10 @@ async function runTests() {
         if (liveOpaqueStyles.chatBg) {
           assert.strictEqual(liveOpaqueStyles.chatBg, 'rgba(0, 0, 0, 0)', 'Disabled ChatDimmer must revert to rgba(0, 0, 0, 0)');
         }
-        console.log(`   ✓ CDP 8314 关闭态与单槽位恢复原版验证通过: Sidebar=${liveOpaqueStyles.sidebarBg}, Header=${liveOpaqueStyles.headerBg}, ChatDimmer=${liveOpaqueStyles.chatBg}`);
+        if (liveOpaqueStyles.auxBg) {
+          assert.strictEqual(liveOpaqueStyles.auxBg, 'rgba(0, 0, 0, 0)', 'Disabled RightAuxPane dimmer must revert to rgba(0, 0, 0, 0)');
+        }
+        console.log(`   ✓ CDP 8314 关闭态与单槽位恢复原版验证通过: Sidebar=${liveOpaqueStyles.sidebarBg}, Header=${liveOpaqueStyles.headerBg}, MainChat=${liveOpaqueStyles.chatBg}, RightAuxPane=${liveOpaqueStyles.auxBg}`);
       }
     } else {
       console.log('   ℹ️ CDP 8314 离线或无活动页面，跳过实时 DOM 计算样式断言');
@@ -374,7 +506,7 @@ async function runTests() {
     // -----------------------------------------------------------------------
     // Phase 5: Studio GUI Assets & REST API Integration (Port 8316)
     // -----------------------------------------------------------------------
-    console.log('\n[Phase 5] 校验 Theme Studio 前端控件与 REST API (/api/theme/apply-draft & /api/apply-draft & /api/presets/save)...');
+    console.log('\n[Phase 5] 校验 Theme Studio 前端三槽位遮罩控件与 REST API (/api/theme/apply-draft & /api/apply-draft & /api/presets/save)...');
     const { server, PORT } = require('../../studio/server');
     serverInstance = server;
 
@@ -383,6 +515,7 @@ async function runTests() {
     assert(htmlRes.text.includes('id="section-transparency-dimmer"'), 'index.html must include #section-transparency-dimmer');
     assert(htmlRes.text.includes('id="toggle-transparent-sidebar"'), 'index.html must include #toggle-transparent-sidebar');
     assert(htmlRes.text.includes('id="toggle-transparent-header"'), 'index.html must include #toggle-transparent-header');
+    assert(htmlRes.text.includes('id="label-dark-mask"'), 'index.html must include #label-dark-mask');
     assert(htmlRes.text.includes('id="slider-dark-mask"'), 'index.html must include #slider-dark-mask');
     assert(htmlRes.text.includes('左侧对话栏透明'), 'index.html must include Chinese label for sidebar transparency');
     assert(htmlRes.text.includes('顶部状态栏透明'), 'index.html must include Chinese label for header transparency');
@@ -392,18 +525,41 @@ async function runTests() {
     assert.strictEqual(cssRes.status, 200);
     assert(cssRes.text.includes('.mockup-window.transparent-sidebar'), 'style.css must include .mockup-window.transparent-sidebar');
     assert(cssRes.text.includes('.mockup-window.transparent-header'), 'style.css must include .mockup-window.transparent-header');
+    assert(cssRes.text.includes('#mock-right-pane::before'), 'style.css must include #mock-right-pane::before for right pane dark mask');
+    assert(cssRes.text.includes('.mock-chat-area::before'), 'style.css must include .mock-chat-area::before for main chat dark mask');
+    assert(cssRes.text.includes('.mock-aux-pane::before'), 'style.css must include .mock-aux-pane::before for right pane dark mask');
+    assert(cssRes.text.includes('#mock-slot-bottom::before'), 'style.css must include #mock-slot-bottom::before for bottom dark mask');
+    assert(cssRes.text.includes('#mock-slot-settings::before'), 'style.css must include #mock-slot-settings::before for settings dark mask');
     assert(cssRes.text.includes('--mock-dark-mask-opacity'), 'style.css must include --mock-dark-mask-opacity');
+    assert(cssRes.text.includes('--mock-bottom-dark-mask-opacity'), 'style.css must include --mock-bottom-dark-mask-opacity');
+    assert(cssRes.text.includes('--mock-settings-dark-mask-opacity'), 'style.css must include --mock-settings-dark-mask-opacity');
 
     const jsRes = await httpRequest(PORT, 'GET', '/app.js');
     assert.strictEqual(jsRes.status, 200);
     assert(jsRes.text.includes('toggleTransparentSidebar'), 'app.js must reference toggleTransparentSidebar');
     assert(jsRes.text.includes('toggleTransparentHeader'), 'app.js must reference toggleTransparentHeader');
     assert(jsRes.text.includes('sliderDarkMask'), 'app.js must reference sliderDarkMask');
+    assert(jsRes.text.includes('getSlotDarkMask'), 'app.js must include getSlotDarkMask');
+    assert(jsRes.text.includes('setSlotDarkMask'), 'app.js must include setSlotDarkMask');
+    assert(jsRes.text.includes('ensureDraftConfig'), 'app.js must include ensureDraftConfig');
+    assert(!jsRes.text.includes('sliderDarkMask.disabled = Boolean(isVanilla)'), 'app.js must not disable sliderDarkMask on vanilla');
+    assert(jsRes.text.includes('sliderDarkMask.disabled = false'), 'app.js must keep sliderDarkMask enabled across slots');
+    assert(jsRes.text.includes('--mock-bottom-dark-mask-opacity'), 'app.js must update --mock-bottom-dark-mask-opacity');
+    assert(jsRes.text.includes('--mock-settings-dark-mask-opacity'), 'app.js must update --mock-settings-dark-mask-opacity');
 
-    // Test POST /api/apply-draft and POST /api/theme/apply-draft
+    const i18nRes = await httpRequest(PORT, 'GET', '/i18n.js');
+    assert.strictEqual(i18nRes.status, 200);
+    assert(i18nRes.text.includes('dimmer.dark_mask_label_left'), 'i18n.js must include dimmer.dark_mask_label_left');
+    assert(i18nRes.text.includes('dimmer.dark_mask_label_bottom'), 'i18n.js must include dimmer.dark_mask_label_bottom');
+    assert(i18nRes.text.includes('dimmer.dark_mask_label_settings'), 'i18n.js must include dimmer.dark_mask_label_settings');
+
+    // Test POST /api/apply-draft and POST /api/theme/apply-draft with per-slot darkMaskOpacity
     const apiApplyRes = await httpRequest(PORT, 'POST', '/api/apply-draft', {
       draftConfig: {
         ...draftToApply,
+        left: { ...draftToApply.left, darkMaskOpacity: 35 },
+        bottom: { ...draftToApply.bottom, darkMaskOpacity: 50 },
+        settings: { ...draftToApply.settings, darkMaskOpacity: 70 },
         transparentSidebar: true,
         transparentHeader: false,
         darkMaskOpacity: 35
@@ -414,12 +570,18 @@ async function runTests() {
     assert.strictEqual(apiApplyRes.json.slotsConfig.transparentSidebar, true);
     assert.strictEqual(apiApplyRes.json.slotsConfig.transparentHeader, false);
     assert.strictEqual(apiApplyRes.json.slotsConfig.darkMaskOpacity, 35);
+    assert.strictEqual(apiApplyRes.json.slotsConfig.left.darkMaskOpacity, 35);
+    assert.strictEqual(apiApplyRes.json.slotsConfig.bottom.darkMaskOpacity, 50);
+    assert.strictEqual(apiApplyRes.json.slotsConfig.settings.darkMaskOpacity, 70);
 
     const statusRes = await httpRequest(PORT, 'GET', '/api/status');
     assert.strictEqual(statusRes.status, 200);
     assert.strictEqual(statusRes.json.slotsConfig.transparentSidebar, true);
     assert.strictEqual(statusRes.json.slotsConfig.transparentHeader, false);
     assert.strictEqual(statusRes.json.slotsConfig.darkMaskOpacity, 35);
+    assert.strictEqual(statusRes.json.slotsConfig.left.darkMaskOpacity, 35);
+    assert.strictEqual(statusRes.json.slotsConfig.bottom.darkMaskOpacity, 50);
+    assert.strictEqual(statusRes.json.slotsConfig.settings.darkMaskOpacity, 70);
 
     // Test POST /api/presets/save with uncommitted draftConfig from Studio draft bar
     const studioDraftPresetName = `R2_R3_StudioDraftPreset_${Date.now()}`;
@@ -428,6 +590,9 @@ async function runTests() {
         name: studioDraftPresetName,
         draftConfig: {
           ...draftToApply,
+          left: { ...draftToApply.left, darkMaskOpacity: 65 },
+          bottom: { ...draftToApply.bottom, darkMaskOpacity: 25 },
+          settings: { ...draftToApply.settings, darkMaskOpacity: 40 },
           transparentSidebar: false,
           transparentHeader: true,
           darkMaskOpacity: 65
@@ -440,13 +605,16 @@ async function runTests() {
       assert.strictEqual(savedDetails.preset.slotsConfig.transparentSidebar, false);
       assert.strictEqual(savedDetails.preset.slotsConfig.transparentHeader, true);
       assert.strictEqual(savedDetails.preset.slotsConfig.darkMaskOpacity, 65);
+      assert.strictEqual(savedDetails.preset.slotsConfig.left.darkMaskOpacity, 65);
+      assert.strictEqual(savedDetails.preset.slotsConfig.bottom.darkMaskOpacity, 25);
+      assert.strictEqual(savedDetails.preset.slotsConfig.settings.darkMaskOpacity, 40);
     } finally {
       try { themeEngine.deletePreset(studioDraftPresetName); } catch (_) {}
     }
 
-    console.log('   ✓ Studio GUI 控件、样式与 REST API (含草稿直存预设) 验证全部通过');
+    console.log('   ✓ Studio GUI 三槽位遮罩控件、样式与 REST API (含草稿直存预设) 验证全部通过');
 
-    console.log('\n🎉 ALL R2/R3/R4/R5 TRANSPARENCY & DIMMER TESTS PASSED!');
+    console.log('\n🎉 ALL R2/R3/R4/R5 TRANSPARENCY & PER-SLOT DIMMER TESTS PASSED!');
   } finally {
     if (serverInstance) {
       await new Promise(r => serverInstance.close(() => r()));

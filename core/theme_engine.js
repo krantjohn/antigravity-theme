@@ -545,6 +545,76 @@ function getDarkMaskAlpha(val) {
   return Number((pct / 100).toFixed(2));
 }
 
+/**
+ * Resolves the normalized darkMaskOpacity (0..80) for a given slot ('left', 'bottom', 'settings').
+ * Keeps top-level config.darkMaskOpacity and config.left.darkMaskOpacity seamlessly synchronized
+ * in both directions for backward compatibility.
+ */
+function getSlotDarkMaskOpacity(slotsConfig, slotKey) {
+  if (!slotsConfig || typeof slotsConfig !== 'object') return 0;
+  if (slotKey === 'left') {
+    const hasSlotMask = Boolean(slotsConfig.left && typeof slotsConfig.left === 'object' && slotsConfig.left.darkMaskOpacity !== undefined);
+    const hasTopMask = slotsConfig.darkMaskOpacity !== undefined;
+    if (hasSlotMask && hasTopMask) {
+      const slotVal = normalizeDarkMaskOpacity(slotsConfig.left.darkMaskOpacity);
+      const topVal = normalizeDarkMaskOpacity(slotsConfig.darkMaskOpacity);
+      if (slotsConfig._syncedLeftMask !== undefined) {
+        if (slotVal !== slotsConfig._syncedLeftMask) return slotVal;
+        if (topVal !== slotsConfig._syncedLeftMask) return topVal;
+      }
+      if (slotVal === 0 && topVal > 0 && slotsConfig._syncedLeftMask === undefined) {
+        return topVal;
+      }
+      return slotVal;
+    }
+    if (hasSlotMask) return normalizeDarkMaskOpacity(slotsConfig.left.darkMaskOpacity);
+    return normalizeDarkMaskOpacity(slotsConfig.darkMaskOpacity);
+  }
+  if (slotsConfig[slotKey] && typeof slotsConfig[slotKey] === 'object' && slotsConfig[slotKey].darkMaskOpacity !== undefined) {
+    return normalizeDarkMaskOpacity(slotsConfig[slotKey].darkMaskOpacity);
+  }
+  return 0;
+}
+
+/**
+ * Normalizes and synchronizes per-slot darkMaskOpacity across left, bottom, settings,
+ * and top-level darkMaskOpacity on a config object in place.
+ * Returns true if any property was modified.
+ */
+function syncConfigDarkMaskOpacity(config) {
+  if (!config || typeof config !== 'object') return false;
+  let changed = false;
+  const leftVal = getSlotDarkMaskOpacity(config, 'left');
+  if (config.darkMaskOpacity !== leftVal) {
+    config.darkMaskOpacity = leftVal;
+    changed = true;
+  }
+  if (config.left && typeof config.left === 'object') {
+    if (config.left.darkMaskOpacity !== leftVal) {
+      config.left.darkMaskOpacity = leftVal;
+      changed = true;
+    }
+  }
+  for (const k of ['bottom', 'settings']) {
+    if (config[k] && typeof config[k] === 'object') {
+      const kVal = getSlotDarkMaskOpacity(config, k);
+      if (config[k].darkMaskOpacity !== kVal) {
+        config[k].darkMaskOpacity = kVal;
+        changed = true;
+      }
+    }
+  }
+  try {
+    Object.defineProperty(config, '_syncedLeftMask', {
+      value: leftVal,
+      writable: true,
+      configurable: true,
+      enumerable: false
+    });
+  } catch (_) {}
+  return changed;
+}
+
 let cachedLastValidConfig = null;
 
 function loadSlotsConfig() {
@@ -569,18 +639,22 @@ function loadSlotsConfig() {
         console.error('[loadSlotsConfig] Error: slots_config.json exists on disk but remained unreadable after retries. Preserving disk state.');
         if (cachedLastValidConfig) {
           console.warn('[loadSlotsConfig] Returning cached last-known-valid configuration without overwriting disk.');
-          return JSON.parse(JSON.stringify(cachedLastValidConfig));
+          const copy = JSON.parse(JSON.stringify(cachedLastValidConfig));
+          syncConfigDarkMaskOpacity(copy);
+          return copy;
         }
         // In-memory fallback ONLY - NEVER write to disk when disk file exists!
-        return {
+        const fb = {
           isOriginal: true,
           transparentSidebar: false,
           transparentHeader: false,
           darkMaskOpacity: 0,
-          left: { key: 'left', file: '', type: 'none', position: 'center center', desc: 'AI主对话界面 / 全局底图' },
-          bottom: { key: 'bottom', file: '', type: 'none', position: 'center 6%', desc: '底部输入框' },
-          settings: { key: 'settings', file: '', type: 'none', position: 'center 65%', desc: '设置界面' }
+          left: { key: 'left', file: '', type: 'none', position: 'center center', desc: 'AI主对话界面 / 全局底图', darkMaskOpacity: 0 },
+          bottom: { key: 'bottom', file: '', type: 'none', position: 'center 6%', desc: '底部输入框', darkMaskOpacity: 0 },
+          settings: { key: 'settings', file: '', type: 'none', position: 'center 65%', desc: '设置界面', darkMaskOpacity: 0 }
         };
+        syncConfigDarkMaskOpacity(fb);
+        return fb;
       }
 
       // First-time fresh installation ONLY: no config exists anywhere on disk
@@ -589,9 +663,9 @@ function loadSlotsConfig() {
         transparentSidebar: false,
         transparentHeader: false,
         darkMaskOpacity: 0,
-        left: { key: 'left', file: '', type: 'none', position: 'center center', desc: 'AI主对话界面 / 全局底图' },
-        bottom: { key: 'bottom', file: '', type: 'none', position: 'center 6%', desc: '底部输入框' },
-        settings: { key: 'settings', file: '', type: 'none', position: 'center 65%', desc: '设置界面' }
+        left: { key: 'left', file: '', type: 'none', position: 'center center', desc: 'AI主对话界面 / 全局底图', darkMaskOpacity: 0 },
+        bottom: { key: 'bottom', file: '', type: 'none', position: 'center 6%', desc: '底部输入框', darkMaskOpacity: 0 },
+        settings: { key: 'settings', file: '', type: 'none', position: 'center 65%', desc: '设置界面', darkMaskOpacity: 0 }
       };
       saveSlotsConfig(config);
       cachedLastValidConfig = JSON.parse(JSON.stringify(config));
@@ -615,9 +689,7 @@ function loadSlotsConfig() {
       config.transparentHeader = Boolean(config.transparentHeader);
       modified = true;
     }
-    const normOpacity = normalizeDarkMaskOpacity(config.darkMaskOpacity);
-    if (config.darkMaskOpacity !== normOpacity) {
-      config.darkMaskOpacity = normOpacity;
+    if (syncConfigDarkMaskOpacity(config)) {
       modified = true;
     }
   }
@@ -634,10 +706,12 @@ function loadSlotsConfig() {
   for (const [key, meta] of Object.entries(SLOTS_META)) {
     const existing = config[key];
     const preservedPosition = (existing && existing.position) ? existing.position : (meta.defaultPosition || 'center center');
+    const preservedMask = getSlotDarkMaskOpacity(config, key);
     if (existing && existing.type === 'none') {
       config[key].file = existing.file || '';
       config[key].position = preservedPosition;
       config[key].desc = meta.desc;
+      config[key].darkMaskOpacity = preservedMask;
       continue;
     }
     if (!existing || !existing.file) {
@@ -646,7 +720,8 @@ function loadSlotsConfig() {
         file: (existing && existing.file) || '',
         type: (existing && existing.type) || 'none',
         position: preservedPosition,
-        desc: meta.desc
+        desc: meta.desc,
+        darkMaskOpacity: preservedMask
       };
       modified = true;
     } else {
@@ -686,7 +761,12 @@ function loadSlotsConfig() {
       }
       config[key].position = preservedPosition;
       config[key].desc = meta.desc;
+      config[key].darkMaskOpacity = preservedMask;
     }
+  }
+
+  if (syncConfigDarkMaskOpacity(config)) {
+    modified = true;
   }
 
   if (modified || !fs.existsSync(slotsConfigPath)) {
@@ -700,6 +780,7 @@ function saveSlotsConfig(config) {
     console.warn('[saveSlotsConfig] Warning: Invalid config object provided to saveSlotsConfig');
     return false;
   }
+  syncConfigDarkMaskOpacity(config);
   const jsonStr = JSON.stringify(config, null, 2);
   const ok1 = writeFileSyncSafe(slotsConfigPath, jsonStr);
   let ok2 = true;
@@ -985,7 +1066,9 @@ function generateMasterCss(slotsConfig) {
 
   const isTransparentSidebar = Boolean(!slotsConfig.isOriginal && isLeftActive && slotsConfig.transparentSidebar === true);
   const isTransparentHeader = Boolean(!slotsConfig.isOriginal && isLeftActive && slotsConfig.transparentHeader === true);
-  const darkMaskAlpha = (!slotsConfig.isOriginal && isLeftActive) ? getDarkMaskAlpha(slotsConfig.darkMaskOpacity) : 0;
+  const leftAlpha = (!slotsConfig.isOriginal && isLeftActive) ? getDarkMaskAlpha(getSlotDarkMaskOpacity(slotsConfig, 'left')) : 0;
+  const bottomAlpha = (!slotsConfig.isOriginal && isBottomActive) ? getDarkMaskAlpha(getSlotDarkMaskOpacity(slotsConfig, 'bottom')) : 0;
+  const settingsAlpha = (!slotsConfig.isOriginal && isSettingsActive) ? getDarkMaskAlpha(getSlotDarkMaskOpacity(slotsConfig, 'settings')) : 0;
 
   return `/* ==========================================================================
    Antigravity Wallpaper Engine - Pure 3-Target Edition
@@ -1171,13 +1254,6 @@ div.shrink-0:has(> [data-testid="title-menu-bar"]) {
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
-` : ''}${darkMaskAlpha > 0 ? `
-/* 3c. Regional Adjustable Dark Mask / Brightness Dimmer */
-div[data-testid="aux-pane-split"] > div.flex:first-child,
-.agy-sheet:not(:has([data-testid="aux-pane-split"])) {
-  background-color: rgba(0, 0, 0, ${darkMaskAlpha}) !important;
-  background: rgba(0, 0, 0, ${darkMaskAlpha}) !important;
-}
 ` : ''}
 /* 4. Terminal & Auxiliary Drawer Seamless Transparency (Pure 3-Target Contract) */
 .terminal.xterm,
@@ -1200,7 +1276,19 @@ div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background {
   border-left: none !important;
   box-shadow: none !important;
 }
-
+${leftAlpha > 0 ? `
+/* 3c. Regional Adjustable Dark Mask / Brightness Dimmer */
+div[data-testid="aux-pane-split"] > div.flex:first-child,
+div[data-testid="aux-pane-split"] > div:not(:first-child):not(.bg-border),
+.agy-sheet:not(:has([data-testid="aux-pane-split"])),
+main[class*="bg-background"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *),
+[aria-label="Auxiliary Pane"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *):not([aria-label="Auxiliary Pane"] *),
+aside[aria-label*="drawer"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *),
+[data-panel="auxiliary"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *) {
+  background-color: rgba(7, 9, 14, ${leftAlpha}) !important;
+  background: rgba(7, 9, 14, ${leftAlpha}) !important;
+}
+` : ''}
 .antigravity-slot-video[data-slot="mid"],
 .antigravity-slot-video[data-slot="right"] {
   display: none !important;
@@ -1225,7 +1313,7 @@ ${isBottomActive ? `
 div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([role="menu"]):not([data-mention-menu]):not([data-radix-popper-content-wrapper]):not([class*="bottom-full"]):not([class*="absolute"]):not([data-state="open"]) {
   position: relative !important;
   background-color: transparent !important;
-  background-image: ${b64Bottom ? `url("${b64Bottom}")` : 'none'} !important;
+  background-image: ${b64Bottom ? (bottomAlpha > 0 ? `linear-gradient(rgba(7, 9, 14, ${bottomAlpha}), rgba(7, 9, 14, ${bottomAlpha})), url("${b64Bottom}")` : `url("${b64Bottom}")`) : 'none'} !important;
   background-size: cover !important;
   background-position: ${posBottom} !important;
   background-repeat: no-repeat !important;
@@ -1253,6 +1341,32 @@ div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-men
   transform: translateZ(0) !important;
   backface-visibility: hidden !important;
 }
+
+[id="antigravity.agentSidePanelInputBox"] > div.bg-card > *:not(.antigravity-slot-video),
+[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"] > *:not(.antigravity-slot-video),
+[id="antigravity.agentSidePanelInputBox"] .surface-composer-card > *:not(.antigravity-slot-video),
+.surface-composer-card > *:not(.antigravity-slot-video),
+div.rounded-2xl.bg-card-border > div.bg-card > *:not(.antigravity-slot-video) {
+  position: relative !important;
+  z-index: 1 !important;
+}
+${bottomAlpha > 0 ? `
+/* 5b. Input Box Dark Mask / Brightness Dimmer (slot: bottom) */
+[id="antigravity.agentSidePanelInputBox"] > div.bg-card:has(> .antigravity-slot-video[data-slot="bottom"])::after,
+[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"]:has(> .antigravity-slot-video[data-slot="bottom"])::after,
+[id="antigravity.agentSidePanelInputBox"] .surface-composer-card:has(> .antigravity-slot-video[data-slot="bottom"])::after,
+.surface-composer-card:has(> .antigravity-slot-video[data-slot="bottom"])::after,
+div.rounded-2xl.bg-card-border > div.bg-card:has(> .antigravity-slot-video[data-slot="bottom"])::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-color: rgba(7, 9, 14, ${bottomAlpha}) !important;
+  background: rgba(7, 9, 14, ${bottomAlpha}) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  border-radius: inherit !important;
+}
+` : ''}
 ` : `
 /* Bottom slot transparent pass-through when left has wallpaper */
 ${isLeftActive ? `
@@ -1305,7 +1419,7 @@ div[data-state="open"]:has(div.bg-sidebar),
 div.settings-modal-container {
   position: relative !important;
   background-color: transparent !important;
-  background-image: ${b64Settings ? `url("${b64Settings}")` : 'none'} !important;
+  background-image: ${b64Settings ? (settingsAlpha > 0 ? `linear-gradient(rgba(7, 9, 14, ${settingsAlpha}), rgba(7, 9, 14, ${settingsAlpha})), url("${b64Settings}")` : `url("${b64Settings}")`) : 'none'} !important;
   background-size: cover !important;
   background-position: ${posSettings} !important;
   background-repeat: no-repeat !important;
@@ -1324,6 +1438,28 @@ div.settings-modal-container {
   pointer-events: none !important;
   z-index: 0 !important;
 }
+
+[role="dialog"] > *:not(.antigravity-slot-video),
+div[data-state="open"]:has(div.bg-sidebar) > *:not(.antigravity-slot-video),
+div.settings-modal-container > *:not(.antigravity-slot-video) {
+  position: relative !important;
+  z-index: 1 !important;
+}
+${settingsAlpha > 0 ? `
+/* 6b. Settings Dialog Dark Mask / Brightness Dimmer (slot: settings) */
+[role="dialog"]:has(> .antigravity-slot-video[data-slot="settings"])::after,
+div[data-state="open"]:has(div.bg-sidebar):has(> .antigravity-slot-video[data-slot="settings"])::after,
+div.settings-modal-container:has(> .antigravity-slot-video[data-slot="settings"])::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-color: rgba(7, 9, 14, ${settingsAlpha}) !important;
+  background: rgba(7, 9, 14, ${settingsAlpha}) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  border-radius: inherit !important;
+}
+` : ''}
 
 [role="dialog"] .bg-background,
 [role="dialog"] [class*="bg-background"],
@@ -3136,6 +3272,14 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
               const ws = new WebSocket(page.webSocketDebuggerUrl);
               ws.addEventListener('open', () => {
                 const videoScript = getClientVideoScript(activeConfig);
+                const isLeftAct = Boolean(activeConfig && !activeConfig.isOriginal && activeConfig.left && activeConfig.left.type !== 'none' && activeConfig.left.file);
+                const isTransSb = Boolean(isLeftAct && activeConfig.transparentSidebar === true);
+                const isTransHdr = Boolean(isLeftAct && activeConfig.transparentHeader === true);
+                const leftMaskAlpha = isLeftAct ? getDarkMaskAlpha(getSlotDarkMaskOpacity(activeConfig, 'left')) : 0;
+                const isBotAct = Boolean(activeConfig && !activeConfig.isOriginal && activeConfig.bottom && activeConfig.bottom.type !== 'none' && activeConfig.bottom.file);
+                const botMaskAlpha = isBotAct ? getDarkMaskAlpha(getSlotDarkMaskOpacity(activeConfig, 'bottom')) : 0;
+                const isSettingsAct = Boolean(activeConfig && !activeConfig.isOriginal && activeConfig.settings && activeConfig.settings.type !== 'none' && activeConfig.settings.file);
+                const settingsMaskAlpha = isSettingsAct ? getDarkMaskAlpha(getSlotDarkMaskOpacity(activeConfig, 'settings')) : 0;
                 const applyCode = `
                   (function() {
                     let titlebarFix = document.getElementById('antigravity-titlebar-fix');
@@ -3228,12 +3372,50 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         'div.absolute.top-full:has(button) button:hover {',
                         '  background: rgba(255, 255, 255, 0.12) !important;',
                         '  color: #ffffff !important;',
-                        '}'
+                        '}'${!isTransSb ? `,
+                        'div[role="navigation"][aria-label="Sidebar"], aside[aria-label="Sidebar"] {',
+                        '  background: var(--color-sidebar, var(--sidebar, #111114)) !important;',
+                        '  background-color: var(--color-sidebar, var(--sidebar, #111114)) !important;',
+                        '  backdrop-filter: none !important;',
+                        '  -webkit-backdrop-filter: none !important;',
+                        '}'` : ''}${!isTransHdr ? `,
+                        '[data-testid="title-menu-bar"] {',
+                        '  background: var(--color-shell, var(--shell, #111114)) !important;',
+                        '  background-color: var(--color-shell, var(--shell, #111114)) !important;',
+                        '  backdrop-filter: none !important;',
+                        '  -webkit-backdrop-filter: none !important;',
+                        '}'` : ''}${leftMaskAlpha <= 0 ? `,
+                        'div[data-testid="aux-pane-split"] > div.flex:first-child,',
+                        'div[data-testid="aux-pane-split"] > div:not(:first-child):not(.bg-border),',
+                        '.agy-sheet:not(:has([data-testid="aux-pane-split"])),',
+                        'main[class*="bg-background"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *),',
+                        '[aria-label="Auxiliary Pane"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *):not([aria-label="Auxiliary Pane"] *),',
+                        'aside[aria-label*="drawer"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *),',
+                        '[data-panel="auxiliary"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *) {',
+                        '  background-color: transparent !important;',
+                        '  background: transparent !important;',
+                        '}'` : ''}${botMaskAlpha <= 0 ? `,
+                        '.surface-composer-card:has(> .antigravity-slot-video[data-slot="bottom"])::after,',
+                        'div.bg-card:has(> .antigravity-slot-video[data-slot="bottom"])::after {',
+                        '  content: none !important;',
+                        '  display: none !important;',
+                        '}'` : ''}${settingsMaskAlpha <= 0 ? `,
+                        '[role="dialog"]:has(> .antigravity-slot-video[data-slot="settings"])::after,',
+                        'div.settings-modal-container:has(> .antigravity-slot-video[data-slot="settings"])::after {',
+                        '  content: none !important;',
+                        '  display: none !important;',
+                        '}'` : ''}
                       ].join('\\n');
                     }
                     let link = document.getElementById('antigravity-custom-theme-link');
                     if (link) {
-                      link.href = 'http://127.0.0.1:8315/custom_theme.css?v=' + Date.now();
+                      link.disabled = true;
+                      link.removeAttribute('rel');
+                      link.removeAttribute('href');
+                    }
+                    let instantStyle = document.getElementById('antigravity-custom-theme-instant');
+                    if (instantStyle) {
+                      try { instantStyle.remove(); } catch(e) {}
                     }
                     if (document.body) {
                       const zeroStyle = document.getElementById('antigravity-zero-latency-style');
@@ -3321,6 +3503,7 @@ async function batchApplyDraft(draftConfig, fontColor) {
   }
 
   const slotsConfig = loadSlotsConfig();
+  const prevLeftMask = getSlotDarkMaskOpacity(slotsConfig, 'left');
   let hasChanges = false;
   const now = Date.now();
 
@@ -3332,7 +3515,7 @@ async function batchApplyDraft(draftConfig, fontColor) {
 
     // Case 1: Slot restored to vanilla / none
     if (!hasStaged && (slotData.type === 'none' || slotData.isOriginal)) {
-      if (!slotsConfig[slotKey] || slotsConfig[slotKey].type !== 'none' || !slotsConfig[slotKey].isOriginal) {
+      if (!slotsConfig[slotKey] || slotsConfig[slotKey].type !== 'none' || !slotsConfig[slotKey].isOriginal || slotsConfig[slotKey].darkMaskOpacity !== 0) {
         slotsConfig[slotKey] = {
           key: slotKey,
           file: '',
@@ -3340,10 +3523,14 @@ async function batchApplyDraft(draftConfig, fontColor) {
           position: 'center center',
           desc: slotMeta.desc,
           isOriginal: true,
+          darkMaskOpacity: 0,
           version: now
         };
         delete slotsConfig[slotKey].poster;
         delete slotsConfig[slotKey].unsupportedCodec;
+        if (slotKey === 'left') {
+          slotsConfig.darkMaskOpacity = 0;
+        }
         hasChanges = true;
       }
       continue;
@@ -3418,6 +3605,9 @@ async function batchApplyDraft(draftConfig, fontColor) {
 
         const prevPos = slotsConfig[slotKey]?.position || slotMeta.defaultPosition || 'center center';
         const finalPos = slotData.position ? parsePosition(slotData.position, prevPos).str : prevPos;
+        const finalSlotMask = slotData.darkMaskOpacity !== undefined
+          ? normalizeDarkMaskOpacity(slotData.darkMaskOpacity)
+          : getSlotDarkMaskOpacity(slotsConfig, slotKey);
 
         slotsConfig[slotKey] = {
           key: slotKey,
@@ -3425,7 +3615,8 @@ async function batchApplyDraft(draftConfig, fontColor) {
           type: isVideo ? 'video' : 'image',
           version: now,
           position: finalPos,
-          desc: slotMeta.desc
+          desc: slotMeta.desc,
+          darkMaskOpacity: finalSlotMask
         };
 
         if (posterFileName) {
@@ -3442,23 +3633,67 @@ async function batchApplyDraft(draftConfig, fontColor) {
 
         hasChanges = true;
       }
-    } else if (slotData.position) {
-      // Case 3: Only position changed
-      const currentPos = slotsConfig[slotKey]?.position;
-      const newPos = parsePosition(slotData.position, SLOTS_META[slotKey].defaultPosition).str;
-      if (currentPos !== newPos) {
+    } else {
+      // Case 3: Existing file/type/position/per-slot darkMaskOpacity updated or restored
+      if (slotData.file) {
+        const inferredType = (slotData.type && slotData.type !== 'none' && slotData.type !== 'vanilla')
+          ? slotData.type
+          : (/\.(mp4|webm|mov)$/i.test(slotData.file) ? 'video' : 'image');
+        if (!slotsConfig[slotKey] || slotsConfig[slotKey].file !== slotData.file || slotsConfig[slotKey].type !== inferredType || slotsConfig[slotKey].isOriginal) {
+          slotsConfig[slotKey] = {
+            ...(slotsConfig[slotKey] || {}),
+            key: slotKey,
+            file: slotData.file,
+            type: inferredType,
+            version: now,
+            position: slotsConfig[slotKey]?.position || SLOTS_META[slotKey].defaultPosition || 'center center',
+            desc: SLOTS_META[slotKey].desc,
+            darkMaskOpacity: getSlotDarkMaskOpacity(slotsConfig, slotKey)
+          };
+          if (slotData.poster) {
+            slotsConfig[slotKey].poster = slotData.poster;
+          }
+          delete slotsConfig[slotKey].isOriginal;
+          hasChanges = true;
+        }
+      }
+      if (slotData.position) {
+        const currentPos = slotsConfig[slotKey]?.position;
+        const newPos = parsePosition(slotData.position, SLOTS_META[slotKey].defaultPosition).str;
+        if (currentPos !== newPos) {
+          if (!slotsConfig[slotKey]) {
+            slotsConfig[slotKey] = {
+              key: slotKey,
+              file: SLOTS_META[slotKey].defaultFile,
+              type: 'image',
+              version: now,
+              desc: SLOTS_META[slotKey].desc,
+              darkMaskOpacity: 0
+            };
+          }
+          slotsConfig[slotKey].position = newPos;
+          slotsConfig[slotKey].version = now;
+          hasChanges = true;
+        }
+      }
+      if (slotData.darkMaskOpacity !== undefined) {
+        const nextSlotMask = normalizeDarkMaskOpacity(slotData.darkMaskOpacity);
         if (!slotsConfig[slotKey]) {
           slotsConfig[slotKey] = {
             key: slotKey,
             file: SLOTS_META[slotKey].defaultFile,
             type: 'image',
             version: now,
-            desc: SLOTS_META[slotKey].desc
+            position: SLOTS_META[slotKey].defaultPosition || 'center center',
+            desc: SLOTS_META[slotKey].desc,
+            darkMaskOpacity: nextSlotMask
           };
+          hasChanges = true;
+        } else if (slotsConfig[slotKey].darkMaskOpacity !== nextSlotMask) {
+          slotsConfig[slotKey].darkMaskOpacity = nextSlotMask;
+          slotsConfig[slotKey].version = now;
+          hasChanges = true;
         }
-        slotsConfig[slotKey].position = newPos;
-        slotsConfig[slotKey].version = now;
-        hasChanges = true;
       }
     }
   }
@@ -3483,17 +3718,48 @@ async function batchApplyDraft(draftConfig, fontColor) {
     slotsConfig.transparentHeader = false;
   }
 
-  if (draftConfig.darkMaskOpacity !== undefined) {
-    const nextOpacity = normalizeDarkMaskOpacity(draftConfig.darkMaskOpacity);
-    if (slotsConfig.darkMaskOpacity !== nextOpacity) {
-      slotsConfig.darkMaskOpacity = nextOpacity;
+  const leftWasRestoredVanilla = Boolean(
+    draftConfig.left &&
+    !(draftConfig.left.stagedFilePath && fs.existsSync(draftConfig.left.stagedFilePath)) &&
+    (draftConfig.left.type === 'none' || draftConfig.left.isOriginal)
+  );
+
+  if (leftWasRestoredVanilla) {
+    slotsConfig.darkMaskOpacity = 0;
+    if (slotsConfig.left) slotsConfig.left.darkMaskOpacity = 0;
+  } else {
+    const hasDraftSlotLeftMask = Boolean(draftConfig.left && draftConfig.left.darkMaskOpacity !== undefined);
+    const hasDraftTopMask = draftConfig.darkMaskOpacity !== undefined;
+    let finalLeftMask = prevLeftMask;
+    if (hasDraftSlotLeftMask && hasDraftTopMask) {
+      const dSlot = normalizeDarkMaskOpacity(draftConfig.left.darkMaskOpacity);
+      const dTop = normalizeDarkMaskOpacity(draftConfig.darkMaskOpacity);
+      if (dSlot === dTop) {
+        finalLeftMask = dSlot;
+      } else if (dSlot !== prevLeftMask) {
+        finalLeftMask = dSlot;
+      } else if (dTop !== prevLeftMask) {
+        finalLeftMask = dTop;
+      } else {
+        finalLeftMask = dSlot;
+      }
+    } else if (hasDraftSlotLeftMask) {
+      finalLeftMask = normalizeDarkMaskOpacity(draftConfig.left.darkMaskOpacity);
+    } else if (hasDraftTopMask) {
+      finalLeftMask = normalizeDarkMaskOpacity(draftConfig.darkMaskOpacity);
+    }
+    if (slotsConfig.darkMaskOpacity !== finalLeftMask) {
+      slotsConfig.darkMaskOpacity = finalLeftMask;
       hasChanges = true;
     }
-  } else if (typeof slotsConfig.darkMaskOpacity !== 'number') {
-    slotsConfig.darkMaskOpacity = 0;
+    if (slotsConfig.left && typeof slotsConfig.left === 'object' && slotsConfig.left.darkMaskOpacity !== finalLeftMask) {
+      slotsConfig.left.darkMaskOpacity = finalLeftMask;
+      hasChanges = true;
+    }
   }
 
   slotsConfig.isOriginal = false;
+  syncConfigDarkMaskOpacity(slotsConfig);
   saveSlotsConfig(slotsConfig);
 
   // Recompile CSS ONCE
@@ -3620,13 +3886,15 @@ async function swapWallpaper(slotInput, srcPath, customPosterPath) {
   // 更新槽位状态配置
   const slotsConfig = loadSlotsConfig();
   const prevPosition = slotsConfig[slotKey]?.position || slotMeta.defaultPosition || 'center center';
+  const prevDarkMask = getSlotDarkMaskOpacity(slotsConfig, slotKey);
   slotsConfig[slotKey] = {
     key: slotKey,
     file: targetFileName,
     type: isVideo ? 'video' : 'image',
     version: Date.now(),
     position: prevPosition,
-    desc: slotMeta.desc
+    desc: slotMeta.desc,
+    darkMaskOpacity: prevDarkMask
   };
   if (posterFileName) {
     slotsConfig[slotKey].poster = posterFileName;
@@ -3686,10 +3954,14 @@ async function restoreSlotVanilla(slotInput) {
     position: 'center center',
     desc: slotMeta.desc,
     isOriginal: true,
+    darkMaskOpacity: 0,
     version: Date.now()
   };
   delete slotsConfig[slotKey].poster;
   delete slotsConfig[slotKey].unsupportedCodec;
+  if (slotKey === 'left') {
+    slotsConfig.darkMaskOpacity = 0;
+  }
 
   saveSlotsConfig(slotsConfig);
   console.log(`✓ slots_config.json 已更新为原版配置`);
@@ -3745,7 +4017,8 @@ async function revertToBaseline() {
       type: 'image',
       version: Date.now(),
       position: meta.defaultPosition || 'center center',
-      desc: meta.desc
+      desc: meta.desc,
+      darkMaskOpacity: 0
     };
   }
   baselineConfig.isOriginal = false;
@@ -4129,6 +4402,12 @@ function savePreset(presetName, description, options = {}) {
     for (const sKey of ['left', 'bottom', 'settings']) {
       if (dc[sKey] && typeof dc[sKey] === 'object' && archivedConfig[sKey]) {
         if (dc[sKey].position) archivedConfig[sKey].position = dc[sKey].position;
+        if (dc[sKey].darkMaskOpacity !== undefined) {
+          archivedConfig[sKey].darkMaskOpacity = normalizeDarkMaskOpacity(dc[sKey].darkMaskOpacity);
+          if (sKey === 'left') {
+            archivedConfig.darkMaskOpacity = archivedConfig[sKey].darkMaskOpacity;
+          }
+        }
       }
     }
   }
@@ -4279,7 +4558,7 @@ function savePreset(presetName, description, options = {}) {
   delete archivedConfig.fontColor;
   archivedConfig.transparentSidebar = Boolean(archivedConfig.transparentSidebar);
   archivedConfig.transparentHeader = Boolean(archivedConfig.transparentHeader);
-  archivedConfig.darkMaskOpacity = normalizeDarkMaskOpacity(archivedConfig.darkMaskOpacity);
+  syncConfigDarkMaskOpacity(archivedConfig);
   fs.writeFileSync(path.join(targetDir, 'preset.json'), JSON.stringify(presetMeta, null, 2), 'utf8');
   fs.writeFileSync(path.join(targetDir, 'slots_config.json'), JSON.stringify(archivedConfig, null, 2), 'utf8');
 
@@ -4621,7 +4900,7 @@ async function applyPreset(nameOrIndex) {
   delete targetConfig.fontColor;
   targetConfig.transparentSidebar = Boolean(targetConfig.transparentSidebar);
   targetConfig.transparentHeader = Boolean(targetConfig.transparentHeader);
-  targetConfig.darkMaskOpacity = normalizeDarkMaskOpacity(targetConfig.darkMaskOpacity);
+  syncConfigDarkMaskOpacity(targetConfig);
   targetConfig.isOriginal = false;
   saveSlotsConfig(targetConfig);
   console.log(`✓ slots_config.json 已更新为预设配置`);
@@ -4707,9 +4986,9 @@ async function restoreOriginal() {
     transparentHeader: false,
     darkMaskOpacity: 0,
     version: Date.now(),
-    left: { key: 'left', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-    bottom: { key: 'bottom', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-    settings: { key: 'settings', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' }
+    left: { key: 'left', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center', darkMaskOpacity: 0 },
+    bottom: { key: 'bottom', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center', darkMaskOpacity: 0 },
+    settings: { key: 'settings', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center', darkMaskOpacity: 0 }
   };
   saveSlotsConfig(vanillaConfig);
   console.log('✓ slots_config.json 已重置为官方原版');
@@ -4824,9 +5103,9 @@ async function uninstallCompletely() {
       transparentHeader: false,
       darkMaskOpacity: 0,
       version: Date.now(),
-      left: { key: 'left', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-      bottom: { key: 'bottom', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' },
-      settings: { key: 'settings', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center' }
+      left: { key: 'left', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center', darkMaskOpacity: 0 },
+      bottom: { key: 'bottom', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center', darkMaskOpacity: 0 },
+      settings: { key: 'settings', file: '', type: 'none', version: Date.now(), desc: '官方原版默认', position: 'center center', darkMaskOpacity: 0 }
     };
     saveSlotsConfig(vanillaConfig);
     fs.writeFileSync(customCssPath, '/* Vanilla Mode - No Custom CSS */\n', 'utf8');
@@ -5290,7 +5569,9 @@ module.exports = {
   writeFileSyncSafe,
   readJsonFileSyncSafe,
   normalizeDarkMaskOpacity,
-  getDarkMaskAlpha
+  getDarkMaskAlpha,
+  getSlotDarkMaskOpacity,
+  syncConfigDarkMaskOpacity
 };
 
 

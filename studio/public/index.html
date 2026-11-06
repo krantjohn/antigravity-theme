@@ -267,25 +267,27 @@
           </div>
 
           <div class="dimmer-control-group">
-            <label class="toggle-row" for="toggle-transparent-sidebar" title="让左侧历史对话栏变成半透明毛玻璃，与主对话区共享底层壁纸" data-i18n-title="dimmer.transparent_sidebar_title">
-              <span class="toggle-label-text" data-i18n="dimmer.transparent_sidebar">左侧对话栏透明</span>
-              <span class="toggle-switch">
-                <input type="checkbox" id="toggle-transparent-sidebar">
-                <span class="toggle-slider"></span>
-              </span>
-            </label>
+            <div id="dimmer-left-only-toggles">
+              <label class="toggle-row" for="toggle-transparent-sidebar" title="让左侧历史对话栏变成半透明毛玻璃，与主对话区共享底层壁纸" data-i18n-title="dimmer.transparent_sidebar_title">
+                <span class="toggle-label-text" data-i18n="dimmer.transparent_sidebar">左侧对话栏透明</span>
+                <span class="toggle-switch">
+                  <input type="checkbox" id="toggle-transparent-sidebar">
+                  <span class="toggle-slider"></span>
+                </span>
+              </label>
 
-            <label class="toggle-row" for="toggle-transparent-header" title="让顶部黑色标题与菜单栏变成半透明毛玻璃，与主对话区共享底层壁纸" data-i18n-title="dimmer.transparent_header_title">
-              <span class="toggle-label-text" data-i18n="dimmer.transparent_header">顶部状态栏透明</span>
-              <span class="toggle-switch">
-                <input type="checkbox" id="toggle-transparent-header">
-                <span class="toggle-slider"></span>
-              </span>
-            </label>
+              <label class="toggle-row" for="toggle-transparent-header" title="让顶部黑色标题与菜单栏变成半透明毛玻璃，与主对话区共享底层壁纸" data-i18n-title="dimmer.transparent_header_title">
+                <span class="toggle-label-text" data-i18n="dimmer.transparent_header">顶部状态栏透明</span>
+                <span class="toggle-switch">
+                  <input type="checkbox" id="toggle-transparent-header">
+                  <span class="toggle-slider"></span>
+                </span>
+              </label>
+            </div>
 
             <div class="slider-row">
               <div class="slider-label-line">
-                <span data-i18n="dimmer.dark_mask_label">壁纸暗色遮罩 / 亮度调节</span>
+                <span id="label-dark-mask" data-i18n="dimmer.dark_mask_label">壁纸暗色遮罩 / 亮度调节</span>
                 <span class="slider-val-tag" id="val-dark-mask">0%</span>
               </div>
               <input type="range" class="range-slider" id="slider-dark-mask" min="0" max="80" step="1" value="0" title="降低过亮壁纸的底色亮度，使对话文字清晰可读 (0% - 80%)" data-i18n-title="dimmer.dark_mask_title">
@@ -463,7 +465,7 @@
                 </aside>
 
                 <!-- 2. Main Conversation Area (Slot: left base + chat stream) -->
-                <div class="mock-chat-workspace" id="mock-slot-left" data-slot="left" title="点击调节【AI主对话底座 left】">
+                <div class="mock-chat-workspace mock-chat-area" id="mock-slot-left" data-slot="left" title="点击调节【AI主对话底座 left】">
                   <!-- Global Left Slot Background Layer -->
                   <div class="mock-slot-bg mock-bg-left">
                     <video class="mock-media-video" id="mock-video-left" autoplay muted loop playsinline></video>
@@ -583,7 +585,7 @@
                 </div>
 
                 <!-- 3. Right Auxiliary Pane (Slot: right / mid) -->
-                <aside class="mock-right-pane" id="mock-right-pane">
+                <aside class="mock-right-pane mock-aux-pane" id="mock-right-pane">
                   <!-- Top Switcher Header -->
                   <div class="mock-pane-header">
                     <div class="mock-pane-tabs">

@@ -2122,18 +2122,26 @@ body {
   z-index: 10;
 }
 
-/* Regional Adjustable Dark Mask / Brightness Dimmer (R3) in Live Mockup */
-#mock-slot-left::before {
+/* Regional Adjustable Dark Mask / Brightness Dimmer (R3) in Live Mockup (Main Chat + Right Aux Pane) */
+#mock-slot-left::before,
+.mock-chat-area::before,
+#mock-right-pane::before,
+.mock-aux-pane::before {
   content: "";
   position: absolute;
   inset: 0;
-  background-color: rgba(0, 0, 0, var(--mock-dark-mask-opacity, 0));
+  background-color: rgba(7, 9, 14, var(--mock-dark-mask-opacity, 0));
   pointer-events: none;
   z-index: 2;
   transition: background-color 0.08s ease;
 }
 
-.mockup-window.peek-vanilla #mock-slot-left::before {
+.mockup-window.peek-vanilla #mock-slot-left::before,
+.mockup-window.peek-vanilla .mock-chat-area::before,
+.mockup-window.peek-vanilla #mock-right-pane::before,
+.mockup-window.peek-vanilla .mock-aux-pane::before,
+.mockup-window.peek-vanilla #mock-slot-bottom::before,
+.mockup-window.peek-vanilla #mock-slot-settings::before {
   display: none !important;
 }
 
@@ -2144,14 +2152,24 @@ body {
   -webkit-backdrop-filter: none;
 }
 
+.mockup-window.has-left-wallpaper:not(.peek-vanilla) .mock-body,
 .mockup-window.transparent-sidebar:not(.peek-vanilla) .mock-body,
 .mockup-window.transparent-header:not(.peek-vanilla) .mock-body {
   overflow: visible;
 }
 
+.mockup-window.has-left-wallpaper:not(.peek-vanilla) .mock-chat-workspace,
 .mockup-window.transparent-sidebar:not(.peek-vanilla) .mock-chat-workspace,
 .mockup-window.transparent-header:not(.peek-vanilla) .mock-chat-workspace {
   overflow: visible;
+}
+
+.mockup-window.has-left-wallpaper:not(.peek-vanilla) .mock-bg-left {
+  right: -380px;
+}
+
+.mockup-window.has-left-wallpaper:not(.peek-vanilla) .mock-bg-left > .slot-focus-indicator {
+  right: 388px;
 }
 
 .mockup-window.transparent-sidebar:not(.peek-vanilla) .mock-sidebar {
@@ -2187,19 +2205,26 @@ body {
   right: 388px;
 }
 
+.mockup-window.mode-focus-left.has-left-wallpaper:not(.peek-vanilla) .mock-bg-left,
 .mockup-window.mode-focus-left.transparent-header:not(.peek-vanilla) .mock-bg-left {
-  left: -160px;
   right: -220px;
 }
 
+.mockup-window.mode-focus-left.transparent-header:not(.peek-vanilla) .mock-bg-left {
+  left: -160px;
+}
+
+.mockup-window.mode-focus-left.has-left-wallpaper:not(.peek-vanilla) .mock-bg-left > .slot-focus-indicator,
 .mockup-window.mode-focus-left.transparent-header:not(.peek-vanilla) .mock-bg-left > .slot-focus-indicator {
   right: 228px;
 }
 
+.mockup-window.aux-closed.has-left-wallpaper:not(.peek-vanilla) .mock-bg-left,
 .mockup-window.aux-closed.transparent-header:not(.peek-vanilla) .mock-bg-left {
   right: 0;
 }
 
+.mockup-window.aux-closed.has-left-wallpaper:not(.peek-vanilla) .mock-bg-left > .slot-focus-indicator,
 .mockup-window.aux-closed.transparent-header:not(.peek-vanilla) .mock-bg-left > .slot-focus-indicator {
   right: 8px;
 }
@@ -2651,6 +2676,16 @@ body {
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
 }
 
+#mock-slot-bottom::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(7, 9, 14, var(--mock-bottom-dark-mask-opacity, 0));
+  pointer-events: none;
+  z-index: 1;
+  transition: background-color 0.08s ease;
+}
+
 .mock-input-inner-card {
   position: relative;
   z-index: 2;
@@ -2771,6 +2806,13 @@ body {
   user-select: none;
 }
 
+.mockup-window.has-left-wallpaper:not(.peek-vanilla) .mock-right-pane,
+.mockup-window.has-left-wallpaper:not(.peek-vanilla) .mock-aux-pane {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .mock-pane-header {
   height: 36px;
   min-height: 36px;
@@ -2780,6 +2822,8 @@ body {
   justify-content: space-between;
   padding: 0 10px;
   background: rgba(0, 0, 0, 0.25);
+  position: relative;
+  z-index: 3;
 }
 
 .mock-pane-tabs {
@@ -2841,6 +2885,7 @@ body {
   display: none;
   flex-direction: column;
   position: relative;
+  z-index: 3;
   overflow: hidden;
 }
 
@@ -3130,7 +3175,17 @@ body {
 }
 
 .mock-settings-modal > .mock-slot-bg {
+  z-index: 0;
+}
+
+#mock-slot-settings::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(7, 9, 14, var(--mock-settings-dark-mask-opacity, 0));
+  pointer-events: none;
   z-index: 1;
+  transition: background-color 0.08s ease;
 }
 
 .mock-modal-header {

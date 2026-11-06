@@ -492,11 +492,20 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           style.id = 'antigravity-custom-theme';
           (document.head || document.documentElement).appendChild(style);
         }
-        const res = await fetch(SERVER_URL + '/custom_theme.css', { cache: 'default' });
+        const res = await fetch(SERVER_URL + '/custom_theme.css', { cache: 'no-cache' });
         if (res.ok) {
           const text = await res.text();
-          if (text && text !== style.textContent) {
+          if (text !== undefined && text !== null) {
             style.textContent = text;
+            if (link) {
+              link.disabled = true;
+              link.removeAttribute('rel');
+              link.removeAttribute('href');
+            }
+            const instantStyle = document.getElementById('antigravity-custom-theme-instant');
+            if (instantStyle) {
+              try { instantStyle.remove(); } catch(e) {}
+            }
           }
         }
       }
