@@ -673,12 +673,12 @@ function renderMockupPreview() {
   agMockup.classList.toggle('transparent-sidebar', Boolean(isLeftActive && cfgSource.transparentSidebar === true));
   agMockup.classList.toggle('transparent-header', Boolean(isLeftActive && cfgSource.transparentHeader === true));
 
-  const leftMaskPct = isLeftActive ? getSlotDarkMask(cfgSource, 'left') : 0;
-  const bottomMaskPct = isBottomActive ? getSlotDarkMask(cfgSource, 'bottom') : 0;
-  const settingsMaskPct = isSettingsActive ? getSlotDarkMask(cfgSource, 'settings') : 0;
+  const leftMaskPct = getSlotDarkMask(cfgSource, 'left');
+  const bottomMaskPct = getSlotDarkMask(cfgSource, 'bottom');
+  const settingsMaskPct = getSlotDarkMask(cfgSource, 'settings');
 
-  agMockup.style.setProperty('--mock-dark-mask-opacity', String(leftMaskPct / 100));
-  agMockup.style.setProperty('--mock-left-dark-mask-opacity', String(leftMaskPct / 100));
+  agMockup.style.setProperty('--mock-dark-mask-opacity', String((isLeftActive ? leftMaskPct : 0) / 100));
+  agMockup.style.setProperty('--mock-left-dark-mask-opacity', String((isLeftActive ? leftMaskPct : 0) / 100));
   agMockup.style.setProperty('--mock-bottom-dark-mask-opacity', String(bottomMaskPct / 100));
   agMockup.style.setProperty('--mock-settings-dark-mask-opacity', String(settingsMaskPct / 100));
 

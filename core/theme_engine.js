@@ -1067,7 +1067,7 @@ function generateMasterCss(slotsConfig) {
   const isTransparentSidebar = Boolean(!slotsConfig.isOriginal && isLeftActive && slotsConfig.transparentSidebar === true);
   const isTransparentHeader = Boolean(!slotsConfig.isOriginal && isLeftActive && slotsConfig.transparentHeader === true);
   const leftAlpha = (!slotsConfig.isOriginal && isLeftActive) ? getDarkMaskAlpha(getSlotDarkMaskOpacity(slotsConfig, 'left')) : 0;
-  const bottomAlpha = (!slotsConfig.isOriginal && isBottomActive) ? getDarkMaskAlpha(getSlotDarkMaskOpacity(slotsConfig, 'bottom')) : 0;
+  const bottomAlpha = (!slotsConfig.isOriginal && (isBottomActive || isLeftActive)) ? getDarkMaskAlpha(getSlotDarkMaskOpacity(slotsConfig, 'bottom')) : 0;
   const settingsAlpha = (!slotsConfig.isOriginal && isSettingsActive) ? getDarkMaskAlpha(getSlotDarkMaskOpacity(slotsConfig, 'settings')) : 0;
 
   return `/* ==========================================================================
@@ -1348,7 +1348,7 @@ div.rounded-2xl.bg-card-border > div.bg-card:not([role="listbox"]):not([data-men
 .surface-composer-card > *:not(.antigravity-slot-video),
 div.rounded-2xl.bg-card-border > div.bg-card > *:not(.antigravity-slot-video) {
   position: relative !important;
-  z-index: 1 !important;
+  z-index: 2 !important;
 }
 ${bottomAlpha > 0 ? `
 /* 5b. Input Box Dark Mask / Brightness Dimmer (slot: bottom) */
@@ -1363,7 +1363,7 @@ div.rounded-2xl.bg-card-border > div.bg-card:has(> .antigravity-slot-video[data-
   background-color: rgba(7, 9, 14, ${bottomAlpha}) !important;
   background: rgba(7, 9, 14, ${bottomAlpha}) !important;
   pointer-events: none !important;
-  z-index: 0 !important;
+  z-index: 1 !important;
   border-radius: inherit !important;
 }
 ` : ''}
@@ -1372,7 +1372,7 @@ div.rounded-2xl.bg-card-border > div.bg-card:has(> .antigravity-slot-video[data-
 ${isLeftActive ? `
 [id="antigravity.agentSidePanelInputBox"] .surface-composer-card,
 .surface-composer-card {
-  background-color: rgba(19, 19, 23, 0.45) !important;
+  background-color: ${bottomAlpha > 0 ? `rgba(7, 9, 14, ${Number((0.45 + bottomAlpha * 0.55).toFixed(2))})` : 'rgba(19, 19, 23, 0.45)'} !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
 }
@@ -3277,9 +3277,9 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                 const isTransHdr = Boolean(isLeftAct && activeConfig.transparentHeader === true);
                 const leftMaskAlpha = isLeftAct ? getDarkMaskAlpha(getSlotDarkMaskOpacity(activeConfig, 'left')) : 0;
                 const isBotAct = Boolean(activeConfig && !activeConfig.isOriginal && activeConfig.bottom && activeConfig.bottom.type !== 'none' && activeConfig.bottom.file);
-                const botMaskAlpha = isBotAct ? getDarkMaskAlpha(getSlotDarkMaskOpacity(activeConfig, 'bottom')) : 0;
+                const botMaskAlpha = (!activeConfig || activeConfig.isOriginal) ? 0 : getDarkMaskAlpha(getSlotDarkMaskOpacity(activeConfig, 'bottom'));
                 const isSettingsAct = Boolean(activeConfig && !activeConfig.isOriginal && activeConfig.settings && activeConfig.settings.type !== 'none' && activeConfig.settings.file);
-                const settingsMaskAlpha = isSettingsAct ? getDarkMaskAlpha(getSlotDarkMaskOpacity(activeConfig, 'settings')) : 0;
+                const settingsMaskAlpha = (!activeConfig || activeConfig.isOriginal) ? 0 : getDarkMaskAlpha(getSlotDarkMaskOpacity(activeConfig, 'settings'));
                 const applyCode = `
                   (function() {
                     let titlebarFix = document.getElementById('antigravity-titlebar-fix');

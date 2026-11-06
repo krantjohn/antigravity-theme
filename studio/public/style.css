@@ -2676,19 +2676,24 @@ body {
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
 }
 
+#mock-slot-bottom > .mock-slot-bg {
+  z-index: 0 !important;
+}
+
 #mock-slot-bottom::before {
   content: "";
   position: absolute;
   inset: 0;
   background-color: rgba(7, 9, 14, var(--mock-bottom-dark-mask-opacity, 0));
   pointer-events: none;
-  z-index: 1;
+  z-index: 1 !important;
+  border-radius: inherit;
   transition: background-color 0.08s ease;
 }
 
 .mock-input-inner-card {
   position: relative;
-  z-index: 2;
+  z-index: 2 !important;
   background: #131722;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -2704,6 +2709,12 @@ body {
 .mock-floating-input-wrap.has-media .mock-input-inner-card {
   background: transparent !important;
   border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.mockup-window.has-left-wallpaper .mock-floating-input-wrap:not(.has-media) .mock-input-inner-card {
+  background: rgba(19, 19, 23, calc(0.45 + var(--mock-bottom-dark-mask-opacity, 0) * 0.55)) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
 }
 
 .mock-input-textarea-area {

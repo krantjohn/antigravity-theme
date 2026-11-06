@@ -612,7 +612,16 @@ async function runTests() {
       try { themeEngine.deletePreset(studioDraftPresetName); } catch (_) {}
     }
 
-    console.log('   ✓ Studio GUI 三槽位遮罩控件、样式与 REST API (含草稿直存预设) 验证全部通过');
+    // Verify Theme Studio Mockup Preview input box dark mask layer order & CSS rules
+    const studioCss = fs.readFileSync(path.join(__dirname, '../../studio/public/style.css'), 'utf8');
+    assert(studioCss.includes('#mock-slot-bottom > .mock-slot-bg'), 'Mockup input box wallpaper layer must have z-index: 0');
+    assert(studioCss.includes('#mock-slot-bottom::before'), 'Mockup input box dark mask pseudo-element must exist');
+    assert(studioCss.includes('--mock-bottom-dark-mask-opacity'), 'Mockup input box must use --mock-bottom-dark-mask-opacity');
+
+    const studioAppJs = fs.readFileSync(path.join(__dirname, '../../studio/public/app.js'), 'utf8');
+    assert(studioAppJs.includes('const bottomMaskPct = getSlotDarkMask(cfgSource, \'bottom\');'), 'app.js must extract bottom dark mask directly without zero-forcing');
+
+    console.log('   ✓ Studio GUI 三槽位遮罩控件、样式与 REST API (含草稿直存预设与输入框实览图层顺序) 验证全部通过');
 
     console.log('\n🎉 ALL R2/R3/R4/R5 TRANSPARENCY & PER-SLOT DIMMER TESTS PASSED!');
   } finally {
