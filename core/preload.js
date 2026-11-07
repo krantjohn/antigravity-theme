@@ -116,7 +116,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 // ================= Antigravity Master Theme & Dynamic Video Auto-Loader =================
 (function() {
   const SERVER_URL = 'http://127.0.0.1:8315';
-  let cachedConfig = {"left":{"key":"left","file":"left_wallpaper.mp4","type":"video","version":1790842917156,"position":"center center","desc":"AI主对话界面 / 全局底图","poster":"left_poster.jpg"},"bottom":{"key":"bottom","file":"input_wallpaper.mp4","type":"video","version":1790842917156,"position":"50% 36%","desc":"底部输入框","poster":"input_poster.jpg"},"settings":{"key":"settings","file":"settings_wallpaper.png","type":"image","position":"center 65%","desc":"设置界面","version":1790842917156},"isOriginal":false};
+  let cachedConfig = {"left":{"key":"left","file":"left_wallpaper.mp4","type":"video","version":1790842917156,"position":"50% 50%","desc":"AI主对话界面 / 全局底图","poster":"left_poster.jpg"},"bottom":{"key":"bottom","file":"","type":"none","isOriginal":true,"desc":"底部输入框"},"settings":{"key":"settings","file":"","type":"none","isOriginal":true,"desc":"设置界面"},"isOriginal":false};
   let _fs, _path, _os, _antigravityDir, _wallpapersDir;
   try {
     _fs = require('fs');
@@ -212,12 +212,13 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       const posLeft = (left && left.position) || '50% 50%';
 
       const bottom = cfg.bottom;
-      const bottomPosterSrc = (bottom && bottom.poster) ? (getBase64DataUri(bottom.poster) || (SERVER_URL + '/' + encodeURIComponent(bottom.poster) + vParam)) : '';
-      const posBottom = (bottom && bottom.position) || '50% 36%';
+      const isBottomActive = bottom && !bottom.isOriginal && bottom.type && bottom.type !== 'none' && bottom.file;
+      const bottomPosterSrc = (isBottomActive && bottom.poster) ? (getBase64DataUri(bottom.poster) || (SERVER_URL + '/' + encodeURIComponent(bottom.poster) + vParam)) : '';
+      const posBottom = (bottom && bottom.position) || '50% 50%';
 
       // 0ms 高保真底图静态海报瞬发样式，杜绝开机黑屏/空白
       let zeroLatencyStyle = document.getElementById('antigravity-zero-latency-style');
-      if (!zeroLatencyStyle && (posterSrc || bottomPosterSrc)) {
+      if (!zeroLatencyStyle && (posterSrc || (isBottomActive && bottomPosterSrc))) {
         zeroLatencyStyle = document.createElement('style');
         zeroLatencyStyle.id = 'antigravity-zero-latency-style';
         const rules = [
@@ -238,7 +239,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           '  z-index: 0 !important;',
           '}'
         ];
-        if (bottomPosterSrc) {
+        if (isBottomActive && bottomPosterSrc) {
           rules.push(
             '[id="antigravity.agentSidePanelInputBox"] > div.bg-card,',
             '[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"],',

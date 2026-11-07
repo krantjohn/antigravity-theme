@@ -1688,7 +1688,7 @@ function getClientVideoScript(config) {
   const slotPosters = {};
   ['left', 'bottom', 'settings'].forEach(slotKey => {
     const slotData = config && config[slotKey];
-    if (slotData && slotData.poster) {
+    if (slotData && slotData.poster && !slotData.isOriginal && slotData.type !== 'none' && slotData.file) {
       const v = slotData.version ? `?v=${slotData.version}` : `?v=${Date.now()}`;
       slotPosters[slotKey] = `${serverBase}/${encodeURIComponent(slotData.poster)}${v}`;
     }
@@ -1831,7 +1831,8 @@ function getClientVideoScript(config) {
         const posLeft = '${posLeft}';
 
         const bottom = config.bottom;
-        const bottomPosterSrc = slotPosters['bottom'] || ((bottom && bottom.poster) ? (SERVER_URL + '/' + encodeURIComponent(bottom.poster) + vParam) : '');
+        const isBottomActive = bottom && !bottom.isOriginal && bottom.type && bottom.type !== 'none' && bottom.file;
+        const bottomPosterSrc = isBottomActive ? (slotPosters['bottom'] || ((bottom && bottom.poster) ? (SERVER_URL + '/' + encodeURIComponent(bottom.poster) + vParam) : '')) : '';
         const posBottom = '${posBottom}';
 
         if (document.body) {
@@ -1843,7 +1844,7 @@ function getClientVideoScript(config) {
 
         // 0ms 高保真底图与底部卡片静态海报瞬发样式，杜绝开机黑屏与卡顿延迟
         let zeroLatencyStyle = document.getElementById('antigravity-zero-latency-style');
-        if (!zeroLatencyStyle && (posterSrc || bottomPosterSrc)) {
+        if (!zeroLatencyStyle && (posterSrc || (isBottomActive && bottomPosterSrc))) {
           zeroLatencyStyle = document.createElement('style');
           zeroLatencyStyle.id = 'antigravity-zero-latency-style';
           const rules = [
@@ -1864,7 +1865,7 @@ function getClientVideoScript(config) {
             '  z-index: 0 !important;',
             '}'
           ];
-          if (bottomPosterSrc) {
+          if (isBottomActive && bottomPosterSrc) {
             rules.push(
               '[id="antigravity.agentSidePanelInputBox"] > div.bg-card,',
               '[id="antigravity.agentSidePanelInputBox"] > div[class*="bg-card"],',
