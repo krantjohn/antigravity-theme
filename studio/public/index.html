@@ -69,6 +69,10 @@
         <span id="lang-toggle-icon">🌐</span>
         <span class="header-btn-text" id="lang-toggle-text">EN</span>
       </button>
+      <button class="btn btn-secondary btn-sm btn-header" id="btn-localization-toggle" title="一键开启 / 关闭 Antigravity 客户端汉化 (简体中文 / 官方原版英文)" data-i18n-title="header.localization_btn_title">
+        <span id="localization-toggle-icon">🇨🇳</span>
+        <span class="header-btn-text" id="localization-toggle-text" data-i18n="header.localization_cn">客户端: 中文</span>
+      </button>
       <div class="status-pill cursor-pointer" id="patch-status-pill" title="核心美化底层注入状态 (点击查看或一键注入)" data-i18n-title="header.patch_pill_title">
         <span class="status-dot"></span>
         <span class="status-text" id="patch-status-text" data-i18n="header.patch_status_loading">底层状态...</span>
@@ -805,6 +809,21 @@
           <button class="btn btn-warning-ghost btn-block" id="btn-restart-app-card">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
             <span data-i18n="safety.step2_btn">🔄 一键重启 Antigravity 客户端</span>
+          </button>
+        </div>
+
+        <div class="telemetry-card spotlight-card" id="card-localization">
+          <div class="card-title-group">
+            <span class="section-tag" data-i18n="safety.localization_tag">I18N · LOCALIZATION</span>
+            <h3 data-i18n="safety.localization_title">🌐 Antigravity 界面语言与汉化管理</h3>
+          </div>
+          <div class="backup-status-banner" id="localization-banner">
+            <span class="backup-dot" id="localization-dot"></span>
+            <span id="localization-text" data-i18n="safety.localization_enabled">检测中...</span>
+          </div>
+          <p class="telemetry-desc" data-i18n="safety.localization_desc">内嵌 8 组高精度社区专业汉化字典（共 2400+ 词条），无损安全共存，可随心在中文界面与官方英文原版之间自由切换。</p>
+          <button class="btn btn-primary btn-block btn-glow" id="btn-toggle-localization-card">
+            <span id="btn-toggle-localization-card-text" data-i18n="safety.localization_btn_enable">🇨🇳 一键开启 Antigravity 简体中文汉化</span>
           </button>
         </div>
 

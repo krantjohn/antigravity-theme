@@ -133,7 +133,8 @@ const TEST_GROUPS = [
       { name: 'Input Box Wallpaper & Rim Elimination', file: path.join(DEV_TESTS_DIR, 'test_bottom_slot_wallpaper.js') },
       { name: 'Dynamic Video Wallpaper Watchdog & Recovery', file: path.join(DEV_TESTS_DIR, 'test_watchdog.js') },
       { name: 'Sidebar/Header Transparency & Regional Dark Mask', file: path.join(DEV_TESTS_DIR, 'test_transparency_and_dimmer.js') },
-      { name: '17-Phase Master Integration Suite', file: path.join(DEV_TESTS_DIR, 'test_suite.js') }
+      { name: '17-Phase Master Integration Suite', file: path.join(DEV_TESTS_DIR, 'test_suite.js') },
+      { name: 'Antigravity Chinese Localization & Theme Coexistence', file: path.join(DEV_TESTS_DIR, 'test_localization.js') }
     ]
   },
   {
@@ -185,6 +186,7 @@ async function main() {
       }
 
       const isStudioSuite = test.file.endsWith('test_studio_api.js') ||
+      test.file.endsWith('test_localization.js') ||
                             test.file.endsWith('test_studio_v3.js') ||
                             test.file.endsWith('test_transparency_and_dimmer.js') ||
                             test.file.endsWith('tier1_feature_coverage.test.js') ||

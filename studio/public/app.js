@@ -159,6 +159,15 @@ const btnInstallPatch = document.getElementById('btn-install-patch');
 const btnRestartApp = document.getElementById('btn-restart-app');
 const btnRestartAppCard = document.getElementById('btn-restart-app-card');
 const btnVanilla = document.getElementById('btn-vanilla');
+const btnLocalizationToggle = document.getElementById('btn-localization-toggle');
+const localizationToggleText = document.getElementById('localization-toggle-text');
+const localizationToggleIcon = document.getElementById('localization-toggle-icon');
+const cardLocalization = document.getElementById('card-localization');
+const localizationBanner = document.getElementById('localization-banner');
+const localizationDot = document.getElementById('localization-dot');
+const localizationText = document.getElementById('localization-text');
+const btnToggleLocalizationCard = document.getElementById('btn-toggle-localization-card');
+const btnToggleLocalizationCardText = document.getElementById('btn-toggle-localization-card-text');
 const btnUninstall = document.getElementById('btn-uninstall');
 
 // Header Additions
@@ -343,6 +352,7 @@ async function fetchStatus() {
       renderQuickPresetSelect();
       renderWeStatus(data.weCount);
       renderPatchStatus(data.patchStatus, data.hasBackup, data.backupSize);
+      renderLocalizationUI(data.localization);
 
       // Auto-open Newbie Guide on first launch if unpatched
       if (!state.hasCheckedGuideAutoOpen) {
@@ -2868,4 +2878,99 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initThemeSwitcher);
 } else {
   initThemeSwitcher();
+}
+
+
+// =========================================================================
+// Localization (Client Chinese Translation) UI & Control
+// =========================================================================
+function renderLocalizationUI(locData) {
+  if (!locData) return;
+  const isInstalled = Boolean(locData.isChineseInstalled);
+  const isEn = typeof getLanguage === 'function' && getLanguage() === 'en';
+
+  // 1. Header Button
+  if (localizationToggleText) {
+    localizationToggleText.textContent = isInstalled 
+      ? (isEn ? 'Client: CN' : '客户端: 中文') 
+      : (isEn ? 'Client: EN' : '客户端: 英文');
+  }
+  if (localizationToggleIcon) {
+    localizationToggleIcon.textContent = isInstalled ? '🇨🇳' : '🌐';
+  }
+  if (btnLocalizationToggle) {
+    btnLocalizationToggle.title = isInstalled
+      ? (isEn ? 'Click to restore official English interface' : '已开启中文，点击一键切换为官方原版英文')
+      : (isEn ? 'Click to enable Simplified Chinese UI' : '当前为英文，点击一键开启简体中文汉化');
+    btnLocalizationToggle.className = isInstalled 
+      ? 'btn btn-primary-ghost btn-sm btn-header' 
+      : 'btn btn-secondary btn-sm btn-header';
+  }
+
+  // 2. Safety Center Card
+  if (localizationBanner && localizationText) {
+    if (isInstalled) {
+      localizationBanner.style.background = 'rgba(52, 211, 153, 0.08)';
+      localizationBanner.style.borderColor = 'rgba(52, 211, 153, 0.2)';
+      localizationBanner.style.color = '#6ee7b7';
+      if (localizationDot) {
+        localizationDot.style.background = 'var(--accent-emerald)';
+        localizationDot.style.boxShadow = '0 0 10px rgba(52, 211, 153, 0.6)';
+      }
+      localizationText.textContent = isEn 
+        ? '🟢 Simplified Chinese active (8 dicts · 2400+ entries)' 
+        : '🟢 客户端汉化已生效 (简体中文 · 8组字典 · 2400+词条)';
+      if (btnToggleLocalizationCard) {
+        btnToggleLocalizationCard.className = 'btn btn-secondary btn-block';
+        if (btnToggleLocalizationCardText) {
+          btnToggleLocalizationCardText.textContent = isEn ? '🔄 Restore Official English UI' : '🔄 恢复为官方原生英文原版';
+        }
+      }
+    } else {
+      localizationBanner.style.background = 'rgba(100, 116, 139, 0.1)';
+      localizationBanner.style.borderColor = 'rgba(100, 116, 139, 0.25)';
+      localizationBanner.style.color = 'var(--text-secondary)';
+      if (localizationDot) {
+        localizationDot.style.background = '#64748b';
+        localizationDot.style.boxShadow = 'none';
+      }
+      localizationText.textContent = isEn 
+        ? '⚪ Client is running official English interface (stock)' 
+        : '⚪ 客户端当前为官方原版英文界面 (未注入汉化)';
+      if (btnToggleLocalizationCard) {
+        btnToggleLocalizationCard.className = 'btn btn-primary btn-block btn-glow';
+        if (btnToggleLocalizationCardText) {
+          btnToggleLocalizationCardText.textContent = isEn ? '🇨🇳 Enable Simplified Chinese UI' : '🇨🇳 一键开启 Antigravity 简体中文汉化';
+        }
+      }
+    }
+  }
+}
+
+async function toggleChineseLocalization() {
+  const isEn = typeof getLanguage === 'function' && getLanguage() === 'en';
+  showToast(isEn ? 'Toggling client localization...' : '正在切换 Antigravity 客户端汉化状态...', 3000);
+  try {
+    const res = await fetch('/api/localization/toggle', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      if (data.isChineseInstalled) {
+        showToast(isEn ? '✨ Antigravity Chinese localization enabled! (Press Ctrl+R in client to refresh)' : '✨ 已成功开启 Antigravity 简体中文汉化！(按 Ctrl+R 刷新客户端视窗立即生效)', 5000);
+      } else {
+        showToast(isEn ? '✨ Restored official English UI! (Press Ctrl+R in client to refresh)' : '✨ 已恢复 Antigravity 官方英文原版界面！(按 Ctrl+R 刷新客户端视窗立即生效)', 5000);
+      }
+      await fetchStatus();
+    } else {
+      showToast((isEn ? 'Failed to toggle localization: ' : '汉化切换失败: ') + (data.error || 'Unknown error'), 5000);
+    }
+  } catch (err) {
+    showToast((isEn ? 'Failed to toggle localization: ' : '汉化切换异常: ') + err.message, 5000);
+  }
+}
+
+if (btnLocalizationToggle) {
+  btnLocalizationToggle.addEventListener('click', toggleChineseLocalization);
+}
+if (btnToggleLocalizationCard) {
+  btnToggleLocalizationCard.addEventListener('click', toggleChineseLocalization);
 }

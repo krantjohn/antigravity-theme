@@ -242,6 +242,17 @@ if (fs.existsSync(repoPreloadPath)) {
 }
 
 // Clean previous version if exists (safe deterministic index truncation)
+// Preserve Chinese localization block if present
+let savedLocalizationBlock = '';
+const locStartSig = "'__ANTIGRAVITY_CHINESE_LOCALIZATION_START__';";
+const locEndSig = "'__ANTIGRAVITY_CHINESE_LOCALIZATION_END__';";
+if (preloadContent.includes(locStartSig) && preloadContent.includes(locEndSig)) {
+  const sIdx = preloadContent.indexOf(locStartSig);
+  const eIdx = preloadContent.indexOf(locEndSig);
+  if (sIdx !== -1 && eIdx !== -1) {
+    savedLocalizationBlock = preloadContent.substring(sIdx, eIdx + locEndSig.length);
+  }
+}
 const marker1 = "// ================= Antigravity Master Theme Auto-Loader =================";
 const marker2 = "// ================= Antigravity Master Theme & Dynamic Video Auto-Loader =================";
 let oldIdx = preloadContent.indexOf(marker1);
@@ -253,6 +264,9 @@ if (oldIdx !== -1) {
 }
 
 preloadContent += '\n' + themeInjectionCode;
+if (savedLocalizationBlock && !preloadContent.includes(locStartSig)) {
+  preloadContent += '\n\n' + savedLocalizationBlock;
+}
 fs.writeFileSync(preloadPath, preloadContent, 'utf8');
 console.log('✓ preload.js 注入完成');
 

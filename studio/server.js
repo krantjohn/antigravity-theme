@@ -11,6 +11,7 @@ if (process.env.ELECTRON_RUN_AS_NODE) {
 }
 
 const themeEngine = require('../core/theme_engine');
+const localizationManager = require('../core/localization_manager');
 
 const PORT = 8316;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -326,8 +327,55 @@ const server = http.createServer(async (req, res) => {
         backupSize,
         weCount,
         slotsMeta: themeEngine.SLOTS_META,
-        patchStatus: themeEngine.checkInjectionStatus()
+        patchStatus: themeEngine.checkInjectionStatus(),
+        localization: localizationManager.getStatus()
       });
+    } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 1.05. GET /api/localization/status - Return Chinese localization status
+  if (req.method === 'GET' && pathname === '/api/localization/status') {
+    try {
+      const status = localizationManager.getStatus();
+      return sendJson(res, 200, status);
+    } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 1.06. POST /api/localization/toggle - Toggle Chinese localization ON / OFF
+  if (req.method === 'POST' && pathname === '/api/localization/toggle') {
+    try {
+      const isInstalled = localizationManager.isChineseInstalled();
+      let result;
+      if (isInstalled) {
+        result = localizationManager.disableChineseLocalization();
+      } else {
+        result = localizationManager.enableChineseLocalization();
+      }
+      return sendJson(res, 200, result);
+    } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 1.07. POST /api/localization/enable - Explicitly enable Chinese localization
+  if (req.method === 'POST' && pathname === '/api/localization/enable') {
+    try {
+      const result = localizationManager.enableChineseLocalization();
+      return sendJson(res, 200, result);
+    } catch (err) {
+      return sendJson(res, 500, { success: false, error: err.message });
+    }
+  }
+
+  // 1.08. POST /api/localization/disable - Explicitly disable Chinese localization
+  if (req.method === 'POST' && pathname === '/api/localization/disable') {
+    try {
+      const result = localizationManager.disableChineseLocalization();
+      return sendJson(res, 200, result);
     } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message });
     }

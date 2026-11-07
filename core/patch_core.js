@@ -30,7 +30,22 @@ const distMain = path.join(appDir, 'dist', 'main.js');
 try {
   if (fs.existsSync(path.join(appDir, 'dist'))) {
     if (fs.existsSync(repoMediaServer)) fs.copyFileSync(repoMediaServer, distMediaServer);
-    if (fs.existsSync(repoPreload)) fs.copyFileSync(repoPreload, distPreload);
+    if (fs.existsSync(repoPreload)) {
+      let locBlock = '';
+      if (fs.existsSync(distPreload)) {
+        const existing = fs.readFileSync(distPreload, 'utf8');
+        const sIdx = existing.indexOf("'__ANTIGRAVITY_CHINESE_LOCALIZATION_START__';");
+        const eIdx = existing.indexOf("'__ANTIGRAVITY_CHINESE_LOCALIZATION_END__';");
+        if (sIdx !== -1 && eIdx !== -1) {
+          locBlock = existing.substring(sIdx, eIdx + "'__ANTIGRAVITY_CHINESE_LOCALIZATION_END__';".length);
+        }
+      }
+      let content = fs.readFileSync(repoPreload, 'utf8');
+      if (locBlock && !content.includes("'__ANTIGRAVITY_CHINESE_LOCALIZATION_START__';")) {
+        content += '\n\n' + locBlock;
+      }
+      fs.writeFileSync(distPreload, content, 'utf8');
+    }
     if (fs.existsSync(repoMain)) fs.copyFileSync(repoMain, distMain);
   }
   if (fs.existsSync(repoMediaServer)) fs.copyFileSync(repoMediaServer, userMediaServer);
