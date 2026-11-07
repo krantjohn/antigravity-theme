@@ -5,10 +5,10 @@
 </p>
 
 <p align="center">
-  <a href="README_EN.md"><img src="https://img.shields.io/badge/Language-English-blue?style=flat-square" alt="English Documentation"></a>
   <a href="README.md"><img src="https://img.shields.io/badge/语言-简体中文-red?style=flat-square" alt="Chinese Documentation"></a>
+  <a href="README_EN.md"><img src="https://img.shields.io/badge/Language-English-blue?style=flat-square" alt="English Documentation"></a>
   <a href="https://github.com/krantjohn/antigravity-theme/releases"><img src="https://img.shields.io/github/v/release/krantjohn/antigravity-theme?color=brightgreen&label=Release&style=flat-square" alt="GitHub Release"></a>
-  <a href="https://github.com/krantjohn/antigravity-theme/releases/latest/download/AntigravityThemeStudio.exe"><img src="https://img.shields.io/badge/Download-.EXE%20(v3.1.0)-success?style=flat-square&logo=windows" alt="Download EXE"></a>
+  <a href="https://github.com/krantjohn/antigravity-theme/releases/latest/download/AntigravityThemeStudio.exe"><img src="https://img.shields.io/badge/Download-.EXE%20(v3.2.0)-success?style=flat-square&logo=windows" alt="Download EXE"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 <p align="center">
@@ -16,266 +16,327 @@
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-33+-47848F?logo=electron&logoColor=white&style=flat-square" alt="Electron"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-v18+-339933?logo=node.js&logoColor=white&style=flat-square" alt="Node.js"></a>
   <img src="https://img.shields.io/badge/Steam-Wallpaper%20Engine-1b2838?style=flat-square&logo=steam" alt="Steam Wallpaper Engine">
-  <img src="https://img.shields.io/badge/Tests-31%2F31%20Passing%20(100%25)-brightgreen?style=flat-square&logo=checkmarx" alt="Tests 31/31 Passing">
+  <img src="https://img.shields.io/badge/Tests-116%2F116%20Passing%20(100%25)-brightgreen?style=flat-square&logo=checkmarx" alt="Tests 116/116 Passing">
   <img src="https://img.shields.io/badge/Latency-~0.35ms%20Input%20Lag-success?style=flat-square" alt="Keystroke Latency">
 </p>
 <p align="center">
   <img src="https://img.shields.io/badge/UI-Dark%20%26%20Light%20Modes-orange?style=flat-square" alt="Dark and Light Theme">
   <img src="https://img.shields.io/badge/i18n-CN%20%2F%20EN%20Bilingual-blueviolet?style=flat-square" alt="i18n Bilingual">
+  <img src="https://img.shields.io/badge/Startup-%3C600ms%20Cold%20Start-brightgreen?style=flat-square" alt="Startup Speed">
   <a href="https://github.com/krantjohn/antigravity-theme/pulls"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="PRs Welcome"></a>
   <a href="https://github.com/krantjohn/antigravity-theme/stargazers"><img src="https://img.shields.io/github/stars/krantjohn/antigravity-theme?style=social" alt="GitHub Stars"></a>
-  <a href="https://github.com/krantjohn/antigravity-theme/network/members"><img src="https://img.shields.io/github/forks/krantjohn/antigravity-theme?style=social" alt="GitHub Forks"></a>
 </p>
 
 <p align="center">
   <b>Give your Google Antigravity desktop client a breathtaking modern aesthetic makeover!</b><br>
-  A high-performance, full-transparency, 5-slot immersive theme engine crafted specifically for Google Antigravity.<br>
-  <i>Featuring 60FPS video wallpaper streaming, Steam Wallpaper Engine direct integration, sub-millisecond input response, Dark/Light dual themes, and 1-click factory-grade pristine restoration.</i>
+  A high-performance, full-bleed 5-slot theme engine and localization system crafted specifically for Google Antigravity.<br>
+  <i>Featuring 60FPS video wallpaper streaming, Steam Wallpaper Engine direct integration, brand-new high-transparency "Liquid Glass" input styling, full Chinese localization, sub-millisecond typing latency, and 1-click factory-grade pristine restoration.</i>
 </p>
 
 ---
 
 ## 🏷️ Repository Tags & Technical Features (Tags & Topics)
 
-`antigravity` `wallpaper-engine` `steam-workshop` `theme-customizer` `electron` `chromium` `webview2` `c-sharp` `hardware-acceleration` `video-streaming` `rfc7233` `dark-mode` `light-mode` `bilingual-i18n` `performance-tuning` `zero-latency` `mit-license`
+`antigravity` `wallpaper-engine` `steam-workshop` `theme-customizer` `chinese-localization` `liquid-glass` `electron` `chromium` `webview2` `c-sharp` `hardware-acceleration` `video-streaming` `rfc7233` `dark-mode` `light-mode` `bilingual-i18n` `performance-tuning` `zero-latency` `mit-license`
 
 | Category | Tags | Feature & Architecture Highlights |
 | :--- | :--- | :--- |
-| **Host Application** | `Google Antigravity` `Electron 33+` `Chromium` | Non-intrusive runtime patch architecture crafted for Google Antigravity |
+| **Host Application** | `Google Antigravity` `Electron 33+` `Chromium` | Non-intrusive runtime patch architecture crafted specifically for Google Antigravity |
 | **Streaming & Speed** | `RFC 7233` `HTTP 206` `GPU Decoding` `0.35ms Latency` | 60FPS hardware-accelerated video streaming, drag-resize decoupling, ~0.35ms typing latency |
-| **Ecosystem** | `Steam` `Wallpaper Engine` `Workshop (AppID 431960)` | Cross-drive auto-detection of subscribed items: video, web/Live2D, and high-res art |
-| **GUI Workspace** | `AntigravityThemeStudio.exe` `C# .NET` `WebView2` `Bento UI` | Single-file portable desktop container with 1:1 real-time live mockup preview |
-| **Aesthetic Design** | `Dark Theme` `Light Theme` `Adaptive Typography` `5-Slots` | Dark & Light dual theme system, contrast-adaptive font glow engine, 5 independent slots |
+| **Ecosystem** | `Steam` `Wallpaper Engine` `Workshop (AppID 431960)` | Cross-drive auto-detection of subscribed items: MP4/WebM videos, static art, and animated scenes |
+| **Aesthetic Design** | `Liquid Glass` `5-Slots Architecture` `Bento UI` | Novel high-transparency "Liquid Glass" input box, 5 isolated slots, Dark/Light dual themes |
+| **Full Localization**| `i18n` `Chinese Localization` `Zero-Flicker` | Built-in 1-click CN/EN bilingual switcher, translating menus, dialogs, and settings with persistence |
+| **GUI Workspace** | `AntigravityThemeStudio.exe` `C# .NET` `WebView2` | Single-file portable desktop container with 1:1 real-time live mockup preview, cold start <600ms |
 | **Safety & Privacy** | `app.asar.orig.bak` `Localhost Only` `100% Reversible` `MIT` | Physical factory backup of stock ASAR, 100% loopback operation without cloud telemetry |
 
 ---
 
-## 🌟 Core Features & Design Advantages
+## 🌟 Core Advantages & Design Highlights
 
-Traditional client customization solutions often degrade performance or break upon application updates. Antigravity Theme Customizer provides a rock-solid, production-grade customization framework:
+Vanilla desktop clients are visually rigid with plain monochrome backgrounds that cannot showcase personal aesthetic preferences. Antigravity Theme Customizer provides a complete, lightweight, and fully reversible solution:
 
-| Dimension | Conventional Customization | 🌸 Antigravity Theme Customizer (v3.1.0) |
+| Dimension | Traditional Modifications | 🌸 This Theme Engine (v3.2.0) |
 | :--- | :--- | :--- |
-| **Live Video Streaming** | Static images only; videos freeze the UI | **Built-in RFC 7233 Media Microservice**: HTTP 206 partial content streaming, 60FPS hardware acceleration |
-| **Resize & Drag Smoothness**| Window resizing and panel splitter dragging stutter | **Drag & Resize Decoupling**: Decoder contention suspended during dragging, auto-resumes smoothly in 80ms |
-| **Typing Latency** | Full-tree DOM MutationObservers cause keystroke lag | **Sub-Millisecond Keystroke Latency**: Precise input node skipping, reducing typing latency to **~0.35ms** |
-| **Wallpaper Sourcing** | Manual downloading, cropping, and conversion | **Steam Wallpaper Engine Direct Integration**: Automatic multi-drive scanning of subscribed workshop items |
-| **Font Legibility** | Text unreadable over light/vibrant wallpapers | **Adaptive Contrast Font Engine**: 6 built-in anti-glare glow presets or any custom Hex with auto-shadow |
-| **Color Schemes** | Monolithic dark mode only | **Dark & Light Dual Themes**: Toggle effortlessly between sleek Dark Geek and clean Light aesthetic |
-| **Multi-Zone Isolation** | One background applied everywhere | **5 Independent Wallpaper Slots**: Main Chat, PowerShell Terminal, Conversations Drawer, Input Box, Settings |
-| **Configuration Vault** | Easily lose past theme configurations | **Preset Archiver Vault**: Archives configurations + media into standalone presets with 0.3s hot reload |
-| **Update Safe & Reversible**| Application updates break theme modifications | **Physical Factory Backup (`app.asar.orig.bak`)**: Complete physical backup with 1-click factory restoration |
+| **Dynamic Video Streaming** | Only supports static images; videos crash or freeze the app | **Embedded RFC 7233 Microservice**: HTTP 206 chunked range streaming at 60FPS with butter-smooth playback |
+| **Input Box Visual Styling** | Generic solid dark boxes or cloudy frosted glass | **Custom "Liquid Glass" Shader**: High-transparency frosted fluid texture + specular border edge highlights |
+| **Language Localization** | English-only interface, fragile external plugins | **Built-in Full Chinese Localization Engine**: 1-click switch between CN 🇨🇳 and EN 🇺🇸, persistent across reboots |
+| **Aspect Ratio & Canvas** | Distorted zoom, cropped faces, blank holes on resize | **Zero-Distortion Full-Bleed Engine**: Locks `100vw × 100vh`, overrides CSS constraints, eliminates black/white gaps |
+| **Asset Discovery** | Manual downloading and cropping | **Steam Wallpaper Engine Direct Link**: Automatically indexes subscribed workshop items across all Windows drives |
+| **Power & GPU Overhead** | Decoding constantly runs in background, draining GPU | **GPU Viewport Sleep Engine**: Automatically pauses decoding when minimized or hidden, reducing usage to ~0% |
+| **Typing & Keystroke Lag** | DOM repaints introduce noticeable latency (>50ms) | **Sub-millisecond Typing Latency (~0.35ms)**: Decoupled sandboxed input pipeline for frictionless coding |
+| **Cold Startup Speed** | Slow startup overhead (>4.5 seconds) | **Ultra-fast Cold Startup (<600ms)**: Concurrent window initialization with 0ms fast-path cached state |
+| **Multi-Area Customization** | Single image dumped globally, cluttering the UI | **5 Independent Theming Slots**: Main canvas, input box, settings modal, sidebar, and header isolated |
+| **Safety & Reversibility** | Overwrites original code with no rollback | **Physical Factory Backup & 1-Click Rollback**: Generates `app.asar.orig.bak` with instant factory restoration |
 
 ---
 
 ## 📸 Visual Showcase
 
-### 1. Antigravity Theme Studio Modern GUI (Dark & Light Dual Theme System)
+### 1. Antigravity Theme Studio Workspace (Dark & Light Dual Modes)
 
-| 🌙 Sleek Dark Theme | ☀️ Clean Light Theme |
-| :---: | :---: |
-| <img src="dev/assets/previews/theme_studio_dark.png" alt="Theme Studio Dark Mode" width="440" style="border-radius: 8px;" /> | <img src="dev/assets/previews/theme_studio_light.png" alt="Theme Studio Light Mode" width="440" style="border-radius: 8px;" /> |
-| <b>1:1 Real-time Interactive Mockup · Dark High Contrast</b> | <b>Pure & Elegant Bright Aesthetic · 1-Click Smooth Toggle</b> |
+Single-file portable desktop application featuring a 1:1 dynamic live mockup window, supporting instant switching between Dark Mode (Obsidian) and Light Mode (Minimalist White):
 
-### 2. Steam Workshop Cross-Drive Browser & Preset Vault
+<p align="center">
+  <img src="dev/assets/previews/theme_studio_dark.png" width="440" alt="Theme Studio Dark Mode" style="border-radius: 8px; margin-right: 10px;" />
+  <img src="dev/assets/previews/theme_studio_light.png" width="440" alt="Theme Studio Light Mode" style="border-radius: 8px;" />
+</p>
 
-| 🎮 Steam Wallpaper Engine Workshop Grid | 🗂️ Presets Vault with 1-Click Instant Switching |
-| :---: | :---: |
-| <img src="dev/assets/previews/theme_studio_workshop.png" alt="Steam Workshop Grid" width="440" style="border-radius: 8px;" /> | <img src="dev/assets/previews/theme_studio_presets.png" alt="Presets Vault" width="440" style="border-radius: 8px;" /> |
-| <b>Auto-scans subscribed wallpapers across all Steam drives</b> | <b>Full configuration & asset archiving with 0.3s hot reload</b> |
+### 2. Steam Wallpaper Engine Multi-Drive Integration & Preset Vault
+
+Instantly indexes thousands of subscribed wallpapers across all Windows drives, paired with a preset vault to archive and switch full aesthetic setups in 0.3 seconds:
+
+<p align="center">
+  <img src="dev/assets/previews/theme_studio_workshop.png" width="440" alt="Theme Studio Steam Workshop" style="border-radius: 8px; margin-right: 10px;" />
+  <img src="dev/assets/previews/theme_studio_presets.png" width="440" alt="Theme Studio Preset Vault" style="border-radius: 8px;" />
+</p>
+
+### 3. Multi-Panel Immersive Full-Bleed Aesthetics
+
+<p align="center">
+  <img src="dev/assets/previews/mika_theme_overview.png" width="880" alt="Mika Theme Overview" style="border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.2);" />
+</p>
 
 ---
 
-## 🧩 5-Slot Architecture (Mental Model)
+## 🧩 5-Slot Architecture Mental Model
 
-Through precise DOM isolation and CSS penetration, Antigravity is partitioned into 5 independent visual zones:
+Unlike naive wallpaper patchers that dump a single image globally, this engine features a clean **5-slot decoupled layout**:
 
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│ [Top Menu] Antigravity   File   View   Window             [— ▢ ✕]      │
-├───────────────┬──────────────────────────┬─────────────────────────────┤
-│               │                          │                             │
-│  [Left Slot]  │       [Mid Slot]         │        [Right Slot]         │
-│               │                          │                             │
-│  AI Main Chat │   PowerShell Terminal    │    Conversations Drawer     │
-│ (Global Base) │   (.terminal.xterm)      │                             │
-│               │                          │                             │
-├───────────────┴──────────────────────────┴─────────────────────────────┤
-│                 [Bottom Slot]: Floating Prompt Input Card              │
-└────────────────────────────────────────────────────────────────────────┘
-  [Settings Slot]: Settings Dialog Backdrop Illustration
+```mermaid
+graph TD
+    Client[Google Antigravity Host Window] --> GlobalSlot[🌸 Slot 1: Main Conversation & Global Left]
+    Client --> BottomSlot[💎 Slot 2: Prompt Input Box]
+    Client --> SettingsSlot[⚙️ Slot 3: Settings Modal]
+    Client --> SidebarSlot[🪟 Slot 4: Sidebar]
+    Client --> HeaderSlot[📌 Slot 5: Header Bar]
+
+    GlobalSlot --> G1[60FPS Video / 4K Still Art]
+    GlobalSlot --> G2[0~100% Dark Mask Opacity]
+    GlobalSlot --> G3[100vw × 100vh Full-Bleed Zero Distortion]
+
+    BottomSlot --> B1[Liquid Glass Specular Highlight]
+    BottomSlot --> B2[Independent Slot Wallpaper]
+    BottomSlot --> B3[1-Click Vanilla Anti-Collision Isolation]
+
+    SettingsSlot --> S1[Dedicated Modal Art]
+    SettingsSlot --> S2[1-Click Vanilla Clean Dark Protection]
+
+    SidebarSlot --> SB1[Frosted Blur & Transparency]
+    HeaderSlot --> H1[Immersive Borderless Header Integration]
 ```
 
-| Slot | Identifier | Target Area | Recommended Media | Purpose & Behavior |
-| :---: | :---: | :--- | :---: | :--- |
-| **`Left`** | `left` | **Global Main Chat** | 1080P/2K/4K Video (.mp4) | Panoramic foundation behind the chat feed, showing through frosted glass |
-| **`Mid`** | `mid` | **Active Terminal** | Video / High-Res Art | Dedicated backdrop for PowerShell / Bash coding sessions |
-| **`Right`** | `right` | **Conversations Drawer** | Vertical Art / Video | Independent background shown when opening conversation list drawer |
-| **`Bottom`**| `bottom` | **Prompt Input Box** | Close-up / GIF / Loop | Card background inside the prompt area, dynamically resizing with input height |
-| **`Settings`**|`settings`| **Settings Dialog** | Illustration (.png/.jpg) | Displayed inside the settings dialog |
+1. **🌸 Slot 1: Main Conversation / Global Canvas (`left`)**:
+   - The primary visual backdrop supporting 60FPS video wallpapers (MP4/WebM) or ultra-high-resolution digital art.
+   - 0% to 100% adjustable dark eye-care mask to keep text and code perfectly legible over vibrant artwork.
+   - Enforces true `100vw × 100vh` canvas with zero cropping, no aspect ratio distortion, and no vacant gaps on window resize.
+2. **💎 Slot 2: Bottom Prompt Input Box (`bottom`)**:
+   - **Signature "Liquid Glass" Shader**: High-transparency frosted fluid texture with subtle specular rim highlights.
+   - Supports independent wallpaper textures or 1-click restoration to pure vanilla frosted dark styling, strictly isolated from global transparency.
+3. **⚙️ Slot 3: Settings Modal (`settings`)**:
+   - Dedicated backdrop when the settings modal appears.
+   - Fixes the classic bug where transparent modals caused modal text to overlap and collide with underlying main conversation text.
+4. **🪟 Slot 4: Sidebar (`sidebar`)**:
+   - Toggles frosted acrylic blur and transparency for conversation lists and project trees.
+5. **📌 Slot 5: Top Header Navigation (`header`)**:
+   - Seamlessly blends the title and menu bar into the primary artwork.
+
+---
+
+## 🌐 Full Chinese Localization Engine (i18n)
+
+To provide Chinese developers and enthusiasts with an authentic native experience, this engine bundles a complete localization subsystem:
+- **Comprehensive Coverage**: Translates menus, sidebar actions, conversation prompts, input box placeholders, settings dialogues, model selectors, and status indicators.
+- **Instant Dual-Language Toggle**: Switch between Simplified Chinese (CN 🇨🇳) and Native English (EN 🇺🇸) anytime in Theme Studio or via CLI.
+- **Persistent & Non-Intrusive**: Preferences are persisted cleanly without breaking upstream Antigravity updates or API endpoints.
 
 ---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Operating System**: Windows 10 / 11 (64-bit)
-- **Runtime**: [Node.js](https://nodejs.org/) (Recommended LTS v18+)
-- **Target Application**: Google [Antigravity](https://antigravity.google/) (compatible with latest release)
+- **Operating System**: Windows 10 or Windows 11 (x64)
+- **Host Application**: Google Antigravity desktop client installed
+- **Optional**: Steam installed on the same machine with Wallpaper Engine subscriptions for workshop auto-sync
 
 ---
 
-### Option 1: Using Theme Studio GUI (Strongly Recommended)
+### Option 1: Use Theme Studio GUI (Recommended)
 
-#### A. Download Pre-compiled Binary from GitHub Releases (Zero Setup)
-1. Visit the **[Releases Page](https://github.com/krantjohn/antigravity-theme/releases)** and download `AntigravityThemeStudio.exe`;
-2. Run it directly anywhere to enjoy the 1:1 real-time preview, drag-and-drop wallpaper importing, and instant hot reload.
+#### Method A: Download Standalone Executable (Zero Setup)
+1. Head over to the [GitHub Releases](https://github.com/krantjohn/antigravity-theme/releases) page and download **`AntigravityThemeStudio.exe`**.
+2. Place it anywhere on your machine and double-click to launch.
+3. Browse wallpapers, adjust mask opacities, toggle languages, and click "Apply Immediately" for a seamless 0.3-second hot-reload!
 
-#### B. Run Directly from Source (Pure Open-Source, Zero Binary Dependency)
-If you prefer not running external executables, launch directly from source:
-```bash
+#### Method B: Run from Source (Pure Open Source)
+```powershell
 # 1. Clone repository
 git clone https://github.com/krantjohn/antigravity-theme.git
 cd antigravity-theme
 
-# 2. Launch Theme Studio GUI
+# 2. Launch Theme Studio service
 node studio/launcher.js
-# Or run shortcut script: dev\bin\start_studio.bat
+# Or run the batch helper:
+.\dev\bin\start_studio.bat
 ```
-Your default browser will launch `Theme Studio` in clean frameless app mode.
 
 ---
 
-### Option 2: Command-Line Interface (CLI Commands)
+### Option 2: Interactive CLI Batch Tools
 
-All operations can be executed via terminal commands with instant **0.3s hot reload** via CDP:
+Convenient interactive scripts are located in `dev/bin/`:
+- **`dev/bin/swap_wallpaper.bat`**: Interactive wallpaper selection menu (local files or Steam workshop search).
+- **`dev/bin/preset_manager.bat`**: Save, list, apply, or delete theme presets.
+- **`dev/bin/一键恢复官方原版.bat`**: Instant toggle back to stock vanilla appearance while keeping user presets safe.
+- **`dev/bin/uninstall_completely.bat`**: Complete uninstallation script restoring the factory `app.asar`.
 
-#### 1. Steam Wallpaper Engine Integration
-```bash
-# List all subscribed Wallpaper Engine items
+---
+
+### Option 3: Command Line One-Liners (CLI Commands)
+
+All theming, slot modifications, and preset management can be triggered via head-less commands:
+
+#### 1. Steam Wallpaper Engine Direct Integration
+```powershell
+# List all subscribed Wallpaper Engine wallpapers
 node core/theme_engine.js --list-we
 
 # Search workshop items by keyword
-node core/theme_engine.js --list-we "Anime"
+node core/theme_engine.js --list-we miku
 
-# Apply workshop item by index to the Left slot
-node core/theme_engine.js --swap-we 2 left
+# Apply workshop item by index to the global canvas (e.g., slot 1)
+node core/theme_engine.js --swap-we 1 left
 
-# Apply workshop item by ID to the Terminal slot
-node core/theme_engine.js --swap-we 3164111930 mid
+# Apply workshop item by workshop ID directly to input box or settings
+node core/theme_engine.js --swap-we 2841029381 bottom
 ```
 
-#### 2. Local File Swapping (Videos & Images)
-```bash
-# Set Left slot (Global base) to local video
-node core/theme_engine.js --swap "left" "D:\Media\my_wallpaper.mp4"
+#### 2. Local Media Files (Video or Still Art)
+```powershell
+# Apply a local MP4 video to the main canvas
+node core/theme_engine.js --swap left "C:\Wallpapers\Cyberpunk.mp4"
 
-# Set Mid slot (Terminal) to local static image
-node core/theme_engine.js --swap "mid" "D:\Pictures\terminal_art.png"
+# Apply an image to the prompt input box
+node core/theme_engine.js --swap bottom "D:\Pictures\Anime_Art.jpg"
 
-# Inspect current 5-slot status
+# Inspect current configuration and active slot status
 node core/theme_engine.js --status
 ```
 
-#### 3. Adaptive Typography Tuning
-```bash
-# List built-in high-contrast presets
-node core/theme_engine.js --list-font-colors
+#### 3. Preset Archival & Instant Switching
+```powershell
+# Save current setup as a named preset
+node core/theme_engine.js --save-preset "CyberpunkPink4K" "Pink anime theme with liquid glass input"
 
-# Switch to Obsidian Black (ideal for light/white wallpapers)
-node core/theme_engine.js --font obsidian-black
-
-# Switch to Pure White, Sakura Pink, or Cyber Cyan
-node core/theme_engine.js --font pure-white
-
-# Use custom Hex color with auto-luminance shadow calculation
-node core/theme_engine.js --font "#ff79c6"
-```
-
-#### 4. Preset Management
-```bash
-# Save current 5-slot setup as a named preset
-node core/theme_engine.js --save-preset "Cyberpunk" "4K Rain City Neon"
-
-# 1-Click apply preset with 0.3s instant hot reload
-node core/theme_engine.js --apply-preset "Cyberpunk"
-
-# List all archived presets
+# List all saved presets
 node core/theme_engine.js --list-presets
+
+# Apply a preset in ~0.3s without restarting the app
+node core/theme_engine.js --apply-preset "CyberpunkPink4K"
+```
+
+#### 4. Restore & Complete Uninstallation
+```powershell
+# Temporarily revert to vanilla stock mode (retaining your saved configurations)
+node core/theme_engine.js --restore-original
+
+# Completely uninstall patches and physically restore stock ASAR
+node core/theme_engine.js --uninstall-completely
 ```
 
 ---
 
-## ⚙️ Core Architecture & Technical Implementation
+## ⚙️ Architecture Deep Dive
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                             Electron Host Process                           │
-│  [main.js] Launches CDP 8314 Port ──spawns──> [media_server.js] (Port 8315) │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ HTTP 206 Streaming / CSS Hot Reload
-┌──────────────────────────────────────▼──────────────────────────────────────┐
-│                            Chromium Renderer Interface                       │
-│  [preload.js] 0ms Poster Fallback ──mounts──> <video data-slot="...">       │
-│  [IntersectionObserver] Smart Dormancy ──> Pause when hidden (Save GPU/VRAM)│
-│  [Drag & Resize Decoupling] Window Decoupling ──> Free DWM during resize    │
-│  [MutationObserver Filtering] ───> Skip text input, latency drop to ~0.35ms │
-│  [custom_theme.css] Penetration Styles ──> Frosted glass, glow text, Z-Index│
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph LR
+    subgraph Asset Discovery & Ecosystem
+        Steam[Steam Wallpaper Engine] -->|VDF/JSON Auto-Scan| Bridge[core/wallpaper_engine_bridge.js]
+        LocalFiles[Local Videos & Images] --> Bridge
+        Presets[Preset Vault ~/.gemini/presets] --> Engine[core/theme_engine.js]
+    end
+
+    subgraph Microservice Layer
+        Bridge -->|Register Stream| MediaServer[core/media_server.js<br>RFC 7233 HTTP 206 Port 8315]
+        Engine -->|Compile CSS| ThemeCSS[custom_theme.css<br>Liquid Glass / 5 Slots / Mask]
+        Engine -->|i18n Dictionaries| I18n[core/localization_manager.js]
+    end
+
+    subgraph Runtime Injection
+        Asar[app.asar.patched] --> Preload[core/preload.js]
+        MediaServer -->|60FPS Chunked Stream| Blink[Chromium Blink Rendering Pipeline]
+        ThemeCSS -->|insertCSS| Blink
+        I18n -->|DOM Mutation Mapping| Blink
+        Engine -->|CDP 8314 Hot Reload| Blink
+    end
 ```
 
-1. **RFC 7233 Media Microservice (`core/media_server.js`)**:
-   - Listens on `127.0.0.1:8315`, natively supporting HTTP 206 Partial Content byte-range delivery;
-   - Equipped with a 200-capacity LRU file path cache and 3-second TTL state cache to eliminate disk I/O bottlenecks;
-   - Manages connection keep-alive lifecycles to prevent socket handle leaks during video element swapping.
-2. **Window Resize & Splitter Dragging Decoupling**:
-   - Eliminates window edge stutter and splitter dragging freezes by decoupling video rendering and UI reflow via `window.__isResizing` and `window.__isDraggingSplit` state locks;
-   - Decoder contention is suspended during dragging and smoothly resumes in **80ms** once mouse interaction ceases;
-   - Disables iframe pointer events during drag actions to prevent cursor loss or dropped frames.
-3. **Sub-Millisecond Keystroke Latency**:
-   - Standard injectors observe the entire DOM tree, causing >15ms input lag on every keystroke;
-   - Our engine filters out `<input>`, `<textarea>`, `[role="textbox"]`, and `[contenteditable]` elements, reducing typing latency to **~0.35ms** and scroll latency to **~0.048ms**.
-4. **Smart GPU Viewport Dormancy**:
-   - Decoders pause automatically whenever panels collapse, terminal tabs switch, or the application minimizes, keeping GPU/VRAM footprint near zero.
-5. **Controlled Update Shielding (`core/auto_patcher.js`)**:
-   - Takes control of `electron-updater` to prevent sudden silent background updates from overwriting themes, while preserving the manual update verification flow in the menu bar.
+### 1. RFC 7233 High-Performance Chunked Streaming (`core/media_server.js`)
+Wallpapers are not loaded through bloated Base64 strings or synchronous disk reads. The microservice listens on loopback port `8315`, natively implementing HTTP 206 Range partial content. This enables multi-gigabyte video files to be sought instantaneously with a 90% reduction in memory overhead.
+
+### 2. Exclusive "Liquid Glass" Optical Shader
+Designed specifically for the prompt input bar, combining high-transparency frosted depth with specular rim highlights:
+```css
+background: rgba(255, 255, 255, 0.08) !important;
+backdrop-filter: blur(28px) saturate(180%) !important;
+border: 1px solid rgba(255, 255, 255, 0.22) !important;
+box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
+```
+It ensures the underlying character art shines through with crystal clarity while maintaining superior text legibility.
+
+### 3. GPU Viewport Sleep & Power Conservation
+`core/preload.js` integrates window lifecycle hooks with the Page Visibility API and MutationObservers. When Antigravity is minimized, blurred, or occluded by other windows, hardware video decoding suspends immediately and resumes instantaneously upon focus, saving laptop battery and GPU thermals.
+
+### 4. Zero-Distortion True Full-Bleed Rendering
+By enforcing strict CSS specificity, the engine overrides Chromium's default `video { max-width: 100%; }`:
+```css
+#antigravity-video-left {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  object-position: 50% 50% !important;
+  transform: translate3d(0, 0, 0) !important;
+}
+```
+This guarantees an authentic 100% full-viewport canvas across 16:9, ultrawide (21:9), and custom window resolutions without accidental cropping or blank borders.
 
 ---
 
-## 🧪 Automated Test Suite (31 Tests Passing)
+## 🧪 Comprehensive Automated Test Suite
 
-Antigravity Theme Customizer features a comprehensive 31-point end-to-end regression test suite:
+The engine comes equipped with an end-to-end (E2E) and integration test harness covering 116 automated checks:
 
-- **Core & Wallpaper Engine Suite** ([`dev/tests/test_suite.js`](dev/tests/test_suite.js)): **17 / 17 PASS**
-  - Slot aliases, media server HTTP 206 responsiveness, multi-slot mounting, backward compatibility, single-instance isolation.
-- **Steam Wallpaper Engine Suite** ([`dev/tests/test_wallpaper_engine.js`](dev/tests/test_wallpaper_engine.js)): **14 / 14 PASS**
-  - Multi-drive scanning, workshop JSON/VDF parsing, web/Live2D fallback handling, index consistency, factory baseline rollback.
-
-```bash
-# Run all 31 automated tests
-node dev/tests/test_suite.js
-node dev/tests/test_wallpaper_engine.js
+```powershell
+# Run the entire automated test suite
+node dev/tests/run_all.js
 ```
+
+| Tier | Test Suite | Verification Scope | Status |
+| :--- | :--- | :--- | :---: |
+| **Tier 1** | `tier1_feature_coverage.test.js` | 5-slot config, HTTP 206 streaming, CN/EN i18n | ✅ **26/26 PASS** |
+| **Tier 2** | `tier2_boundary_corner.test.js` | Corrupted media, extreme aspect ratios, network limits | ✅ **20/20 PASS** |
+| **Tier 3** | `tier3_combinations.test.js` | Video + Liquid Glass composition, multi-drive cross mounts | ✅ **13/13 PASS** |
+| **Tier 4** | `tier4_real_world.test.js` | Live CDP rendering, window resize decoupling & hot-reloads | ✅ **5/5 PASS** |
+| **Integration** | `test_suite.js` & dedicated modules | 17-phase physical patch integrity, vanilla slot isolation | ✅ **52/52 PASS** |
+| **Total** | **Master Aggregate Suite** | **116 Full-Lifecycle Comprehensive Checks** | 🟢 **100% PASS** |
 
 ---
 
-## 🛡️ Security Principles & Clean Uninstallation
+## 🛡️ Security & Pristine Factory Rollback
 
-This project adheres to strict open-source principles:
+### 1. Physical Factory Backup
+- During initial installation, the engine creates a permanent physical backup of the stock ASAR archive:
+  `resources/app.asar.orig.bak`
+- All custom wallpapers and configuration files reside in a dedicated user data folder (`~/.gemini/antigravity/`), keeping the host application directory pristine.
 
-### 1. Physical Backup & Zero Telemetry
-- **Automatic Original Backup**: Before patching, the system creates an untouched physical backup of the original `app.asar` as `app.asar.orig.bak`;
-- **100% Localhost Operation**: All media streaming and style rendering run exclusively on loopback address (`127.0.0.1`). **No network telemetry, no proxying, and zero access to your Google account tokens or API traffic**;
-- **Fully Auditable**: All patch scripts (`auto_patcher.js`, `theme_engine.js`, `preload.js`) are plain, auditable JavaScript.
+### 2. 1-Click Factory Uninstallation
+Whenever you want to upgrade Antigravity or remove custom themes:
+- **GUI**: In Theme Studio, navigate to "System & Security" → "Complete Uninstall & Physical Rollback".
+- **Batch**: Double-click **`dev/bin/uninstall_completely.bat`**.
+- **CLI**: Execute `node core/theme_engine.js --uninstall-completely`.
 
-### 2. Complete Factory Uninstallation
-To restore Antigravity to pristine factory state:
-- **CLI Method**:
-  ```bash
-  node core/theme_engine.js --restore-original
-  ```
-- **Physical Restore Script**:
-  Run **`dev/bin/uninstall_completely.bat`** to replace `app.asar` with `app.asar.orig.bak`, returning Antigravity to 100% untouched stock state.
+The script physically restores `app.asar.orig.bak`, purges injection scripts, and reverts Antigravity to 100% official stock condition.
 
 ---
 
@@ -283,28 +344,29 @@ To restore Antigravity to pristine factory state:
 
 ```text
 antigravity-theme/
-├── 📂 core/                       # Core engine and streaming microservices
-│   ├── theme_engine.js            # Style compiler, 5-slot controller, CDP hot reload
-│   ├── wallpaper_engine_bridge.js # Steam library discovery and VDF/JSON parser
-│   ├── media_server.js            # RFC 7233 HTTP Range 206 streaming microservice
-│   ├── auto_patcher.js            # ASAR extract/pack and patch injection engine
-│   └── preload.js                 # Renderer injection layer (video mounting, dormancy)
-├── 📂 studio/                     # Theme Studio visual webapp
-│   ├── launcher.js                # Viewport manager & launcher daemon
-│   ├── server.js                  # Local HTTP API microservice (port 8316)
-│   ├── public/                    # 1:1 Live mockup preview, workshop grid, presets UI, bilingual i18n
-│   └── src/                       # Native C# GUI launcher source (AntigravityThemeStudio)
-├── 📂 wallpapers/                 # Default template artwork and placeholder assets
-├── 📂 dev/                        # 🛠️ Developer utilities and test suites
-│   ├── bin/                       # Batch script toolset (install, swap, restore, etc.)
-│   ├── scripts/                   # Diagnostic, benchmark, and maintenance tools
-│   ├── tests/                     # 31-point regression and E2E test suites
-│   ├── docs/                      # Architectural specifications and notes
-│   └── assets/                    # Showcase GIF and documentation screenshots
-├── AntigravityThemeStudio.exe     # Native x64 single-file executable client
+├── 📂 core/                       # Core theming engine, streaming service & patch pipeline
+│   ├── theme_engine.js            # Theme compiler: CSS generation, 5-slot control, CDP hot reload
+│   ├── wallpaper_engine_bridge.js # Multi-drive Steam library scanner & workshop VDF/JSON parser
+│   ├── media_server.js            # High-performance streaming microservice: HTTP Range 206
+│   ├── localization_manager.js    # Comprehensive Chinese localization & bilingual i18n manager
+│   ├── auto_patcher.js            # Patch engine: automated ASAR extraction and process injection
+│   └── preload.js                 # Renderer injection script: GPU sleep, liquid glass, transparency
+├── 📂 studio/                     # Theme Studio modern desktop application
+│   ├── launcher.js                # Smart viewport launcher supervisor script
+│   ├── server.js                  # Local HTTP API microservice (Port 8316)
+│   ├── public/                    # Web frontend assets (1:1 dynamic live mockup, Steam grid, preset vault)
+│   └── src/                       # Native Windows C# desktop launcher source (AntigravityThemeStudio)
+├── 📂 wallpapers/                 # Default sample assets and aspect ratio templates
+├── 📂 dev/                        # 🛠️ Developer tooling & automated regression test harness
+│   ├── bin/                       # Interactive CLI batch toolbox (swap, install, restore, uninstall)
+│   ├── scripts/                   # Build maintenance, UI automation, and diagnostic probe tools
+│   ├── tests/                     # 116 rigorous end-to-end regression test suites
+│   ├── docs/                      # Architectural designs and technical documentation
+│   └── assets/                    # Showcase graphics, GIFs, and documentation screenshots
+├── AntigravityThemeStudio.exe     # Standalone portable x64 Windows desktop client
 ├── LICENSE                        # MIT Open Source License
-├── README.md                      # Chinese Documentation (中文文档)
-└── README_EN.md                   # English Documentation
+├── README.md                      # Official Documentation (Simplified Chinese)
+└── README_EN.md                   # Official Documentation (English)
 ```
 
 ---
@@ -312,37 +374,44 @@ antigravity-theme/
 ## 💡 Frequently Asked Questions (FAQ)
 
 <details>
-<summary><b>Q1: What happens when Google Antigravity releases an official update?</b></summary>
-Your wallpapers and saved presets are stored in your user profile directory (<code>~/.gemini/antigravity/</code>) and <b>will never be overwritten by application updates</b>.<br>
-After an update, simply run <code>node studio/launcher.js</code> or <code>dev/bin/install.bat</code> once to re-apply the non-intrusive styling layer.
+<summary><b>Q1: What happens when Antigravity releases an official update?</b></summary>
+All your wallpaper media files and saved presets are safely stored in an isolated user directory (<code>~/.gemini/antigravity/</code>), so <b>they will never be lost during an official update</b>.<br>
+After updating the client, simply run <code>AntigravityThemeStudio.exe</code> once (or run <code>node studio/launcher.js</code>), and the engine will automatically detect the new version and re-apply styles.
 </details>
 
 <details>
-<summary><b>Q2: Does video wallpaper streaming cause high CPU/GPU usage?</b></summary>
-No. The engine leverages Chromium's underlying D3D11 hardware acceleration combined with our "Smart Viewport Dormancy" and "Drag-Resize Decoupling". When panels collapse, the window is minimized, or borders are being resized, video decoders suspend automatically, keeping GPU and CPU consumption near zero.
+<summary><b>Q2: Will 60FPS dynamic video wallpapers heat up my CPU or drain GPU VRAM?</b></summary>
+No. The engine utilizes Chromium's native D3D11 hardware acceleration and features an automated "GPU Viewport Sleep Engine": whenever Antigravity is minimized, occluded, or backgrounded, video decoding pauses instantly within milliseconds, reducing CPU and GPU utilization to near 0%.
 </details>
 
 <details>
-<summary><b>Q3: What if bright/light wallpapers make text hard to read?</b></summary>
-In Theme Studio, select the <code>[Obsidian Black]</code> typography preset (or run <code>node core/theme_engine.js --font obsidian-black</code>). Text will automatically gain an anti-glare high-contrast finish with subtle luminous halos, staying crisp and readable even against pure white backdrops.
+<summary><b>Q3: What should I do if a bright anime wallpaper makes UI text hard to read?</b></summary>
+In Theme Studio, adjust the "Dark Eye-Care Mask" slider to between 30% and 45%. This overlays an unobtrusive translucent tint that maintains full character visibility while providing crisp contrast for text, prompts, and code blocks.
 </details>
 
 <details>
-<summary><b>Q4: How do I completely uninstall and restore factory state?</b></summary>
-Run <code>dev/bin/uninstall_completely.bat</code> (or click "Restore Factory Clean Mode" in Theme Studio). The original <code>app.asar.orig.bak</code> physical file will be cleanly restored, bringing Antigravity back to 100% stock official condition.
+<summary><b>Q4: Why did some third-party mods cause transparent text collisions when restoring vanilla input?</b></summary>
+Earlier modding scripts applied broad CSS opacity globally across all modal elements. Our 5-slot architecture strictly isolates <code>bottom</code> and <code>settings</code> at the layout layer. When you select "Restore Vanilla", a clean native dark shielding layer is applied to eliminate text overlapping bugs permanently.
+</details>
+
+<details>
+<summary><b>Q5: How do I switch back to stock appearance or completely uninstall?</b></summary>
+- Temporary Vanilla Mode: Run <code>dev/bin/一键恢复官方原版.bat</code> to enjoy clean stock styling while retaining your presets for future use.<br>
+- Complete Uninstallation: Run <code>dev/bin/uninstall_completely.bat</code> to physically restore the factory <code>app.asar.orig.bak</code> and clear all injection hooks.
 </details>
 
 ---
 
-## 📜 Copyright & Disclaimer
+## 📜 Copyright & Legal Disclaimer
 
-- Distributed under the [MIT License](LICENSE).
-- Bundled sample artwork is provided solely for dimension benchmarking and initial demonstration purposes. All original artwork copyrights belong to their respective creators and copyright holders (such as Yostar / NEXON Games).
-- Users are encouraged to import their own personalized wallpapers or link directly via the built-in Steam Wallpaper Engine integration.
+- This project is open-source under the [MIT License](LICENSE).
+- Sample assets bundled within the repository are provided solely for aspect ratio demonstration and rendering verification; all copyrights belong to their respective original illustrators and rights holders (e.g., Yostar / NEXON Games).
+- Users are encouraged to import personal legitimate wallpapers via the built-in **Steam Wallpaper Engine integration** or their local media collections.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions, issues, and pull requests are warmly welcomed!
-If this project makes your daily Antigravity development workflow more inspiring and enjoyable, consider leaving a ⭐️ **Star** on GitHub!
+Contributions, bug reports, and pull requests are warmly welcome! If you've created a stunning theme preset or discovered performance enhancements, feel free to open a PR and share with the community!
+
+⭐️ If this project enhances your Antigravity workflow, don't forget to give this repository a **Star**!
