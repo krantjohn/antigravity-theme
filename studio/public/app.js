@@ -2949,15 +2949,15 @@ function renderLocalizationUI(locData) {
 
 async function toggleChineseLocalization() {
   const isEn = typeof getLanguage === 'function' && getLanguage() === 'en';
-  showToast(isEn ? 'Toggling client localization...' : '正在切换 Antigravity 客户端汉化状态...', 3000);
+  showToast(isEn ? 'Updating client localization configuration...' : '正在更新 Antigravity 客户端语言配置...', 2000);
   try {
     const res = await fetch('/api/localization/toggle', { method: 'POST' });
     const data = await res.json();
     if (data.success) {
       if (data.isChineseInstalled) {
-        showToast(isEn ? '✨ Antigravity Chinese localization enabled! (Press Ctrl+R in client to refresh)' : '✨ 已成功开启 Antigravity 简体中文汉化！(按 Ctrl+R 刷新客户端视窗立即生效)', 5000);
+        showToast(isEn ? '✨ Antigravity Chinese localization enabled! (Please restart Antigravity to apply)' : '✨ 已成功开启 Antigravity 简体中文汉化！(请重启 Antigravity 客户端以生效)', 6000);
       } else {
-        showToast(isEn ? '✨ Restored official English UI! (Press Ctrl+R in client to refresh)' : '✨ 已恢复 Antigravity 官方英文原版界面！(按 Ctrl+R 刷新客户端视窗立即生效)', 5000);
+        showToast(isEn ? '✨ Restored official English UI! (Please restart Antigravity to apply)' : '✨ 已恢复 Antigravity 官方英文原版界面！(请重启 Antigravity 客户端以生效)', 6000);
       }
       await fetchStatus();
     } else {

@@ -85,6 +85,7 @@ async function runLocalizationTests() {
     assert.strictEqual(enableRes.status, 200);
     assert.strictEqual(enableRes.json.success, true);
     assert.strictEqual(enableRes.json.isChineseInstalled, true);
+    assert.strictEqual(enableRes.json.needsRestart, true);
     assert.strictEqual(localizationManager.isChineseInstalled(), true);
     console.log('   ✓ 中文汉化已成功写入并校验生效');
 
@@ -110,6 +111,7 @@ async function runLocalizationTests() {
     assert.strictEqual(disableRes.status, 200);
     assert.strictEqual(disableRes.json.success, true);
     assert.strictEqual(disableRes.json.isChineseInstalled, false);
+    assert.strictEqual(disableRes.json.needsRestart, true);
     assert.strictEqual(localizationManager.isChineseInstalled(), false);
 
     // Verify preload is clean of localization but STILL HAS theme

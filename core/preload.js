@@ -993,6 +993,9 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
                   } else {
                     el.style.removeProperty('background-color');
                   }
+                } else if (slotKey === 'settings') {
+                  el.style.setProperty('background-color', '#121216', 'important');
+                  el.style.setProperty('background', '#121216', 'important');
                 } else {
                   el.style.removeProperty('background-color');
                 }

@@ -45,7 +45,11 @@ async function runTests() {
     assert.strictEqual(configMulti.settings.type, 'none');
     const cssMulti = themeEngine.generateMasterCss(configMulti);
     assert(cssMulti.includes('antigravity.agentSidePanelInputBox') || cssMulti.includes('Vanilla Mode') || cssMulti.includes('Vanilla Theme'));
-    console.log('✓ Generated CSS contains per-slot vanilla rules for all specified 3 targets');
+    if (!cssMulti.includes('Vanilla Mode')) {
+      assert(cssMulti.includes('Settings Dialog Vanilla Defense') && cssMulti.includes('#121216'), 'Settings vanilla must enforce solid dark defense (#121216)');
+      assert(cssMulti.includes('background-image: none !important'), 'Settings vanilla must explicitly override background-image with none');
+    }
+    console.log('✓ Generated CSS contains per-slot vanilla rules and settings solid dark defense (#121216)');
 
     // Test 5: Verify behavior on unsupported slot 'mid'
     console.log('[Test 5] Verifying behavior on unsupported slot "mid"...');

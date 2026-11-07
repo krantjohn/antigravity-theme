@@ -1562,7 +1562,40 @@ div.settings-modal-container:has(> .antigravity-slot-video[data-slot="settings"]
   background-color: transparent !important;
   background: transparent !important;
 }
-` : ''}
+` : `
+/* 6b. Target 3: Settings Dialog Vanilla Defense (Solid official dark styling, zero transparency leak) */
+[role="dialog"],
+div.settings-modal-container,
+div[data-state="open"]:has(div.bg-sidebar) {
+  position: relative !important;
+  background: #121216 !important;
+  background-color: #121216 !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+  z-index: 1000 !important;
+}
+
+[role="dialog"] .bg-background,
+div.settings-modal-container .bg-background {
+  background: #121216 !important;
+  background-color: #121216 !important;
+  background-image: none !important;
+}
+
+[role="dialog"] .bg-sidebar,
+div.settings-modal-container .bg-sidebar {
+  background: #18181c !important;
+  background-color: #18181c !important;
+  background-image: none !important;
+}
+
+.antigravity-slot-video[data-slot="settings"],
+[role="dialog"] .antigravity-slot-video[data-slot="settings"],
+div.settings-modal-container .antigravity-slot-video[data-slot="settings"] {
+  display: none !important;
+}
+`}
 
 /* 7. Common Video Element Containment */
 .antigravity-slot-video {
@@ -2343,6 +2376,9 @@ function getClientVideoScript(config) {
                     } else {
                       el.style.removeProperty('background-color');
                     }
+                  } else if (slotKey === 'settings') {
+                    el.style.setProperty('background-color', '#121216', 'important');
+                    el.style.setProperty('background', '#121216', 'important');
                   } else {
                     el.style.removeProperty('background-color');
                   }

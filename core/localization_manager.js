@@ -45,72 +45,13 @@ function isChineseInstalled() {
 }
 
 function liveInjectCdp() {
-  try {
-    const http = require('http');
-    const req = http.get('http://127.0.0.1:8314/json', (res) => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => {
-        try {
-          const list = JSON.parse(data);
-          const page = list.find(p => p.type === 'page' && !p.url.startsWith('data:')) || list.find(p => p.type === 'page');
-          if (!page) return;
-          const ws = new WebSocket(page.webSocketDebuggerUrl);
-          ws.onopen = () => {
-            const js = engine.generateJs();
-            ws.send(JSON.stringify({
-              id: 991,
-              method: 'Runtime.evaluate',
-              params: { expression: js, awaitPromise: true }
-            }));
-          };
-          ws.onmessage = () => {
-            try { ws.close(); } catch (_) {}
-          };
-          ws.onerror = () => {};
-        } catch (_) {}
-      });
-    });
-    req.on('error', () => {});
-  } catch (_) {}
+  // Per user directive: Live CDP DOM MutationObserver injection is disabled to prevent
+  // Chromium hardware-accelerated video decoder stalls, disappearance of navigation buttons,
+  // and auxiliary subagent panel collapse. Localization changes take effect cleanly on client restart.
 }
 
 function liveDisconnectCdp() {
-  try {
-    const http = require('http');
-    const req = http.get('http://127.0.0.1:8314/json', (res) => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => {
-        try {
-          const list = JSON.parse(data);
-          const page = list.find(p => p.type === 'page' && !p.url.startsWith('data:')) || list.find(p => p.type === 'page');
-          if (!page) return;
-          const ws = new WebSocket(page.webSocketDebuggerUrl);
-          ws.onopen = () => {
-            const disableJs = `
-              (() => {
-                if (typeof window.__agDisconnectLocalization === 'function') {
-                  window.__agDisconnectLocalization();
-                }
-                window.__agLocalizationDisabled = true;
-              })()
-            `;
-            ws.send(JSON.stringify({
-              id: 993,
-              method: 'Runtime.evaluate',
-              params: { expression: disableJs, awaitPromise: true }
-            }));
-          };
-          ws.onmessage = () => {
-            try { ws.close(); } catch (_) {}
-          };
-          ws.onerror = () => {};
-        } catch (_) {}
-      });
-    });
-    req.on('error', () => {});
-  } catch (_) {}
+  // Per user directive: Live CDP DOM manipulation disabled. Client restart applies clean stock English.
 }
 
 function enableChineseLocalization() {
@@ -162,11 +103,15 @@ function enableChineseLocalization() {
     }
   } catch (_) {}
 
-  // 4. Live zero-second CDP hot injection without page reload (preserves tabs and layout)
-  liveInjectCdp();
-
-  console.log('[LocalizationManager] ✨ 中文汉化部署完成并已同美化套件深度绑定！');
-  return { success: true, isChineseInstalled: true };
+  // 4. Do not execute destructive live CDP hot injection or Page.reload.
+  // Localization changes cleanly take effect upon client restart.
+  console.log('[LocalizationManager] ✨ 中文汉化配置已写入！重启 Antigravity 客户端后完整生效。');
+  return {
+    success: true,
+    isChineseInstalled: true,
+    needsRestart: true,
+    message: '中文汉化已就绪！请重启 Antigravity 客户端以完整生效。'
+  };
 }
 
 function disableChineseLocalization() {
@@ -288,11 +233,15 @@ function disableChineseLocalization() {
     }
   } catch (_) {}
 
-  // 5. Disconnect live observer without destructive page reload
-  liveDisconnectCdp();
-
-  console.log('[LocalizationManager] ✨ 中文汉化已彻底卸载，界面回归官方原生英文！');
-  return { success: true, isChineseInstalled: false };
+  // 5. Do not execute destructive live CDP disconnect or Page.reload.
+  // Localization changes cleanly take effect upon client restart.
+  console.log('[LocalizationManager] ✨ 官方原版英文已恢复！重启 Antigravity 客户端后完整生效。');
+  return {
+    success: true,
+    isChineseInstalled: false,
+    needsRestart: true,
+    message: '官方原版英文已就绪！请重启 Antigravity 客户端以完整生效。'
+  };
 }
 
 function getStatus() {
