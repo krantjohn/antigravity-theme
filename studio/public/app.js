@@ -265,8 +265,12 @@ function initTabs() {
       } else if (targetViewId === 'view-presets') {
         renderPresetsList();
       } else if (targetViewId === 'view-preview') {
-        renderSlotInspector();
-        renderMockupPreview();
+        if (!state.isDirty) {
+          fetchStatus();
+        } else {
+          renderSlotInspector();
+          renderMockupPreview();
+        }
         if (state.isAutoFit) {
           setTimeout(updateMockupScale, 50);
         }
@@ -571,10 +575,12 @@ function renderMockupPreview() {
       const pendingFile = state.pendingFiles[slotKey];
       isVideo = pendingFile ? pendingFile.type.startsWith('video/') : false;
     } else if (slotData.stagedFilePath) {
-      mediaUrl = `/api/preview-file?path=${encodeURIComponent(slotData.stagedFilePath)}`;
+      const verParam = slotData.version ? `&v=${slotData.version}` : (slotData.lastModified ? `&v=${slotData.lastModified}` : '');
+      mediaUrl = `/api/preview-file?path=${encodeURIComponent(slotData.stagedFilePath)}${verParam}`;
       isVideo = Boolean(slotData.stagedFilePath.match(/\.(mp4|webm|mov)$/i));
     } else if (slotData.file) {
-      mediaUrl = `/api/preview-file?path=${encodeURIComponent(slotData.file)}`;
+      const verParam = slotData.version ? `&v=${slotData.version}` : (slotData.lastModified ? `&v=${slotData.lastModified}` : '');
+      mediaUrl = `/api/preview-file?path=${encodeURIComponent(slotData.file)}${verParam}`;
       isVideo = slotData.type === 'video' || Boolean(slotData.file.match(/\.(mp4|webm|mov)$/i));
     }
 
@@ -2811,7 +2817,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Status polling interval (3.5s)
   setInterval(() => {
-    if (state.activeTab === 'view-safety') {
+    // Keep preview and safety tabs synchronized when not editing drafts
+    if (!state.isDirty && (state.activeTab === 'view-preview' || state.activeTab === 'view-safety')) {
       fetchStatus();
     }
   }, 3500);

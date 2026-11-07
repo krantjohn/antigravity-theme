@@ -410,7 +410,10 @@ const server = http.createServer(async (req, res) => {
           'Accept-Ranges': 'bytes',
           'Content-Length': chunksize,
           'Content-Type': contentType,
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         });
         fileStream.pipe(res);
       } else {
@@ -418,7 +421,10 @@ const server = http.createServer(async (req, res) => {
           'Content-Length': stat.size,
           'Content-Type': contentType,
           'Accept-Ranges': 'bytes',
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         });
         fs.createReadStream(rawPath).pipe(res);
       }

@@ -490,8 +490,6 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           'aside[aria-label="Sidebar"] a,',
           'aside[aria-label="Sidebar"] [role="button"] {',
           '  pointer-events: auto !important;',
-          '  position: relative !important;',
-          '  z-index: 1 !important;',
           '  -webkit-app-region: no-drag !important;',
           '  cursor: pointer !important;',
           '}'
