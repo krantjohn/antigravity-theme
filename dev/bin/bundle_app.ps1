@@ -62,3 +62,9 @@ finally {
 
 $fileSize = (Get-Item $zipPath).Length
 Write-Host "[SUCCESS] app_bundle.zip created successfully ($([math]::Round($fileSize / 1MB, 2)) MB, $fileSize bytes)"
+
+# Generate app_bundle.hash for instant 0ms startup verification
+$bundleHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$hashPath = Join-Path $libDir "app_bundle.hash"
+[System.IO.File]::WriteAllText($hashPath, $bundleHash, [System.Text.Encoding]::ASCII)
+Write-Host "[INFO] app_bundle.hash written: $bundleHash"

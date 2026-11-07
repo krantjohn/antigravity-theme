@@ -126,16 +126,30 @@ namespace AntigravityThemeStudio
                 {
                     if (stream == null) return null;
 
-                    string bundleHash;
-                    using (SHA256 sha = SHA256.Create())
+                    string bundleHash = null;
+                    using (Stream hashStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("app_bundle.hash"))
                     {
-                        byte[] hashBytes = sha.ComputeHash(stream);
-                        bundleHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                        if (hashStream != null)
+                        {
+                            using (StreamReader sr = new StreamReader(hashStream))
+                            {
+                                bundleHash = sr.ReadToEnd().Trim().ToLowerInvariant();
+                            }
+                        }
                     }
 
-                    if (stream.CanSeek)
+                    if (string.IsNullOrEmpty(bundleHash))
                     {
-                        stream.Seek(0, SeekOrigin.Begin);
+                        using (SHA256 sha = SHA256.Create())
+                        {
+                            byte[] hashBytes = sha.ComputeHash(stream);
+                            bundleHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                        }
+
+                        if (stream.CanSeek)
+                        {
+                            stream.Seek(0, SeekOrigin.Begin);
+                        }
                     }
 
                     // 检查本地缓存是否与当前内嵌 bundle 的哈希完全一致
@@ -308,10 +322,7 @@ namespace AntigravityThemeStudio
                     JobObjectManager.BindProcess(_nodeProcess);
                 }
 
-                // 等待本地服务就绪
-                WaitForServerReady("http://127.0.0.1:8316/api/status", 3500);
-
-                // 启动 WebView2 原生暗黑窗体
+                // 启动 WebView2 原生暗黑窗体 (UI 与 Node 后台并发初始化，零卡顿)
                 Application.Run(new StudioForm(appDir));
             }
             catch (Exception ex)
@@ -359,16 +370,16 @@ namespace AntigravityThemeStudio
             }
         }
 
-        private static bool WaitForServerReady(string url, int timeoutMs)
+        public static bool WaitForServerReady(string url, int timeoutMs)
         {
             int elapsed = 0;
-            int interval = 120;
+            int interval = 25; // 25ms 快速探测
             while (elapsed < timeoutMs)
             {
                 try
                 {
                     HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
-                    req.Timeout = 300;
+                    req.Timeout = 150;
                     using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
                     {
                         if (resp.StatusCode == HttpStatusCode.OK)
@@ -387,8 +398,31 @@ namespace AntigravityThemeStudio
 
         private static string FindNodeExecutable(string appDir)
         {
+            // 0. 优先检查本地运行时缓存的 node 解释器路径 (实现 0ms 瞬间解析)
+            string cacheDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "antigravity_studio_host"
+            );
+            string cachedNodeFile = Path.Combine(cacheDir, "node_path.txt");
+            if (File.Exists(cachedNodeFile))
+            {
+                try
+                {
+                    string cached = File.ReadAllText(cachedNodeFile).Trim();
+                    if (!string.IsNullOrEmpty(cached) && File.Exists(cached))
+                    {
+                        return cached;
+                    }
+                }
+                catch { }
+            }
+
             string localNode = Path.Combine(appDir, "bin", "node.exe");
-            if (File.Exists(localNode)) return localNode;
+            if (File.Exists(localNode))
+            {
+                SaveCachedNode(cachedNodeFile, localNode);
+                return localNode;
+            }
 
             string[] knownPaths = new string[]
             {
@@ -401,7 +435,11 @@ namespace AntigravityThemeStudio
 
             foreach (string p in knownPaths)
             {
-                if (!string.IsNullOrEmpty(p) && File.Exists(p)) return p;
+                if (!string.IsNullOrEmpty(p) && File.Exists(p))
+                {
+                    SaveCachedNode(cachedNodeFile, p);
+                    return p;
+                }
             }
 
             string pathEnv = Environment.GetEnvironmentVariable("PATH");
@@ -416,7 +454,11 @@ namespace AntigravityThemeStudio
                         try
                         {
                             string candidate = Path.Combine(trimmed, "node.exe");
-                            if (File.Exists(candidate)) return candidate;
+                            if (File.Exists(candidate))
+                            {
+                                SaveCachedNode(cachedNodeFile, candidate);
+                                return candidate;
+                            }
                         }
                         catch { }
                     }
@@ -437,6 +479,7 @@ namespace AntigravityThemeStudio
                             string procPath = proc.MainModule.FileName;
                             if (!string.IsNullOrEmpty(procPath) && File.Exists(procPath))
                             {
+                                SaveCachedNode(cachedNodeFile, procPath);
                                 return procPath;
                             }
                         }
@@ -457,10 +500,25 @@ namespace AntigravityThemeStudio
 
             foreach (string p in antigravityPaths)
             {
-                if (!string.IsNullOrEmpty(p) && File.Exists(p)) return p;
+                if (!string.IsNullOrEmpty(p) && File.Exists(p))
+                {
+                    SaveCachedNode(cachedNodeFile, p);
+                    return p;
+                }
             }
 
             return null;
+        }
+
+        private static void SaveCachedNode(string filePath, string nodePath)
+        {
+            try
+            {
+                string dir = Path.GetDirectoryName(filePath);
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                File.WriteAllText(filePath, nodePath);
+            }
+            catch { }
         }
     }
 
@@ -592,6 +650,9 @@ namespace AntigravityThemeStudio
                     }
                     catch { }
                 };
+
+                // 异步等待本地轻量 Ping 接口就绪 (并发重叠 Node 与 WebView2 启动，零卡顿)
+                await System.Threading.Tasks.Task.Run(() => Program.WaitForServerReady("http://127.0.0.1:8316/api/ping", 4500));
 
                 // 导航到 Studio 主页
                 _webView.Source = new Uri("http://127.0.0.1:8316");

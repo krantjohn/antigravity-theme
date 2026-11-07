@@ -17,7 +17,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo [INFO] Compiling AntigravityThemeStudio.exe - Single-File Native WebView2 Container...
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /platform:x64 /win32icon:studio\app.ico /win32manifest:studio\app.manifest /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:studio\lib\Microsoft.Web.WebView2.Core.dll /r:studio\lib\Microsoft.Web.WebView2.WinForms.dll /resource:studio\lib\Microsoft.Web.WebView2.Core.dll,Microsoft.Web.WebView2.Core.dll /resource:studio\lib\Microsoft.Web.WebView2.WinForms.dll,Microsoft.Web.WebView2.WinForms.dll /resource:studio\lib\WebView2Loader.dll,WebView2Loader.dll /resource:studio\lib\app_bundle.zip,app_bundle.zip /out:AntigravityThemeStudio.exe studio\src\Program.cs
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /platform:x64 /win32icon:studio\app.ico /win32manifest:studio\app.manifest /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll /r:studio\lib\Microsoft.Web.WebView2.Core.dll /r:studio\lib\Microsoft.Web.WebView2.WinForms.dll /resource:studio\lib\Microsoft.Web.WebView2.Core.dll,Microsoft.Web.WebView2.Core.dll /resource:studio\lib\Microsoft.Web.WebView2.WinForms.dll,Microsoft.Web.WebView2.WinForms.dll /resource:studio\lib\WebView2Loader.dll,WebView2Loader.dll /resource:studio\lib\app_bundle.zip,app_bundle.zip /resource:studio\lib\app_bundle.hash,app_bundle.hash /out:AntigravityThemeStudio.exe studio\src\Program.cs
 
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Build failed with error code %ERRORLEVEL%

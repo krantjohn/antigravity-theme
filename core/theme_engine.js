@@ -4794,9 +4794,11 @@ function formatPresetTable(presets) {
 /**
  * Lists all saved presets with summary table.
  */
-function listPresets() {
+function listPresets(silent = false) {
   const presets = listPresetsInternal();
-  console.log(formatPresetTable(presets));
+  if (!silent) {
+    console.log(formatPresetTable(presets));
+  }
   return presets;
 }
 
@@ -5646,6 +5648,7 @@ module.exports = {
   parseCoordinate,
   savePreset,
   listPresets,
+  listPresetsInternal,
   applyPreset,
   deletePreset,
   getPresetDetails,

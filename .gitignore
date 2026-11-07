@@ -84,6 +84,7 @@ antigravity2-cn-main/
 studio/src/bin/
 studio/src/obj/
 studio/lib/*.zip
+studio/lib/*.hash
 
 
 

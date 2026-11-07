@@ -102,6 +102,56 @@ function checkAntigravityProcess() {
   });
 }
 
+// Fast cached process check: bypass expensive tasklist when CDP port is already verified online
+let _cachedProcRunning = false;
+let _lastProcCheckTime = 0;
+async function getAntigravityRunningFast(cdpOnline) {
+  if (cdpOnline) {
+    _cachedProcRunning = true;
+    _lastProcCheckTime = Date.now();
+    return true;
+  }
+  const now = Date.now();
+  if (now - _lastProcCheckTime < 2500) {
+    return _cachedProcRunning;
+  }
+  _lastProcCheckTime = now;
+  _cachedProcRunning = await checkAntigravityProcess();
+  return _cachedProcRunning;
+}
+
+// Background asynchronous Wallpaper Engine cache
+let cachedWeCount = 0;
+let isWeScanning = false;
+let lastWeScanTime = 0;
+
+function refreshWeCountInBackground(force = false) {
+  const now = Date.now();
+  if (isWeScanning) return;
+  if (!force && cachedWeCount > 0 && (now - lastWeScanTime < 60000)) return;
+  isWeScanning = true;
+  setImmediate(() => {
+    try {
+      let list = null;
+      if (typeof themeEngine.scanWorkshopWallpapers === 'function') {
+        list = themeEngine.scanWorkshopWallpapers();
+      } else if (typeof themeEngine.listWallpaperEngineWallpapers === 'function') {
+        list = themeEngine.listWallpaperEngineWallpapers('', 50, false);
+      }
+      if (list && Array.isArray(list)) {
+        cachedWeCount = list.length;
+        lastWeScanTime = Date.now();
+      }
+    } catch (_) {}
+    finally {
+      isWeScanning = false;
+    }
+  });
+}
+
+// Kick off initial background scan without blocking server startup
+refreshWeCountInBackground();
+
 // Helper: restart Antigravity client
 function restartAntigravity() {
   return new Promise((resolve, reject) => {
@@ -289,16 +339,23 @@ const server = http.createServer(async (req, res) => {
   // REST API Endpoints
   // ------------------------------------------------------------------
 
+  // 0. Lightweight Ping / Health check (< 0.2ms)
+  if (req.method === 'GET' && (pathname === '/api/ping' || pathname === '/api/health')) {
+    return sendJson(res, 200, { ok: true, status: 'ready', port: PORT, pid: process.pid });
+  }
+
   // 1. GET /api/status - Complete live status
   if (req.method === 'GET' && pathname === '/api/status') {
     try {
       lastClientHeartbeat = Date.now();
       hasEverHeartbeated = true;
-      const isCdpOnline = await checkPortStatus(8314);
-      const isMediaOnline = await checkMediaServerStatus();
-      const isAntigravityRunning = await checkAntigravityProcess();
+      const [isCdpOnline, isMediaOnline] = await Promise.all([
+        checkPortStatus(8314),
+        checkMediaServerStatus()
+      ]);
+      const isAntigravityRunning = await getAntigravityRunningFast(isCdpOnline);
       const slotsConfig = themeEngine.loadSlotsConfig();
-      const presets = themeEngine.listPresets();
+      const presets = themeEngine.listPresetsInternal ? themeEngine.listPresetsInternal() : themeEngine.listPresets(true);
       
       const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
       const defaultResDir = path.join(localAppData, 'Programs', 'antigravity', 'resources');
@@ -310,11 +367,9 @@ const server = http.createServer(async (req, res) => {
         try { backupSize = (fs.statSync(asarOrigBak).size / 1024 / 1024).toFixed(2); } catch(e) {}
       }
 
-      let weCount = 0;
-      try {
-        const weList = themeEngine.listWallpaperEngineWallpapers();
-        weCount = weList ? weList.length : 0;
-      } catch (e) {}
+      if (cachedWeCount === 0) {
+        refreshWeCountInBackground();
+      }
 
       return sendJson(res, 200, {
         success: true,
@@ -323,9 +378,9 @@ const server = http.createServer(async (req, res) => {
         isAntigravityRunning,
         slotsConfig,
         presets,
-                hasBackup,
+        hasBackup,
         backupSize,
-        weCount,
+        weCount: cachedWeCount,
         slotsMeta: themeEngine.SLOTS_META,
         patchStatus: themeEngine.checkInjectionStatus(),
         localization: localizationManager.getStatus()
@@ -390,6 +445,10 @@ const server = http.createServer(async (req, res) => {
       const items = themeEngine.listWallpaperEngineWallpapers 
         ? themeEngine.listWallpaperEngineWallpapers({ refresh, sortBy, search }) 
         : [];
+      if (items && Array.isArray(items)) {
+        cachedWeCount = items.length;
+        lastWeScanTime = Date.now();
+      }
       return sendJson(res, 200, { success: true, count: items.length, items, refreshed: refresh, sortBy });
     } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message, items: [] });
@@ -403,6 +462,10 @@ const server = http.createServer(async (req, res) => {
       const items = themeEngine.listWallpaperEngineWallpapers 
         ? themeEngine.listWallpaperEngineWallpapers({ refresh: true, sortBy }) 
         : [];
+      if (items && Array.isArray(items)) {
+        cachedWeCount = items.length;
+        lastWeScanTime = Date.now();
+      }
       return sendJson(res, 200, { success: true, count: items.length, items, refreshed: true, sortBy });
     } catch (err) {
       return sendJson(res, 500, { success: false, error: err.message, items: [] });

@@ -6,16 +6,35 @@ const engine = require('./localization_engine.js');
 const SIGNATURE_START = engine.SIGNATURE_START;
 const SIGNATURE_END = engine.SIGNATURE_END;
 
+let _cachedResourcesDir = null;
+
 function getResourcesDir() {
+  if (_cachedResourcesDir) return _cachedResourcesDir;
+  const localAppdata = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  const defaultPath = path.join(localAppdata, 'Programs', 'antigravity', 'resources');
+  if (fs.existsSync(defaultPath)) {
+    _cachedResourcesDir = defaultPath;
+    return _cachedResourcesDir;
+  }
   const installDir = engine.detectInstallationDir("", { quiet: true });
   if (!installDir) {
-    const localAppdata = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-    return path.join(localAppdata, 'Programs', 'antigravity', 'resources');
+    _cachedResourcesDir = defaultPath;
+    return _cachedResourcesDir;
   }
   if (fs.existsSync(path.join(installDir, 'resources'))) {
-    return path.join(installDir, 'resources');
+    _cachedResourcesDir = path.join(installDir, 'resources');
+    return _cachedResourcesDir;
   }
-  return installDir;
+  _cachedResourcesDir = installDir;
+  return _cachedResourcesDir;
+}
+
+let _cachedInstalledResult = null;
+let _cachedInstalledKey = null;
+
+function invalidateLocalizationCache() {
+  _cachedInstalledResult = null;
+  _cachedInstalledKey = null;
 }
 
 function isChineseInstalled() {
@@ -23,25 +42,37 @@ function isChineseInstalled() {
   const asarPath = path.join(resDir, 'app.asar');
   const appPreload = path.join(resDir, 'app', 'dist', 'preload.js');
 
+  let key = '';
+  try { if (fs.existsSync(asarPath)) key += fs.statSync(asarPath).mtimeMs; } catch(_) {}
+  try { if (fs.existsSync(appPreload)) key += '_' + fs.statSync(appPreload).mtimeMs; } catch(_) {}
+
+  if (key && _cachedInstalledKey === key && _cachedInstalledResult !== null) {
+    return _cachedInstalledResult;
+  }
+
+  let result = false;
+
   // Check unpacked app first if it exists
   if (fs.existsSync(appPreload)) {
     try {
       const content = fs.readFileSync(appPreload, 'utf8');
-      if (content.includes(SIGNATURE_START)) return true;
+      if (content.includes(SIGNATURE_START)) result = true;
     } catch (_) {}
   }
 
-  // Check asar
-  if (fs.existsSync(asarPath)) {
+  // Check asar if unpacked is clean
+  if (!result && fs.existsSync(asarPath)) {
     try {
       const preloadBuf = engine.AsarArchive.readFile(asarPath, 'dist/preload.js');
       if (preloadBuf && preloadBuf.toString('utf8').includes(SIGNATURE_START)) {
-        return true;
+        result = true;
       }
     } catch (_) {}
   }
 
-  return false;
+  _cachedInstalledKey = key;
+  _cachedInstalledResult = result;
+  return result;
 }
 
 function liveInjectCdp() {
@@ -105,6 +136,7 @@ function enableChineseLocalization() {
 
   // 4. Do not execute destructive live CDP hot injection or Page.reload.
   // Localization changes cleanly take effect upon client restart.
+  invalidateLocalizationCache();
   console.log('[LocalizationManager] ✨ 中文汉化配置已写入！重启 Antigravity 客户端后完整生效。');
   return {
     success: true,
@@ -235,6 +267,7 @@ function disableChineseLocalization() {
 
   // 5. Do not execute destructive live CDP disconnect or Page.reload.
   // Localization changes cleanly take effect upon client restart.
+  invalidateLocalizationCache();
   console.log('[LocalizationManager] ✨ 官方原版英文已恢复！重启 Antigravity 客户端后完整生效。');
   return {
     success: true,
@@ -268,6 +301,7 @@ function getStatus() {
 module.exports = {
   getResourcesDir,
   isChineseInstalled,
+  invalidateLocalizationCache,
   enableChineseLocalization,
   disableChineseLocalization,
   getStatus,
