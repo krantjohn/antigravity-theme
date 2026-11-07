@@ -1224,7 +1224,9 @@ div[class*="pointer-events-none"][class*="top-0"][class*="left-4"] {
 ${isTransparentSidebar ? `
 /* 3a. Optional Left Sidebar Transparency (Shares Main Wallpaper) */
 div[role="navigation"][aria-label="Sidebar"],
-aside[aria-label="Sidebar"] {
+div[role="navigation"][aria-label="侧边栏"],
+aside[aria-label="Sidebar"],
+aside[aria-label="侧边栏"] {
   background: rgba(17, 17, 20, ${sidebarAlpha}) !important;
   background-color: rgba(17, 17, 20, ${sidebarAlpha}) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
@@ -1236,24 +1238,34 @@ aside[aria-label="Sidebar"] {
 }
 
 div[role="navigation"][aria-label="Sidebar"] button,
+div[role="navigation"][aria-label="侧边栏"] button,
 div[role="navigation"][aria-label="Sidebar"] a,
+div[role="navigation"][aria-label="侧边栏"] a,
 div[role="navigation"][aria-label="Sidebar"] [role="button"],
+div[role="navigation"][aria-label="侧边栏"] [role="button"],
 aside[aria-label="Sidebar"] button,
+aside[aria-label="侧边栏"] button,
 aside[aria-label="Sidebar"] a,
-aside[aria-label="Sidebar"] [role="button"] {
+aside[aria-label="侧边栏"] a,
+aside[aria-label="Sidebar"] [role="button"],
+aside[aria-label="侧边栏"] [role="button"] {
   pointer-events: auto !important;
   -webkit-app-region: no-drag !important;
   cursor: pointer !important;
 }
 
 div[role="navigation"][aria-label="Sidebar"] .bg-sidebar,
-aside[aria-label="Sidebar"] .bg-sidebar {
+div[role="navigation"][aria-label="侧边栏"] .bg-sidebar,
+aside[aria-label="Sidebar"] .bg-sidebar,
+aside[aria-label="侧边栏"] .bg-sidebar {
   background: transparent !important;
   background-color: transparent !important;
 }
 
 div[role="navigation"][aria-label="Sidebar"] .bg-sidebar-secondary,
-aside[aria-label="Sidebar"] .bg-sidebar-secondary {
+div[role="navigation"][aria-label="侧边栏"] .bg-sidebar-secondary,
+aside[aria-label="Sidebar"] .bg-sidebar-secondary,
+aside[aria-label="侧边栏"] .bg-sidebar-secondary {
   background: rgba(255, 255, 255, 0.08) !important;
   background-color: rgba(255, 255, 255, 0.08) !important;
 }
@@ -1334,10 +1346,13 @@ div:has(> .xterm-screen),
 .terminal.xterm .xterm-viewport,
 .terminal.xterm .xterm-screen,
 [aria-label="Auxiliary Pane"],
+[aria-label="辅助面板"],
 div.bg-background:has([aria-label="Auxiliary Pane"]),
+div.bg-background:has([aria-label="辅助面板"]),
 aside[aria-label*="drawer"],
 [data-panel="auxiliary"],
 div[role="region"][aria-label="Terminal"],
+div[role="region"][aria-label="终端"],
 [class*="terminal-drawer"],
 div.flex.flex-col.gap-2.overflow-y-auto.h-full.w-full.bg-background {
   background: transparent !important;
@@ -1353,6 +1368,7 @@ div[data-testid="aux-pane-split"] > div:not(:first-child):not(.bg-border),
 .agy-sheet:not(:has([data-testid="aux-pane-split"])),
 main[class*="bg-background"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *),
 [aria-label="Auxiliary Pane"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *):not([aria-label="Auxiliary Pane"] *),
+[aria-label="辅助面板"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *):not([aria-label="辅助面板"] *),
 aside[aria-label*="drawer"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *),
 [data-panel="auxiliary"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *) {
   background-color: rgba(7, 9, 14, ${leftAlpha}) !important;
@@ -1470,7 +1486,9 @@ ${(isBottomActive || isLeftActive) ? `
 }
 
 [id="antigravity.agentSidePanelInputBox"] div[aria-label="Message input"],
+[id="antigravity.agentSidePanelInputBox"] div[aria-label="消息输入"],
 .surface-composer div[aria-label="Message input"],
+.surface-composer div[aria-label="消息输入"],
 [id="antigravity.agentSidePanelInputBox"] p.pointer-events-none,
 .surface-composer p.pointer-events-none {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7) !important;
@@ -3500,6 +3518,7 @@ function triggerLiveHotReload(arg1, arg2, onComplete) {
                         '.agy-sheet:not(:has([data-testid="aux-pane-split"])),',
                         'main[class*="bg-background"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *),',
                         '[aria-label="Auxiliary Pane"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *):not([aria-label="Auxiliary Pane"] *),',
+                        '[aria-label="辅助面板"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *):not([aria-label="辅助面板"] *),',
                         'aside[aria-label*="drawer"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *),',
                         '[data-panel="auxiliary"]:not(.agy-sheet *):not([data-testid="aux-pane-split"] *) {',
                         '  background-color: transparent !important;',
