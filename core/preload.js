@@ -209,7 +209,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       const vParam = (left && left.version) ? ('?v=' + left.version) : '';
       const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
       const posterSrc = (left && left.poster) ? (getBase64DataUri(left.poster) || (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam)) : '';
-      const posLeft = (left && left.position) || '0% 45%';
+      const posLeft = (left && left.position) || '50% 50%';
 
       const bottom = cfg.bottom;
       const bottomPosterSrc = (bottom && bottom.poster) ? (getBase64DataUri(bottom.poster) || (SERVER_URL + '/' + encodeURIComponent(bottom.poster) + vParam)) : '';
@@ -648,11 +648,12 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) {
-        const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left, video');
-        for (let i = 0; i < allVids.length; i++) {
-          if (!allVids[i].paused) {
-            allVids[i]._pausedByHidden = true;
-            allVids[i].pause();
+        // Only pause modal auxiliary videos (like settings modal)
+        const auxVids = document.querySelectorAll('.antigravity-slot-video[data-slot="settings"]');
+        for (let i = 0; i < auxVids.length; i++) {
+          if (!auxVids[i].paused) {
+            auxVids[i]._pausedByHidden = true;
+            auxVids[i].pause();
           }
         }
       } else {
@@ -719,7 +720,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           leftVid.setAttribute('poster', posterSrc);
           leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
           leftVid.style.backgroundSize = 'cover';
-          leftVid.style.backgroundPosition = (config.left && config.left.position) || '0% 45%';
+          leftVid.style.backgroundPosition = (config.left && config.left.position) || '50% 50%';
         }
         leftVid.style.transform = 'translateZ(0)';
         leftVid.style.contain = 'strict';
@@ -780,7 +781,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             stagingVid.style.width = '100vw';
             stagingVid.style.height = '100vh';
             stagingVid.style.objectFit = 'cover';
-            stagingVid.style.objectPosition = (config.left && config.left.position) || '0% 45%';
+            stagingVid.style.objectPosition = (config.left && config.left.position) || '50% 50%';
             stagingVid.style.zIndex = '1';
             stagingVid.style.pointerEvents = 'none';
             stagingVid.style.transform = 'translateZ(0)';
@@ -899,7 +900,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             leftVid.style.width = '100vw';
             leftVid.style.height = '100vh';
             leftVid.style.objectFit = 'cover';
-            leftVid.style.objectPosition = (config.left && config.left.position) || '0% 45%';
+            leftVid.style.objectPosition = (config.left && config.left.position) || '50% 50%';
             leftVid.style.zIndex = '0';
             leftVid.style.pointerEvents = 'none';
             leftVid.style.transform = 'translateZ(0)';
@@ -911,7 +912,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
               leftVid.setAttribute('poster', posterSrc);
               leftVid.style.backgroundImage = 'url("' + posterSrc + '")';
               leftVid.style.backgroundSize = 'cover';
-              leftVid.style.backgroundPosition = (config.left && config.left.position) || '0% 45%';
+              leftVid.style.backgroundPosition = (config.left && config.left.position) || '50% 50%';
             }
             setupVideoLoopGuards(leftVid);
             leftVid.addEventListener('playing', function() {
@@ -1384,14 +1385,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       if (document.body && !document.body.classList.contains('is-resizing')) {
         document.body.classList.add('is-resizing');
       }
-      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
-      for (let i = 0; i < allVids.length; i++) {
-        const v = allVids[i];
-        if (!v.paused) {
-          v._wasPlayingBeforeResize = true;
-          v.pause();
-        }
-      }
+      // Never pause base or bottom videos during resize; GPU handles object-fit smoothly
       const iframes = document.querySelectorAll('iframe');
       for (let i = 0; i < iframes.length; i++) {
         iframes[i].style.pointerEvents = 'none';
@@ -1400,11 +1394,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
     const resumeVideosAfterResize = function() {
       if (!window.__isResizing && !window.__isDraggingSplit) return;
-      if (window.__isDraggingSplit) {
-        const dragAge = Date.now() - (window.__dragStartTime || 0);
-        if (dragAge <= 3000) return;
-        window.__isDraggingSplit = false;
-      }
+      window.__isDraggingSplit = false;
       window.__isResizing = false;
       if (document.body && document.body.classList.contains('is-resizing')) {
         document.body.classList.remove('is-resizing');
@@ -1416,13 +1406,9 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
       for (let i = 0; i < allVids.length; i++) {
         const v = allVids[i];
-        if (v._wasPlayingBeforeResize || v.paused) {
-          v._wasPlayingBeforeResize = false;
+        if (v.paused) {
           syncVideoPlaybackState(v);
         }
-      }
-      if (typeof applyVideos === 'function') {
-        applyVideos();
       }
     };
 
@@ -1433,47 +1419,13 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     window.__isNavigating = false;
 
     const pauseVideosForNav = function() {
-      if (window.__isNavigating) return;
-      window.__isNavigating = true;
-      if (document.body && !document.body.classList.contains('is-navigating')) {
-        document.body.classList.add('is-navigating');
-      }
-      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
-      for (let i = 0; i < allVids.length; i++) {
-        const v = allVids[i];
-        if (!v.paused) {
-          v._wasPlayingBeforeNav = true;
-          v.pause();
-        }
-      }
-      const iframes = document.querySelectorAll('iframe');
-      for (let i = 0; i < iframes.length; i++) {
-        iframes[i].style.pointerEvents = 'none';
-      }
+      // Seamless playback: base video continues uninterrupted on navigation
     };
 
     const resumeVideosAfterNav = function() {
-      if (!window.__isNavigating) return;
-      if (navThrottleTimer) { clearTimeout(navThrottleTimer); navThrottleTimer = null; }
-      if (navMaxTimeoutTimer) { clearTimeout(navMaxTimeoutTimer); navMaxTimeoutTimer = null; }
       window.__isNavigating = false;
       if (document.body && document.body.classList.contains('is-navigating')) {
         document.body.classList.remove('is-navigating');
-      }
-      const iframes = document.querySelectorAll('iframe');
-      for (let i = 0; i < iframes.length; i++) {
-        iframes[i].style.pointerEvents = '';
-      }
-      const allVids = document.querySelectorAll('.antigravity-slot-video, #antigravity-video-left');
-      for (let i = 0; i < allVids.length; i++) {
-        const v = allVids[i];
-        if (v._wasPlayingBeforeNav || v.paused) {
-          v._wasPlayingBeforeNav = false;
-          syncVideoPlaybackState(v);
-        }
-      }
-      if (typeof applyVideos === 'function') {
-        applyVideos();
       }
     };
 
@@ -1482,7 +1434,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       if (!target) return;
       const navItem = target.closest ? target.closest('a[href*="/c/"], a.absolute.inset-0, [data-testid*="conversation"], [class*="conversation-row"]') : null;
       if (!navItem) return;
-      pauseVideosForNav();
+      /* pauseVideosForNav omitted for smooth 60fps */
 
       if (navThrottleTimer) clearTimeout(navThrottleTimer);
       navThrottleTimer = setTimeout(function() {
@@ -1499,7 +1451,7 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
     const onNavKey = function(e) {
       if (e.key === 'Enter' && e.target && e.target.closest && e.target.closest('a[href*="/c/"], a.absolute.inset-0, [data-testid*="conversation"]')) {
-        pauseVideosForNav();
+        /* pauseVideosForNav omitted for smooth 60fps */
         if (navThrottleTimer) clearTimeout(navThrottleTimer);
         navThrottleTimer = setTimeout(function() {
           navThrottleTimer = null;
@@ -1768,23 +1720,16 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
         v._recoveryTimestamps = v._recoveryTimestamps.filter(t => now - t <= 30000);
         v._recoveryTimestamps.push(now);
 
-        // Circuit Breaker: max 5 recoveries within 30 seconds
-        if (v._recoveryTimestamps.length > 5) {
+        // Circuit Breaker: graceful backoff without hiding or freezing video
+        if (v._recoveryTimestamps.length > 8) {
           if (!v._circuitOpenUntil || now > v._circuitOpenUntil) {
-            v._circuitOpenUntil = now + 20000; // 20s cooldown
-            logRecovery(slot, 'circuit-breaker-tripped', 'Exceeded 5 retries within 30s');
-            try { v.pause(); } catch(e) {}
-            v.style.opacity = '0';
-            const poster = v.getAttribute('poster') || (v.dataset && v.dataset.poster) || '';
-            if (poster) {
-              v.style.backgroundImage = 'url("' + poster + '")';
-              v.style.backgroundSize = 'cover';
-              if (v.parentElement) {
-                v.parentElement.style.backgroundImage = 'url("' + poster + '")';
-                v.parentElement.style.backgroundSize = 'cover';
-                v.parentElement.style.backgroundPosition = v.style.backgroundPosition || 'center center';
-              }
-            }
+            v._circuitOpenUntil = now + 10000; // 10s cooldown
+            logRecovery(slot, 'circuit-breaker-cooldown', 'Backing off recoveries for 10s');
+            v._recoveryTimestamps = [];
+            v._watchdogRecoveryTier = 1;
+            setTimeout(function() {
+              if (v && v.isConnected && v.paused) v.play().catch(function(){});
+            }, 1000);
           }
           return;
         }
@@ -1808,19 +1753,13 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           } catch(e) {}
           v.play().catch(function(){});
         } else if (tier === 3) {
-          // Tier 3: Token stream reload against local media server (port 8315)
+          // Tier 3: Soft seek nudge (retains existing buffer, prevents freeze)
           v._watchdogRecoveryTier = 4;
-          logRecovery(slot, 'tier3-stream-reload', reason);
+          logRecovery(slot, 'tier3-seek-nudge', reason);
           try {
-            const base = v.dataset.currentSrc || v.src;
-            if (base) {
-              const newSrc = updateCacheBuster(base, now);
-              v.dataset.currentSrc = newSrc;
-              v.src = newSrc;
-              v.load();
-              v.play().catch(function(){});
-            }
+            v.currentTime = Math.max(0, (v.currentTime + 0.005) % (v.duration || 10));
           } catch(e) {}
+          v.play().catch(function(){});
         } else if (tier === 4) {
           // Tier 4: Double-buffered zero-flicker element replacement
           v._watchdogRecoveryTier = 1;
@@ -1873,11 +1812,17 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
 
         // 2. Decoder Progress Stalling Check (video playing but currentTime not advancing)
         if (!v.paused && v.readyState >= 1) {
+          // Loop boundary guard: ignore wrap-arounds near start/end and seeks
+          if (v.currentTime < 0.6 || (v.duration && v.currentTime >= (v.duration - 0.6)) || v.seeking) {
+            v._stallCycles = 0;
+            v._lastWatchdogTime = v.currentTime;
+            return;
+          }
           if (typeof v._lastWatchdogTime === 'number') {
             const delta = Math.abs(v.currentTime - v._lastWatchdogTime);
             if (delta < 0.005) {
               v._stallCycles = (v._stallCycles || 0) + 1;
-              if (v._stallCycles >= 2) {
+              if (v._stallCycles >= 3) {
                 v._stallCycles = 0;
                 recoverElement(v, slot, 'progress-stalled-delta-' + delta.toFixed(4));
                 return;
