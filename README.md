@@ -1,7 +1,7 @@
 # 🌸 Antigravity Theme Customizer
 
 <p align="center">
-  <img src="dev/assets/previews/theme_showcase.gif" alt="Antigravity Theme Live Showcase" width="900" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.25);" />
+  <img src="dev/assets/previews/theme_preview.jpg" alt="Antigravity Theme Live Showcase" width="920" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.25);" />
 </p>
 
 <p align="center">
@@ -67,34 +67,6 @@
 | **启动性能** | 插件冷启动迟缓 (>4.5 秒) | **极速冷启动架构 (<600ms)**：多线程并发窗口初始化与 0ms 快速路径缓存 |
 | **多区域独立定制** | 一张图粗暴垫底，全局混杂看不清 | **5 大槽位独立分层控制**：主背景、输入框、设置窗口、侧边栏、顶栏互不干扰 |
 | **安全性与还原性** | 暴力篡改源码，更新后崩溃无法恢复 | **物理出厂备份与一键秒级还原**：自动生成 `app.asar.orig.bak`，支持一键彻底还原原生 |
-
----
-
-## 📸 视觉效果实测 (Visual Showcase)
-
-### 1. Antigravity Theme Studio 现代化可视化工作台（暗色 / 亮色双主题）
-
-单文件免安装桌面工作台，搭载 1:1 动态实时拟真视窗（Live Mockup Preview），支持暗色曜黑（Dark）与极简珍珠白（Light）双主题无缝切换：
-
-<p align="center">
-  <img src="dev/assets/previews/theme_studio_dark.png" width="440" alt="Theme Studio Dark Mode" style="border-radius: 8px; margin-right: 10px;" />
-  <img src="dev/assets/previews/theme_studio_light.png" width="440" alt="Theme Studio Light Mode" style="border-radius: 8px;" />
-</p>
-
-### 2. Steam 创意工坊海量素材跨盘直连 & 预设保险库
-
-自动穿越 Windows 所有可用磁盘符，秒级识别本地已订阅的数千款 Wallpaper Engine 壁纸资产；配合预设保险库，一键归档并秒级热切换不同风格套件：
-
-<p align="center">
-  <img src="dev/assets/previews/theme_studio_workshop.png" width="440" alt="Theme Studio Steam Workshop" style="border-radius: 8px; margin-right: 10px;" />
-  <img src="dev/assets/previews/theme_studio_presets.png" width="440" alt="Theme Studio Preset Vault" style="border-radius: 8px;" />
-</p>
-
-### 3. 多面板沉浸式通透美学实机演示
-
-<p align="center">
-  <img src="dev/assets/previews/mika_theme_overview.png" width="880" alt="Mika Theme Overview" style="border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.2);" />
-</p>
 
 ---
 
@@ -226,13 +198,13 @@ node core/theme_engine.js --status
 #### 3. 预设归档与秒级切换 (Preset Manager)
 ```powershell
 # 将当前整套配置保存为新预设
-node core/theme_engine.js --save-preset "赛博粉色4K" "粉色系环绕壁纸搭配液态玻璃输入框"
+node core/theme_engine.js --save-preset "赛博银发4K" "银发少女壁纸搭配液态玻璃输入框"
 
 # 列出所有已保存预设
 node core/theme_engine.js --list-presets
 
 # 0.3 秒一键切换并激活指定预设 (免重启生效)
-node core/theme_engine.js --apply-preset "赛博粉色4K"
+node core/theme_engine.js --apply-preset "赛博银发4K"
 ```
 
 #### 4. 出厂还原与彻底卸载

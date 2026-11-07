@@ -1,7 +1,7 @@
 # 🌸 Antigravity Theme Customizer
 
 <p align="center">
-  <img src="dev/assets/previews/theme_showcase.gif" alt="Antigravity Theme Live Showcase" width="900" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.25);" />
+  <img src="dev/assets/previews/theme_preview.jpg" alt="Antigravity Theme Live Showcase" width="920" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.25);" />
 </p>
 
 <p align="center">
@@ -67,34 +67,6 @@ Vanilla desktop clients are visually rigid with plain monochrome backgrounds tha
 | **Cold Startup Speed** | Slow startup overhead (>4.5 seconds) | **Ultra-fast Cold Startup (<600ms)**: Concurrent window initialization with 0ms fast-path cached state |
 | **Multi-Area Customization** | Single image dumped globally, cluttering the UI | **5 Independent Theming Slots**: Main canvas, input box, settings modal, sidebar, and header isolated |
 | **Safety & Reversibility** | Overwrites original code with no rollback | **Physical Factory Backup & 1-Click Rollback**: Generates `app.asar.orig.bak` with instant factory restoration |
-
----
-
-## 📸 Visual Showcase
-
-### 1. Antigravity Theme Studio Workspace (Dark & Light Dual Modes)
-
-Single-file portable desktop application featuring a 1:1 dynamic live mockup window, supporting instant switching between Dark Mode (Obsidian) and Light Mode (Minimalist White):
-
-<p align="center">
-  <img src="dev/assets/previews/theme_studio_dark.png" width="440" alt="Theme Studio Dark Mode" style="border-radius: 8px; margin-right: 10px;" />
-  <img src="dev/assets/previews/theme_studio_light.png" width="440" alt="Theme Studio Light Mode" style="border-radius: 8px;" />
-</p>
-
-### 2. Steam Wallpaper Engine Multi-Drive Integration & Preset Vault
-
-Instantly indexes thousands of subscribed wallpapers across all Windows drives, paired with a preset vault to archive and switch full aesthetic setups in 0.3 seconds:
-
-<p align="center">
-  <img src="dev/assets/previews/theme_studio_workshop.png" width="440" alt="Theme Studio Steam Workshop" style="border-radius: 8px; margin-right: 10px;" />
-  <img src="dev/assets/previews/theme_studio_presets.png" width="440" alt="Theme Studio Preset Vault" style="border-radius: 8px;" />
-</p>
-
-### 3. Multi-Panel Immersive Full-Bleed Aesthetics
-
-<p align="center">
-  <img src="dev/assets/previews/mika_theme_overview.png" width="880" alt="Mika Theme Overview" style="border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.2);" />
-</p>
 
 ---
 
@@ -225,13 +197,13 @@ node core/theme_engine.js --status
 #### 3. Preset Archival & Instant Switching
 ```powershell
 # Save current setup as a named preset
-node core/theme_engine.js --save-preset "CyberpunkPink4K" "Pink anime theme with liquid glass input"
+node core/theme_engine.js --save-preset "CyberpunkSilver4K" "Silver-haired anime theme with liquid glass input"
 
 # List all saved presets
 node core/theme_engine.js --list-presets
 
 # Apply a preset in ~0.3s without restarting the app
-node core/theme_engine.js --apply-preset "CyberpunkPink4K"
+node core/theme_engine.js --apply-preset "CyberpunkSilver4K"
 ```
 
 #### 4. Restore & Complete Uninstallation
