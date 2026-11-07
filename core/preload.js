@@ -200,35 +200,6 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
     videoEl.addEventListener('stalled', onWaitOrStall);
   }
 
-  function getPanShift(posStr, excessPercent = 20) {
-    let x = 50, y = 50;
-    if (posStr && typeof posStr === 'string') {
-      const parts = posStr.trim().split(/\s+/);
-      if (parts.length >= 1) {
-        if (parts[0] === 'left') x = 0;
-        else if (parts[0] === 'center') x = 50;
-        else if (parts[0] === 'right') x = 100;
-        else {
-          const m = parts[0].match(/^(\d+(?:\.\d+)?)%?$/);
-          if (m) x = parseFloat(m[1]);
-        }
-      }
-      if (parts.length >= 2) {
-        if (parts[1] === 'top') y = 0;
-        else if (parts[1] === 'center') y = 50;
-        else if (parts[1] === 'bottom') y = 100;
-        else {
-          const m = parts[1].match(/^(\d+(?:\.\d+)?)%?$/);
-          if (m) y = parseFloat(m[1]);
-        }
-      }
-    }
-    return {
-      x: (-excessPercent * (x / 100)).toFixed(2) + 'vw',
-      y: (-excessPercent * (y / 100)).toFixed(2) + 'vh'
-    };
-  }
-
   // Tick 0 极速挂载底图壁纸 (0ms 显示高保真静态海报图并立即挂载至 documentElement，绝无开机黑屏与卡顿延迟)
   function mountTickZeroBase() {
     try {
@@ -239,7 +210,6 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       const src = SERVER_URL + '/' + encodeURIComponent(left.file) + vParam;
       const posterSrc = (left && left.poster) ? (getBase64DataUri(left.poster) || (SERVER_URL + '/' + encodeURIComponent(left.poster) + vParam)) : '';
       const posLeft = (left && left.position) || '50% 50%';
-      const shiftLeft = getPanShift(posLeft, 20);
 
       const bottom = cfg.bottom;
       const isBottomActive = bottom && !bottom.isOriginal && bottom.type && bottom.type !== 'none' && bottom.file;
@@ -259,15 +229,14 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           'html::before {',
           '  content: "" !important;',
           '  position: fixed !important;',
-          '  top: 0 !important; left: 0 !important;',
-          '  width: 120vw !important; height: 120vh !important;',
+          '  top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;',
+          '  width: 100% !important; height: 100% !important;',
           posterSrc ? '  background-image: linear-gradient(rgba(11, 12, 20, 0.06), rgba(11, 12, 20, 0.10)), url("' + posterSrc + '") !important;' : '',
           '  background-size: cover !important;',
           '  background-position: ' + posLeft + ' !important;',
           '  background-repeat: no-repeat !important;',
           '  pointer-events: none !important;',
           '  z-index: 0 !important;',
-          '  transform: translate3d(' + shiftLeft.x + ', ' + shiftLeft.y + ', 0) !important;',
           '}'
         ];
         if (isBottomActive && bottomPosterSrc) {
@@ -342,13 +311,17 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
         leftVid.style.position = 'fixed';
         leftVid.style.top = '0';
         leftVid.style.left = '0';
-        leftVid.style.width = '120vw';
-        leftVid.style.height = '120vh';
+        leftVid.style.right = '0';
+        leftVid.style.bottom = '0';
+        leftVid.style.width = '100vw';
+        leftVid.style.height = '100vh';
+        leftVid.style.maxWidth = 'none';
+        leftVid.style.maxHeight = 'none';
         leftVid.style.objectFit = 'cover';
         leftVid.style.objectPosition = posLeft;
         leftVid.style.zIndex = '0';
         leftVid.style.pointerEvents = 'none';
-        leftVid.style.transform = 'translate3d(' + shiftLeft.x + ', ' + shiftLeft.y + ', 0)';
+        leftVid.style.transform = 'translateZ(0)';
         leftVid.style.contain = 'strict';
         leftVid.style.backfaceVisibility = 'hidden';
         leftVid.style.display = 'block';
@@ -754,12 +727,12 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
           leftVid.style.backgroundSize = 'cover';
           leftVid.style.backgroundPosition = (config.left && config.left.position) || '50% 50%';
         }
-        const posLeft = (config.left && config.left.position) || '50% 50%';
-        const shiftLeft = getPanShift(posLeft, 20);
-        leftVid.style.width = '120vw';
-        leftVid.style.height = '120vh';
-        leftVid.style.objectPosition = posLeft;
-        leftVid.style.transform = 'translate3d(' + shiftLeft.x + ', ' + shiftLeft.y + ', 0)';
+        leftVid.style.width = '100vw';
+        leftVid.style.height = '100vh';
+        leftVid.style.maxWidth = 'none';
+        leftVid.style.maxHeight = 'none';
+        leftVid.style.objectPosition = (config.left && config.left.position) || '50% 50%';
+        leftVid.style.transform = 'translateZ(0)';
         leftVid.style.contain = 'strict';
         leftVid.style.backfaceVisibility = 'hidden';
         if (!leftVid.isConnected) {
@@ -812,18 +785,18 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             stagingVid.setAttribute('crossorigin', 'anonymous');
             stagingVid.disablePictureInPicture = true;
             stagingVid.disableRemotePlayback = true;
-            const posLeft = (config.left && config.left.position) || '50% 50%';
-            const shiftLeft = getPanShift(posLeft, 20);
             stagingVid.style.position = 'fixed';
             stagingVid.style.top = '0';
             stagingVid.style.left = '0';
-            stagingVid.style.width = '120vw';
-            stagingVid.style.height = '120vh';
+            stagingVid.style.width = '100vw';
+            stagingVid.style.height = '100vh';
+            stagingVid.style.maxWidth = 'none';
+            stagingVid.style.maxHeight = 'none';
             stagingVid.style.objectFit = 'cover';
-            stagingVid.style.objectPosition = posLeft;
+            stagingVid.style.objectPosition = (config.left && config.left.position) || '50% 50%';
             stagingVid.style.zIndex = '1';
             stagingVid.style.pointerEvents = 'none';
-            stagingVid.style.transform = 'translate3d(' + shiftLeft.x + ', ' + shiftLeft.y + ', 0)';
+            stagingVid.style.transform = 'translateZ(0)';
             stagingVid.style.contain = 'strict';
             stagingVid.style.backfaceVisibility = 'hidden';
             stagingVid.style.opacity = '0';
@@ -933,18 +906,18 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
             leftVid.setAttribute('crossorigin', 'anonymous');
             leftVid.disablePictureInPicture = true;
             leftVid.disableRemotePlayback = true;
-            const posLeft = (config.left && config.left.position) || '50% 50%';
-            const shiftLeft = getPanShift(posLeft, 20);
             leftVid.style.position = 'fixed';
             leftVid.style.top = '0';
             leftVid.style.left = '0';
-            leftVid.style.width = '120vw';
-            leftVid.style.height = '120vh';
+            leftVid.style.width = '100vw';
+            leftVid.style.height = '100vh';
+            leftVid.style.maxWidth = 'none';
+            leftVid.style.maxHeight = 'none';
             leftVid.style.objectFit = 'cover';
-            leftVid.style.objectPosition = posLeft;
+            leftVid.style.objectPosition = (config.left && config.left.position) || '50% 50%';
             leftVid.style.zIndex = '0';
             leftVid.style.pointerEvents = 'none';
-            leftVid.style.transform = 'translate3d(' + shiftLeft.x + ', ' + shiftLeft.y + ', 0)';
+            leftVid.style.transform = 'translateZ(0)';
             leftVid.style.contain = 'strict';
             leftVid.style.backfaceVisibility = 'hidden';
             leftVid.style.display = 'block';
@@ -1639,13 +1612,17 @@ electron_1.contextBridge.exposeInMainWorld('wsl', wslAPI);
       stagingVid.style.position = v.style.position || (slot === 'left' ? 'fixed' : 'absolute');
       stagingVid.style.top = v.style.top || '0';
       stagingVid.style.left = v.style.left || '0';
-      stagingVid.style.width = v.style.width || (slot === 'left' ? '120vw' : '100%');
-      stagingVid.style.height = v.style.height || (slot === 'left' ? '120vh' : '100%');
+      stagingVid.style.width = v.style.width || (slot === 'left' ? '100vw' : '100%');
+      stagingVid.style.height = v.style.height || (slot === 'left' ? '100vh' : '100%');
+      if (slot === 'left') {
+        stagingVid.style.maxWidth = 'none';
+        stagingVid.style.maxHeight = 'none';
+      }
       stagingVid.style.objectFit = v.style.objectFit || 'cover';
       stagingVid.style.objectPosition = v.style.objectPosition || 'center center';
       stagingVid.style.pointerEvents = 'none';
       stagingVid.style.zIndex = v.style.zIndex || '0';
-      stagingVid.style.transform = v.style.transform || 'translateZ(0)';
+      stagingVid.style.transform = 'translateZ(0)';
       stagingVid.style.contain = 'strict';
       stagingVid.style.backfaceVisibility = 'hidden';
       stagingVid.style.opacity = '0';

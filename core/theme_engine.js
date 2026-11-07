@@ -1064,14 +1064,6 @@ function generateMasterCss(slotsConfig) {
   const posBottom = getSlotPosition(slotsConfig, 'bottom');
   const posSettings = getSlotPosition(slotsConfig, 'settings');
 
-  // Panoramic Pan Enhancement (1.20x Headroom for seamless horizontal & vertical panning)
-  const panScaleLeft = 1.20;
-  const excessWLeft = (panScaleLeft - 1) * 100; // 20vw
-  const excessHLeft = (panScaleLeft - 1) * 100; // 20vh
-  const parsedPosLeft = parsePosition(posLeft, '50% 50%');
-  const shiftXLeft = (-excessWLeft * (parsedPosLeft.x / 100)).toFixed(2) + 'vw';
-  const shiftYLeft = (-excessHLeft * (parsedPosLeft.y / 100)).toFixed(2) + 'vh';
-
   const isTransparentSidebar = Boolean(!slotsConfig.isOriginal && isLeftActive && slotsConfig.transparentSidebar === true);
   const isTransparentHeader = Boolean(!slotsConfig.isOriginal && isLeftActive && slotsConfig.transparentHeader === true);
   const leftAlpha = (!slotsConfig.isOriginal && isLeftActive) ? getDarkMaskAlpha(getSlotDarkMaskOpacity(slotsConfig, 'left')) : 0;
@@ -1135,8 +1127,10 @@ body::before {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  width: ${panScaleLeft * 100}vw !important;
-  height: ${panScaleLeft * 100}vh !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
   background-color: transparent !important;
   background-image: ${b64Left ? `url("${b64Left}")` : 'none'} !important;
   background-size: cover !important;
@@ -1144,7 +1138,7 @@ body::before {
   background-repeat: no-repeat !important;
   pointer-events: none !important;
   z-index: 0 !important;
-  transform: translate3d(${shiftXLeft}, ${shiftYLeft}, 0) !important;
+  transform: translate3d(0, 0, 0) !important;
   backface-visibility: hidden !important;
 }
 
@@ -1152,13 +1146,17 @@ body::before {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  width: ${panScaleLeft * 100}vw !important;
-  height: ${panScaleLeft * 100}vh !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
   object-fit: cover !important;
   object-position: ${posLeft} !important;
   pointer-events: none !important;
   z-index: 0 !important;
-  transform: translate3d(${shiftXLeft}, ${shiftYLeft}, 0) !important;
+  transform: translate3d(0, 0, 0) !important;
   backface-visibility: hidden !important;
   contain: strict !important;
 }
@@ -1713,10 +1711,6 @@ function getClientVideoScript(config) {
   const posBottom = getSlotPosition(config, 'bottom');
   const posSettings = getSlotPosition(config, 'settings');
 
-  const parsedPosLeft = parsePosition(posLeft, '50% 50%');
-  const shiftXLeft = (-20 * (parsedPosLeft.x / 100)).toFixed(2) + 'vw';
-  const shiftYLeft = (-20 * (parsedPosLeft.y / 100)).toFixed(2) + 'vh';
-
   const serverBase = `http://127.0.0.1:${DEFAULT_PORT}`;
   const slotPosters = {};
   ['left', 'bottom', 'settings'].forEach(slotKey => {
@@ -1739,8 +1733,6 @@ function getClientVideoScript(config) {
       'bottom': '${posBottom}',
       'settings': '${posSettings}'
     };
-    const shiftXLeft = '${shiftXLeft}';
-    const shiftYLeft = '${shiftYLeft}';
 
     function checkAndShowVideo(v) {
       if (!v) return;
@@ -1890,15 +1882,15 @@ function getClientVideoScript(config) {
             'html::before {',
             '  content: "" !important;',
             '  position: fixed !important;',
-            '  top: 0 !important; left: 0 !important;',
-            '  width: 120vw !important; height: 120vh !important;',
+            '  top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;',
+            '  width: 100vw !important; height: 100vh !important;',
             posterSrc ? '  background-image: linear-gradient(rgba(11, 12, 20, 0.06), rgba(11, 12, 20, 0.10)), url("' + posterSrc + '") !important;' : '',
             '  background-size: cover !important;',
             '  background-position: ' + posLeft + ' !important;',
             '  background-repeat: no-repeat !important;',
             '  pointer-events: none !important;',
             '  z-index: 0 !important;',
-            '  transform: translate3d(' + shiftXLeft + ', ' + shiftYLeft + ', 0) !important;',
+            '  transform: translate3d(0, 0, 0) !important;',
             '}'
           ];
           if (isBottomActive && bottomPosterSrc) {
@@ -1962,13 +1954,17 @@ function getClientVideoScript(config) {
           leftVid.style.position = 'fixed';
           leftVid.style.top = '0';
           leftVid.style.left = '0';
-          leftVid.style.width = '120vw';
-          leftVid.style.height = '120vh';
+          leftVid.style.right = '0';
+          leftVid.style.bottom = '0';
+          leftVid.style.width = '100vw';
+          leftVid.style.height = '100vh';
+          leftVid.style.maxWidth = 'none';
+          leftVid.style.maxHeight = 'none';
           leftVid.style.objectFit = 'cover';
           leftVid.style.objectPosition = posLeft;
           leftVid.style.zIndex = '0';
           leftVid.style.pointerEvents = 'none';
-          leftVid.style.transform = 'translate3d(' + shiftXLeft + ', ' + shiftYLeft + ', 0)';
+          leftVid.style.transform = 'translateZ(0)';
           leftVid.style.contain = 'strict';
           leftVid.style.backfaceVisibility = 'hidden';
           leftVid.style.display = 'block';
@@ -2121,10 +2117,12 @@ function getClientVideoScript(config) {
             leftVid.style.backgroundSize = 'cover';
             leftVid.style.backgroundPosition = '${posLeft}';
           }
-          leftVid.style.width = '120vw';
-          leftVid.style.height = '120vh';
+          leftVid.style.width = '100vw';
+          leftVid.style.height = '100vh';
+          leftVid.style.maxWidth = 'none';
+          leftVid.style.maxHeight = 'none';
           leftVid.style.objectPosition = '${posLeft}';
-          leftVid.style.transform = 'translate3d(' + shiftXLeft + ', ' + shiftYLeft + ', 0)';
+          leftVid.style.transform = 'translateZ(0)';
           leftVid.style.contain = 'strict';
           leftVid.style.backfaceVisibility = 'hidden';
           if (!leftVid.isConnected) {
@@ -2188,13 +2186,15 @@ function getClientVideoScript(config) {
               stagingVid.style.position = 'fixed';
               stagingVid.style.top = '0';
               stagingVid.style.left = '0';
-              stagingVid.style.width = '120vw';
-              stagingVid.style.height = '120vh';
+              stagingVid.style.width = '100vw';
+              stagingVid.style.height = '100vh';
+              stagingVid.style.maxWidth = 'none';
+              stagingVid.style.maxHeight = 'none';
               stagingVid.style.objectFit = 'cover';
               stagingVid.style.objectPosition = '${posLeft}';
               stagingVid.style.zIndex = '1';
               stagingVid.style.pointerEvents = 'none';
-              stagingVid.style.transform = 'translate3d(' + shiftXLeft + ', ' + shiftYLeft + ', 0)';
+              stagingVid.style.transform = 'translateZ(0)';
               stagingVid.style.contain = 'strict';
               stagingVid.style.backfaceVisibility = 'hidden';
               stagingVid.style.opacity = '0';
@@ -2307,13 +2307,15 @@ function getClientVideoScript(config) {
               leftVid.style.position = 'fixed';
               leftVid.style.top = '0';
               leftVid.style.left = '0';
-              leftVid.style.width = '120vw';
-              leftVid.style.height = '120vh';
+              leftVid.style.width = '100vw';
+              leftVid.style.height = '100vh';
+              leftVid.style.maxWidth = 'none';
+              leftVid.style.maxHeight = 'none';
               leftVid.style.objectFit = 'cover';
               leftVid.style.objectPosition = '${posLeft}';
               leftVid.style.zIndex = '0';
               leftVid.style.pointerEvents = 'none';
-              leftVid.style.transform = 'translate3d(' + shiftXLeft + ', ' + shiftYLeft + ', 0)';
+              leftVid.style.transform = 'translateZ(0)';
               leftVid.style.contain = 'strict';
               leftVid.style.backfaceVisibility = 'hidden';
               leftVid.style.display = 'block';
@@ -2354,10 +2356,12 @@ function getClientVideoScript(config) {
             if (document.body && document.body.firstElementChild !== leftVid && document.body.contains(leftVid)) {
               document.body.prepend(leftVid);
             }
-            leftVid.style.width = '120vw';
-            leftVid.style.height = '120vh';
+            leftVid.style.width = '100vw';
+            leftVid.style.height = '100vh';
+            leftVid.style.maxWidth = 'none';
+            leftVid.style.maxHeight = 'none';
             leftVid.style.objectPosition = '${posLeft}';
-            leftVid.style.transform = 'translate3d(' + shiftXLeft + ', ' + shiftYLeft + ', 0)';
+            leftVid.style.transform = 'translateZ(0)';
             setupVideoLoopGuards(leftVid);
             if (leftVid.paused && leftVid.readyState >= 1) {
               leftVid.play().catch(function() {});
@@ -2995,13 +2999,17 @@ function getClientVideoScript(config) {
       stagingVid.style.position = v.style.position || (slot === 'left' ? 'fixed' : 'absolute');
       stagingVid.style.top = v.style.top || '0';
       stagingVid.style.left = v.style.left || '0';
-      stagingVid.style.width = v.style.width || (slot === 'left' ? '120vw' : '100%');
-      stagingVid.style.height = v.style.height || (slot === 'left' ? '120vh' : '100%');
+      stagingVid.style.width = v.style.width || (slot === 'left' ? '100vw' : '100%');
+      stagingVid.style.height = v.style.height || (slot === 'left' ? '100vh' : '100%');
+      if (slot === 'left') {
+        stagingVid.style.maxWidth = 'none';
+        stagingVid.style.maxHeight = 'none';
+      }
       stagingVid.style.objectFit = v.style.objectFit || 'cover';
       stagingVid.style.objectPosition = v.style.objectPosition || 'center center';
       stagingVid.style.pointerEvents = 'none';
       stagingVid.style.zIndex = v.style.zIndex || '0';
-      stagingVid.style.transform = v.style.transform || 'translateZ(0)';
+      stagingVid.style.transform = 'translateZ(0)';
       stagingVid.style.contain = 'strict';
       stagingVid.style.backfaceVisibility = 'hidden';
       stagingVid.style.opacity = '0';

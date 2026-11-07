@@ -599,14 +599,6 @@ function renderMockupPreview() {
     videoEl.style.objectPosition = pos;
     imgEl.style.objectPosition = pos;
 
-    if (slotKey === 'left' && agMockup) {
-      const coords = parsePositionString(pos);
-      const shiftX = (-20 * (coords.x / 100)).toFixed(2) + '%';
-      const shiftY = (-20 * (coords.y / 100)).toFixed(2) + '%';
-      agMockup.style.setProperty('--mock-left-shift-x', shiftX);
-      agMockup.style.setProperty('--mock-left-shift-y', shiftY);
-    }
-
     // Apply Media playback properties
     videoEl.muted = state.isAudioMuted;
     videoEl.playbackRate = state.videoSpeed || 1.0;
@@ -1526,13 +1518,6 @@ function updateActiveSlotPosition(x, y) {
   sliderPosY.value = y;
   valPosX.textContent = `${x}%`;
   valPosY.textContent = `${y}%`;
-
-  if (slot === 'left' && agMockup) {
-    const shiftX = (-20 * (x / 100)).toFixed(2) + '%';
-    const shiftY = (-20 * (y / 100)).toFixed(2) + '%';
-    agMockup.style.setProperty('--mock-left-shift-x', shiftX);
-    agMockup.style.setProperty('--mock-left-shift-y', shiftY);
-  }
 
   setDraftDirty(true);
   renderMockupPreview();

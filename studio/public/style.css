@@ -1748,14 +1748,6 @@ body {
   display: none;
 }
 
-.mock-bg-left .mock-media-video,
-.mock-bg-left .mock-media-img {
-  width: 120%;
-  height: 120%;
-  transform: translate3d(var(--mock-left-shift-x, -10%), var(--mock-left-shift-y, -10%), 0);
-  transition: transform 0.05s linear;
-}
-
 .mock-media-video.visible, .mock-media-img.visible {
   display: block;
 }
