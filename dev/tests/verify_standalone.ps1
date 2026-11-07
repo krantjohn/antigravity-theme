@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $runtimeDir = Join-Path $env:LOCALAPPDATA "antigravity_studio_host\runtime"
 $sourceExe = Join-Path $repoRoot "dist\AntigravityThemeStudio.exe"
-$sourceZip = Join-Path $repoRoot "dist\AntigravityThemeStudio-v3.1.0-win-x64.zip"
+$sourceZip = Join-Path $repoRoot "dist\AntigravityThemeStudio-v4.0.0-win-x64.zip"
 
 Write-Host "======================================================="
 Write-Host "   [TEST] Antigravity Theme Studio Standalone Verification"

@@ -23,7 +23,7 @@ $targetExe = Join-Path $distDir "AntigravityThemeStudio.exe"
 Copy-Item -Path $sourceExe -Destination $targetExe -Force
 Write-Host "[INFO] Copied AntigravityThemeStudio.exe to dist directory."
 
-$zipPath = Join-Path $distDir "AntigravityThemeStudio-v3.1.0-win-x64.zip"
+$zipPath = Join-Path $distDir "AntigravityThemeStudio-v4.0.0-win-x64.zip"
 if (Test-Path $zipPath) {
     Remove-Item $zipPath -Force
 }
@@ -42,14 +42,14 @@ $exeHash = (Get-FileHash -Path $targetExe -Algorithm SHA256).Hash.ToUpperInvaria
 $zipHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToUpperInvariant()
 
 Write-Host "[INFO] AntigravityThemeStudio.exe SHA256: $exeHash"
-Write-Host "[INFO] AntigravityThemeStudio-v3.1.0-win-x64.zip SHA256: $zipHash"
+Write-Host "[INFO] AntigravityThemeStudio-v4.0.0-win-x64.zip SHA256: $zipHash"
 
 # Update release_notes.md
 $releaseNotesPath = Join-Path $distDir "release_notes.md"
 if (Test-Path $releaseNotesPath) {
     $content = Get-Content -Path $releaseNotesPath -Raw -Encoding UTF8
     $content = [System.Text.RegularExpressions.Regex]::Replace($content, "[0-9A-Fa-f]{64}\s+AntigravityThemeStudio\.exe", "$exeHash  AntigravityThemeStudio.exe")
-    $content = [System.Text.RegularExpressions.Regex]::Replace($content, "[0-9A-Fa-f]{64}\s+AntigravityThemeStudio-v3\.1\.0-win-x64\.zip", "$zipHash  AntigravityThemeStudio-v3.1.0-win-x64.zip")
+    $content = [System.Text.RegularExpressions.Regex]::Replace($content, "[0-9A-Fa-f]{64}\s+AntigravityThemeStudio-v4\.0\.0-win-x64\.zip", "$zipHash  AntigravityThemeStudio-v4.0.0-win-x64.zip")
     Set-Content -Path $releaseNotesPath -Value $content -Encoding UTF8
     Write-Host "[SUCCESS] Updated checksums in dist\release_notes.md"
 }

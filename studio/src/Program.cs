@@ -17,8 +17,8 @@ using Microsoft.Web.WebView2.Core;
 [assembly: AssemblyCompany("krantjohn")]
 [assembly: AssemblyProduct("Antigravity Theme Studio")]
 [assembly: AssemblyCopyright("Copyright © 2026 krantjohn")]
-[assembly: AssemblyVersion("3.1.0.0")]
-[assembly: AssemblyFileVersion("3.1.0.0")]
+[assembly: AssemblyVersion("4.0.0.0")]
+[assembly: AssemblyFileVersion("4.0.0.0")]
 
 namespace AntigravityThemeStudio
 {
