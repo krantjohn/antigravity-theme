@@ -1454,19 +1454,43 @@ div.rounded-2xl.bg-card-border > div.bg-card:has(> .antigravity-slot-video[data-
 }
 ` : ''}
 ` : `
-/* Bottom slot transparent pass-through when left has wallpaper */
+/* Bottom slot transparent pass-through when left has wallpaper (High-transparency Liquid Glass) */
 ${isLeftActive ? `
 [id="antigravity.agentSidePanelInputBox"] .surface-composer-card,
 .surface-composer-card {
-  background-color: ${bottomAlpha > 0 ? `rgba(7, 9, 14, ${Number((0.45 + bottomAlpha * 0.55).toFixed(2))})` : 'rgba(19, 19, 23, 0.45)'} !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 45%, rgba(10, 12, 18, ${bottomAlpha > 0 ? Number((0.18 + bottomAlpha * 0.45).toFixed(2)) : '0.18'}) 100%) !important;
+  background-color: transparent !important;
+  backdrop-filter: blur(16px) saturate(180%) brightness(1.05) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) brightness(1.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.20) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.24), inset 0 1px 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 1px 0 rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px !important;
+}
+
+[id="antigravity.agentSidePanelInputBox"] .surface-composer-card .agy-composer-footer button:not([data-testid="voice-start-button"]):not([data-testid="input-cancel-button"]),
+.surface-composer-card .agy-composer-footer button:not([data-testid="voice-start-button"]):not([data-testid="input-cancel-button"]) {
+  background: rgba(255, 255, 255, 0.09) !important;
+  backdrop-filter: blur(12px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.28), 0 2px 8px rgba(0, 0, 0, 0.22) !important;
+  color: #ffffff !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+[id="antigravity.agentSidePanelInputBox"] .surface-composer-card .agy-composer-footer button:hover:not([data-testid="voice-start-button"]):not([data-testid="input-cancel-button"]),
+.surface-composer-card .agy-composer-footer button:hover:not([data-testid="voice-start-button"]):not([data-testid="input-cancel-button"]) {
+  background: rgba(255, 255, 255, 0.20) !important;
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.45), 0 4px 14px rgba(0, 0, 0, 0.32) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
 }
 ` : ''}
 `}
 
 ${(isBottomActive || isLeftActive) ? `
-/* Ensure input box footer buttons and text maintain clear frosted glass pill visibility over wallpapers */
+/* Ensure input box footer buttons and text maintain clear frosted/liquid glass visibility over wallpapers */
 [id="antigravity.agentSidePanelInputBox"] .agy-composer-footer button:not([data-testid="voice-start-button"]):not([data-testid="input-cancel-button"]),
 .surface-composer .agy-composer-footer button:not([data-testid="voice-start-button"]):not([data-testid="input-cancel-button"]) {
   background: rgba(18, 20, 28, 0.65) !important;
@@ -1491,7 +1515,8 @@ ${(isBottomActive || isLeftActive) ? `
 .surface-composer div[aria-label="消息输入"],
 [id="antigravity.agentSidePanelInputBox"] p.pointer-events-none,
 .surface-composer p.pointer-events-none {
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7) !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.6) !important;
+  color: #ffffff !important;
 }
 ` : ''}
 

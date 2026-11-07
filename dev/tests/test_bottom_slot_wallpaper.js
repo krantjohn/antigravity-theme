@@ -27,8 +27,9 @@ async function evalCdp(expression) {
           ws.addEventListener('message', (evt) => {
             try {
               const resp = JSON.parse(evt.data);
+              const val = resp.result && resp.result.result ? resp.result.result.value : resp;
+              ws.addEventListener('close', () => resolve(val), { once: true });
               ws.close();
-              resolve(resp.result && resp.result.result ? resp.result.result.value : resp);
             } catch (e) {
               resolve(null);
             }
@@ -137,7 +138,9 @@ async function runTest() {
   }
 }
 
-runTest().then(() => process.exit(0)).catch(err => {
+runTest().then(() => {
+  setTimeout(() => process.exit(0), 100);
+}).catch(err => {
   console.error('❌ Test failed:', err);
   process.exit(1);
 });
