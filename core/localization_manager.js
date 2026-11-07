@@ -75,7 +75,7 @@ function liveInjectCdp() {
   } catch (_) {}
 }
 
-function liveReloadCdp() {
+function liveDisconnectCdp() {
   try {
     const http = require('http');
     const req = http.get('http://127.0.0.1:8314/json', (res) => {
@@ -88,7 +88,19 @@ function liveReloadCdp() {
           if (!page) return;
           const ws = new WebSocket(page.webSocketDebuggerUrl);
           ws.onopen = () => {
-            ws.send(JSON.stringify({ id: 992, method: 'Page.reload' }));
+            const disableJs = `
+              (() => {
+                if (typeof window.__agDisconnectLocalization === 'function') {
+                  window.__agDisconnectLocalization();
+                }
+                window.__agLocalizationDisabled = true;
+              })()
+            `;
+            ws.send(JSON.stringify({
+              id: 993,
+              method: 'Runtime.evaluate',
+              params: { expression: disableJs, awaitPromise: true }
+            }));
           };
           ws.onmessage = () => {
             try { ws.close(); } catch (_) {}
@@ -150,7 +162,7 @@ function enableChineseLocalization() {
     }
   } catch (_) {}
 
-  // 4. Live zero-second CDP hot injection if client is running
+  // 4. Live zero-second CDP hot injection without page reload (preserves tabs and layout)
   liveInjectCdp();
 
   console.log('[LocalizationManager] ✨ 中文汉化部署完成并已同美化套件深度绑定！');
@@ -276,8 +288,8 @@ function disableChineseLocalization() {
     }
   } catch (_) {}
 
-  // 5. Live zero-second CDP reload if client is running
-  liveReloadCdp();
+  // 5. Disconnect live observer without destructive page reload
+  liveDisconnectCdp();
 
   console.log('[LocalizationManager] ✨ 中文汉化已彻底卸载，界面回归官方原生英文！');
   return { success: true, isChineseInstalled: false };
@@ -311,5 +323,5 @@ module.exports = {
   disableChineseLocalization,
   getStatus,
   liveInjectCdp,
-  liveReloadCdp
+  liveDisconnectCdp
 };
