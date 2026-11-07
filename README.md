@@ -1,4 +1,4 @@
-# 🌸 Antigravity Theme Customizer
+#  Antigravity Theme Customizer
 
 <p align="center">
   <img src="dev/assets/previews/theme_preview.jpg" alt="Antigravity Theme Preview" width="920" style="border-radius: 12px; box-shadow: 0 10px 35px rgba(0,0,0,0.25);" />
